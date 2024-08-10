@@ -3,8 +3,8 @@ const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
-const https = require('https')
-const FS = require('fs')
+const https = require("https");
+const FS = require("fs");
 
 const bodyParser = require("body-parser");
 
@@ -45,15 +45,27 @@ const StatusResponse = require("./util/statusresponse");
 
 const app = express();
 
-const privateKey = FS.readFileSync( Config.sslKeyFile);
-const certificate = FS.readFileSync( Config.sslCert );
+let privateKey;
+let certificate;
+
+if (Config.ssl === true) {
+  try {
+    privateKey = FS.readFileSync(Config.sslKeyFile);
+    certificate = FS.readFileSync(Config.sslCert);
+  } catch (err) {
+    console.log(err);
+    process.exit();
+  }
+}
 
 app.use(bodyParser.json());
 
 // Set up multer for PNG and JPEG images
+
+FS.mkdirSync( Config.imageDir, { recursive: true, });
 const multerFileStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "public/images");
+    cb(null, Config.imageDir);
   },
   filename: (req, file, cb) => {
     const fileExt = req.body.fileextension ? req.body.fileextension : "jpg";
@@ -78,7 +90,7 @@ app.post(
 //Add CORS headers
 app.use(
   cors({
-    origin: ["http://localhost:4200"],
+    origin: Config.corsOrigin,
   })
 );
 
@@ -93,9 +105,17 @@ app.use("/login", Helpers.logComment("Login"), loginRoutes);
 app.use("/register", Helpers.logComment("Register"), registerRoutes);
 
 /* Connection Test */
-app.use("/ping", Helpers.logComment("Ping"), Security.checkAuthentication, (req, res, next) => {
-  return StatusResponse(res, 200, "OK", { version: "0.0.1", date: new Date() });
-});
+app.use(
+  "/ping",
+  Helpers.logComment("Ping"),
+  Security.checkAuthentication,
+  (req, res, next) => {
+    return StatusResponse(res, 200, "OK", {
+      version: "0.0.1",
+      date: new Date(),
+    });
+  }
+);
 
 // Routes that require a login
 app.use(
@@ -220,11 +240,26 @@ function checkDBConnection() {
 checkDBConnection()
   .then((result) => {
     console.log("Listening on " + Config.app_listen + ":" + Config.app_port);
-    https.createServer({key: privateKey, cert: certificate},app).listen(Config.app_port, Config.app_listen);
+    if (Config.ssl === true) {
+      https
+        .createServer({ key: privateKey, cert: certificate }, app)
+        .listen(Config.app_port, Config.app_listen)
+        .catch((err) => {
+          console.log("HTTPS startup");
+          console.log(err);
+        });
+    } else {
+      app.listen(Config.app_port, Config.app_listen).catch((err) => {
+        console.log("Non-HTTPS startup");
+        console.log(err);
+      });
+    }
   })
   .catch((error) => {
     if (error.name === "SequelizeConnectionRefusedError") {
-      console.log("Cannot reach host: " + error.parent.address + ":" + error.parent.port )
+      console.log(
+        "Cannot reach host: " + error.parent.address + ":" + error.parent.port
+      );
     } else {
       console.log(JSON.stringify(error));
     }
