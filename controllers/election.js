@@ -19,57 +19,14 @@ const Vote = require("../model/vote");
 const Image = require("../model/image");
 const Status = require("../model/status");
 
-const electionAttributes = [
-  "id",
-  "name",
-  "description",
-  "electionType",
-  "expiration",
-];
-
-const groupAttributes = ["id", "name", "description"];
-const listAttributes = ["id", "name", "description"];
-const itemAttributes = ["id", "name", "description", "url", "location"];
-const statsItemAttributes = ["id", "name"];
-const userAttributes = [
-  "id",
-  "firstName",
-  "lastName",
-  [
-    Sequelize.fn(
-      "CONCAT",
-      Sequelize.col("firstName"),
-      " ",
-      Sequelize.col("lastName")
-    ),
-    "fullName",
-  ],
-  "alias",
-  "email",
-];
-const statsUserAttributes = [
-  "id",
-  [
-    Sequelize.fn(
-      "CONCAT",
-      Sequelize.col("firstName"),
-      " ",
-      Sequelize.col("lastName")
-    ),
-    "name",
-  ],
-];
-const imageAttributes = ["id", "name", "description", "contentType", "url"];
-const statusAttributes = ["id", "object", "name"];
-
-const categoryAttributes = ["id", "name", "description"];
+const Attributes = require("../model/attributes")
 
 function generateIncludes(details) {
   const includes = [];
 
   includes.push({
     model: Status,
-    attributes: statusAttributes,
+    attributes: Attributes.Status,
   });
 
   if (details) {
@@ -77,26 +34,32 @@ function generateIncludes(details) {
     if (splitDetail.includes("group")) {
       includes.push({
         model: Group,
-        attributes: groupAttributes,
+        attributes: Attributes.Group,
         include: [
           {
             model: User,
-            attributes: userAttributes,
+            attributes: Attributes.User,
             through: { attributes: [] },
           },
         ],
       });
     }
     if (splitDetail.includes("list")) {
+      const modifiedImageAttributes = Attributes.Image.slice();
+      modifiedImageAttributes.push(
+      [
+        Sequelize.fn("CONCAT", Config.imageURL, Sequelize.col("list.items.filename")),
+        "url",
+      ],);
       includes.push({
         model: List,
-        attributes: listAttributes,
+        attributes: Attributes.List,
         include: [
           {
             model: Item,
-            attributes: itemAttributes,
+            attributes: Attributes.Item,
             through: { attributes: [] },
-            include: [{ model: Image, attributes: imageAttributes }],
+            include: [{ model: Image, attributes: Attributes.Image }],
           },
         ],
       });
@@ -104,13 +67,13 @@ function generateIncludes(details) {
     if (splitDetail.includes("category")) {
       includes.push({
         model: Category,
-        attributes: categoryAttributes,
+        attributes: Attributes.Category,
       });
     }
     if (splitDetail.includes("image")) {
       includes.push({
         model: Image,
-        attributes: imageAttributes,
+        attributes: Attributes.Image,
       });
     }
   }
@@ -136,7 +99,7 @@ module.exports.getSingleElection = (req, res, next) => {
 
   options.where = whereCondition;
   options.include = includes;
-  options.attributes = electionAttributes;
+  options.attributes = Attributes.Election;
 
   Election.findOne(options)
     .then((foundElection) => {
@@ -183,7 +146,7 @@ module.exports.getAllElection = (req, res, next) => {
 
   options.where = whereCondition;
   options.include = includes;
-  options.attributes = electionAttributes;
+  options.attributes = Attributes.Election;
   options.distinct = true;
 
   Election.findAndCountAll(options).then(({ count, rows }) => {
@@ -506,9 +469,9 @@ module.exports.getStats = async (req, res, next) => {
   whereCondition.electionId = electionToFind;
 
   const includes = [];
-  includes.push({ model: Status, attributes: statusAttributes });
-  includes.push({ model: User, attributes: statsUserAttributes });
-  includes.push({ model: Item, attributes: statsItemAttributes });
+  includes.push({ model: Status, attributes: Attributes.Status });
+  includes.push({ model: User, attributes: Attributes.StatsUser });
+  includes.push({ model: Item, attributes: Attributes.StatsItem });
 
   options.where = whereCondition;
   options.include = includes;

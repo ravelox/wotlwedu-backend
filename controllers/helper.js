@@ -15,6 +15,8 @@ const ListItem = require("../model/listitem");
 const UUID = require("../util/mini-uuid");
 const Notification = require("../model/notification");
 
+const Attributes = require("../model/attributes")
+
 module.exports.getStatusNames = (req, res, next) => {
   const objectName = req.params.objectName;
   const options = {};
@@ -27,7 +29,7 @@ module.exports.getStatusNames = (req, res, next) => {
   }
 
   options.where = whereCondition;
-  options.attributes = ["id", "object", "name"];
+  options.attributes = Attributes.Status;
   options.order = ["id"];
 
   Status.findAll(options)
@@ -46,7 +48,7 @@ module.exports.getStatusId = (req, res, next) => {
     return StatusResponse(res, 200, "OK", { id: -1, object: "none", name: "" });
 
   options.where = { name: statusName };
-  options.attributes = ["id", "object", "name"];
+  options.attributes = Attributes.Status;
 
   Status.findAll(options)
     .then((result) => {
@@ -79,9 +81,8 @@ module.exports.copyImage = (origImageId, newOwnerId) => {
       const newImageId = UUID("image");
 
       // Copy the image file to the new filename
-      const url = new URL(foundImage.url);
-      const oldFileName = imageDir + "/" + Path.basename(url.pathname);
-      const extension = Path.extname(url.pathname);
+      const oldFileName = imageDir + "/" + foundImage.filename;
+      const extension = Path.extname(foundImage.filename);
       const newFileName = imageDir + "/" + newImageId + extension;
 
       const fileExists = FS.existsSync(oldFileName);
@@ -94,7 +95,7 @@ module.exports.copyImage = (origImageId, newOwnerId) => {
       delete foundImage.updatedAt;
       const newImage = new Image(foundImage);
       newImage.id = newImageId;
-      newImage.url = Config.imageURL + newImageId + extension;
+      newImage.filename = newFileName;
 
       // Important to set the new owner
       newImage.creator = newOwnerId;

@@ -12,8 +12,7 @@ const Role = require("../model/role");
 const Capability = require("../model/capability");
 const RoleCapability = require("../model/rolecapability");
 
-const roleAttributes = ["id", "name", "description"];
-const capabilityAttributes = ["id", "name"];
+const Attributes = require("../model/attributes")
 
 module.exports.getCapability = (req, res, next) => {
   const capToFind = req.params.capId;
@@ -31,14 +30,14 @@ module.exports.getCapability = (req, res, next) => {
   const includes = [
     {
       model: Role,
-      attributes: roleAttributes,
+      attributes: Attributes.Role,
       through: { attributes: [] },
     },
   ];
 
   options.where = whereCondition;
   options.includes = includes;
-  options.attributes = capabilityAttributes;
+  options.attributes = Attributes.Capability;
 
   Capability.findOne(options)
     .then((foundCap) => {
@@ -73,7 +72,7 @@ module.exports.getAllCapability = (req, res, next) => {
     };
   }
   options.where = whereCondition;
-  options.attributes = capabilityAttributes;
+  options.attributes = Attributes.Capability;
   options.distinct = true;
 
   Capability.findAndCountAll(options)

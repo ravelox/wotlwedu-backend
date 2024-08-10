@@ -15,10 +15,7 @@ const Category = require("../model/category");
 const Friend = require("../model/friend");
 const Notification = require("../model/notification");
 
-const itemAttributes = ["id", "name", "description", "url", "location"];
-const imageAttributes = ["id", "name", "description", "contentType", "url"];
-
-const categoryAttributes = ["id", "name", "description"];
+const Attributes = require("../model/attributes")
 
 function generateIncludes(details) {
   const includes = [];
@@ -26,10 +23,10 @@ function generateIncludes(details) {
     const splitDetail = details.split(",");
 
     if (splitDetail.includes("image")) {
-      includes.push({ model: Image, attributes: imageAttributes });
+      includes.push({ model: Image, attributes: Attributes.Image });
     }
     if (splitDetail.includes("category")) {
-      includes.push({ model: Category, attributes: categoryAttributes });
+      includes.push({ model: Category, attributes: Attributes.Category });
     }
   }
   return includes;
@@ -66,7 +63,7 @@ module.exports.getItem = async (req, res, next) => {
   const includes = generateIncludes(req.query.detail);
 
   options.where = whereCondition;
-  options.attributes = itemAttributes;
+  options.attributes = Attributes.Item;
   options.include = includes;
 
   Item.findOne(options)
@@ -110,7 +107,7 @@ module.exports.getAllItem = (req, res, next) => {
 
   options.where = whereCondition;
   options.include = includes;
-  options.attributes = itemAttributes;
+  options.attributes = Attributes.Item;
   options.distinct = true;
 
   Item.findAndCountAll(options).then(({ count, rows }) => {

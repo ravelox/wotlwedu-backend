@@ -8,7 +8,7 @@ const {Op} = require('sequelize');
 
 const Preference = require("../model/preference");
 
-const preferenceAttributes = ["id", "name", "value"];
+const Attributes = require("../model/attributes")
 
 module.exports.getPreference = (req, res, next) => {
   const preferenceToFind = req.params.preferenceName;
@@ -19,7 +19,7 @@ module.exports.getPreference = (req, res, next) => {
 
   Preference.findOne({
     where: whereCondition,
-    attributes: preferenceAttributes,
+    attributes: Attributes.Preference,
   })
     .then((foundPreference) => {
       return StatusResponse(res, 200, "OK", { preference: foundPreference });
@@ -56,7 +56,7 @@ module.exports.getAllPreferences = (req, res, next) => {
   whereCondition.creator = req.authUserId;
 
   options.where = whereCondition;
-  options.attributes = preferenceAttributes;
+  options.attributes = Attributes.Preference;
   options.distinct = true;
 
   Preference.findAndCountAll(options)

@@ -17,25 +17,13 @@ const Item = require("../model/item");
 const Image = require("../model/image");
 const Status = require("../model/status");
 
+const Attributes = require("../model/attributes")
 const voteAttributes = ["id"];
-const electionAttributes = ["id", "name", "description"];
-const itemAttributes = ["id", "name", "description"];
-const userAttributes = ["id", "firstName", "lastName", [
-  Sequelize.fn(
-    "CONCAT",
-    Sequelize.col("firstName"),
-    " ",
-    Sequelize.col("lastName")
-  ),
-  "fullName",
-],"alias", "email"];
-const imageAttributes = ["id", "name", "description", "contentType", "url"];
-const statusAttributes = ["name"];
 
 function generateIncludes(details) {
   const includes = [];
 
-  includes.push({ model: Status, attributes: statusAttributes });
+  includes.push({ model: Status, attributes: Attributes.Status });
 
   if (details) {
     const splitDetail = details.split(",");
@@ -43,27 +31,27 @@ function generateIncludes(details) {
     if (splitDetail.includes("election")) {
       const electionIncludes = {
         model: Election,
-        attributes: electionAttributes,
+        attributes: Attributes.Election,
       };
       if (splitDetail.includes("image")) {
         electionIncludes.include = {
           model: Image,
-          attributes: imageAttributes,
+          attributes: Attributes.Image,
         };
       }
       includes.push(electionIncludes);
     }
     if (splitDetail.includes("item")) {
-      const itemIncludes = { model: Item, attributes: itemAttributes };
+      const itemIncludes = { model: Item, attributes: Attributes.Item };
       if (splitDetail.includes("image")) {
-        itemIncludes.include = { model: Image, attributes: imageAttributes };
+        itemIncludes.include = { model: Image, attributes: Attributes.Image };
       }
       includes.push(itemIncludes);
     }
     if (splitDetail.includes("user")) {
-      const userIncludes = { model: User, attributes: userAttributes };
+      const userIncludes = { model: User, attributes: Attributes.User };
       if (splitDetail.includes("image")) {
-        userIncludes.include = { model: Image, attributes: imageAttributes };
+        userIncludes.include = { model: Image, attributes: Attributes.Image };
       }
       includes.push(userIncludes);
     }

@@ -15,17 +15,7 @@ const RoleCapability = require("../model/rolecapability");
 const User = require("../model/user");
 const UserRole = require("../model/userrole");
 
-const roleAttributes = ["id", "name", "description","protected"];
-const capabilityAttributes = ["id", "name"];
-const userAttributes = ["id", "firstName", "lastName", [
-  Sequelize.fn(
-    "CONCAT",
-    Sequelize.col("firstName"),
-    " ",
-    Sequelize.col("lastName")
-  ),
-  "fullName",
-],"alias", "email"];
+const Attributes = require("../model/attributes")
 
 function generateIncludes(details) {
   let includes = [];
@@ -34,14 +24,14 @@ function generateIncludes(details) {
     if (splitDetail.includes("capability")) {
       includes.push({
         model: Capability,
-        attributes: capabilityAttributes,
+        attributes: Attributes.Capability,
         through: { attributes: [] },
       });
     }
     if (splitDetail.includes("user")) {
       includes.push({
         model: User,
-        attributes: userAttributes,
+        attributes: Attributes.User,
         through: { attributes: [] },
       });
     }
@@ -65,7 +55,7 @@ module.exports.getSingleRole = (req, res, next) => {
 
   options.where = whereCondition;
   options.include = includes;
-  options.attributes = roleAttributes;
+  options.attributes = Attributes.Role;
 
   Role.findOne(options)
     .then((foundRole) => {
@@ -108,7 +98,7 @@ module.exports.getAllRole = (req, res, next) => {
 
   options.where = whereCondition;
   options.include = includes;
-  options.attributes = roleAttributes;
+  options.attributes = Attributes.Role;
   options.distinct = true;
 
   Role.findAndCountAll(options).then(({ count, rows }) => {

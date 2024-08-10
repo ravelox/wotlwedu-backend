@@ -23,49 +23,7 @@ const Status = require("../model/status");
 const Notification = require("../model/notification");
 const Role = require("../model/role");
 
-const userAttributes = [
-  "id",
-  "firstName",
-  "lastName",
-  [
-    Sequelize.fn(
-      "CONCAT",
-      Sequelize.col("user.firstName"),
-      " ",
-      Sequelize.col("user.lastName")
-    ),
-    "fullName",
-  ],
-  "alias",
-  "email",
-  "active",
-  "verified",
-  "enable2fa",
-  "admin",
-];
-
-const friendAttributes = [
-  "id",
-  "firstName",
-  "lastName",
-  [
-    Sequelize.fn(
-      "CONCAT",
-      Sequelize.col("user.firstName"),
-      " ",
-      Sequelize.col("user.lastName")
-    ),
-    "fullName",
-  ],
-  "alias",
-  "email",
-  "imageId",
-  "statusId",
-];
-
-const statusAttributes = ["id", "name"];
-
-const imageAttributes = ["id", "name", "description", "url", "contentType"];
+const Attributes = require("../model/attributes")
 
 function generateIncludes(details) {
   const includes = [];
@@ -76,13 +34,13 @@ function generateIncludes(details) {
         model: Friend,
         attributes: ["statusId"],
         include: [
-          { model: User, attributes: friendAttributes },
-          { model: Status, attributes: statusAttributes },
+          { model: User, attributes: Attributes.Friend },
+          { model: Status, attributes: Attributes.Status },
         ],
       });
     }
     if (splitDetail.includes("image")) {
-      includes.push({ model: Image, attributes: imageAttributes });
+      includes.push({ model: Image, attributes: Attributes.Image });
     }
   }
   return includes;
@@ -106,7 +64,7 @@ exports.getUser = async (req, res, next) => {
 
   options.where = whereCondition;
   options.include = includes;
-  options.attributes = userAttributes;
+  options.attributes = Attributes.UserFull;
 
   // Find the user in the table
   User.findOne(options)
@@ -153,7 +111,7 @@ exports.getAllUser = (req, res, next) => {
   options.order = [["lastName"], ["firstName"]];
   options.where = whereCondition;
   options.include = includes;
-  options.attributes = userAttributes;
+  options.attributes = Attributes.UserFull;
   options.distinct = true;
 
   User.findAndCountAll(options).then(({ count, rows }) => {
@@ -269,9 +227,7 @@ exports.deleteUser = async (req, res, next) => {
         (foundImages) => {
           if (foundImages) {
             for (i of foundImages) {
-              const url = new URL(i.url);
-              const filename = Path.basename(url.pathname);
-              deleteImageFile(Config.imageDir + filename)
+              deleteImageFile(Config.imageDir + i.filename)
                 .then((result) => {
                   /* File deleted */
                 })
@@ -406,13 +362,13 @@ exports.getUserFriends = async (req, res, next) => {
 
   const includes = [];
 
-  const imageIncludes = { model: Image, attributes: imageAttributes };
+  const imageIncludes = { model: Image, attributes: Attributes.Image };
   const userIncludes = {
     model: User,
-    attributes: friendAttributes,
+    attributes: Attributes.Friend,
     include: imageIncludes,
   };
-  const statusIncludes = { model: Status, attributes: statusAttributes };
+  const statusIncludes = { model: Status, attributes: Attributes.Status };
   includes.push(userIncludes);
   includes.push(statusIncludes);
 

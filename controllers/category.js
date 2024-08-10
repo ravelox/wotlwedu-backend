@@ -10,7 +10,7 @@ const Config = require("../config/wotlwedu");
 
 const Category = require("../model/category");
 
-const categoryAttributes = ["id", "name", "description"];
+const Attributes = require("../model/attributes");
 
 module.exports.getSingleCategory = (req, res, next) => {
   const categoryToFind = req.params.categoryId;
@@ -27,7 +27,7 @@ module.exports.getSingleCategory = (req, res, next) => {
   }
 
   options.where = whereCondition;
-  options.attributes = categoryAttributes;
+  options.attributes = Attributes.Category;
 
   Category.findOne(options )
     .then((foundCategory) => {
@@ -67,7 +67,7 @@ module.exports.getAllCategory = (req, res, next) => {
   }
 
   options.where = whereCondition;
-  options.attributes = categoryAttributes;
+  options.attributes = attributes.Category;
   options.distinct = true;
 
   Category.findAndCountAll(options).then(({ count, rows }) => {

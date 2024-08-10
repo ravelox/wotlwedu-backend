@@ -13,17 +13,7 @@ const Group = require("../model/group");
 const User = require("../model/user");
 const Category = require("../model/category");
 
-const groupAttributes = ["id", "name", "description", "listType"];
-const userAttributes = ["id", "firstName", "lastName", [
-  Sequelize.fn(
-    "CONCAT",
-    Sequelize.col("firstName"),
-    " ",
-    Sequelize.col("lastName")
-  ),
-  "fullName",
-],"alias", "email"];
-const categoryAttributes = ["id", "name", "description"];
+const Attributes = require("../model/attributes")
 
 function generateIncludes(details) {
   const includes = [];
@@ -32,14 +22,14 @@ function generateIncludes(details) {
     if (splitDetail.includes("user")) {
       includes.push({
         model: User,
-        attributes: userAttributes,
+        attributes: Attributes.User,
         through: { attributes: [] },
       });
     }
     if (splitDetail.includes("category")) {
       includes.push({
         model: Category,
-        attributes: categoryAttributes,
+        attributes: Attributes.Category,
       });
     }
   }
@@ -60,7 +50,7 @@ module.exports.getSingleGroup = (req, res, next) => {
 
   options.where = whereCondition;
   options.includes = includes;
-  options.attributes = groupAttributes;
+  options.attributes = Attributes.Group;
 
   Group.findOne(options)
     .then((foundGroup) => {
@@ -102,7 +92,7 @@ module.exports.getAllGroup = (req, res, next) => {
   const includes = generateIncludes(req.query.detail);
 
   options.where = whereCondition;
-  options.attributes = groupAttributes;
+  options.attributes = Attributes.Group;
   options.include = includes;
   options.distinct = true;
 

@@ -18,44 +18,26 @@ const Election = require("../model/election");
 const Friend = require("../model/friend");
 const Notification = require("../model/notification");
 
-const listAttributes = ["id", "name", "description"];
-const itemAttributes = [
-  "id",
-  "name",
-  "description",
-  "imageId",
-  "url",
-  "location",
-];
-const categoryAttributes = ["id", "name", "description"];
-
-const imageAttributes = [
-  "id",
-  "name",
-  "description",
-  "url",
-  "contentType",
-  "statusId",
-];
+const Attributes = require("../model/attributes")
 
 function generateIncludes(details) {
   let includes = [];
   if (details) {
     const splitDetails = details.split(",");
     if (splitDetails.includes("category")) {
-      includes.push({ model: Category, attributes: categoryAttributes });
+      includes.push({ model: Category, attributes: Attributes.Category });
     }
 
     if (splitDetails.includes("item")) {
       const imageIncludes = [];
 
       if (splitDetails.includes("image")) {
-        imageIncludes.push({ model: Image, attributes: imageAttributes });
+        imageIncludes.push({ model: Image, attributes: Attributes.Image });
       }
 
       includes.push({
         model: Item,
-        attributes: itemAttributes,
+        attributes: Attributes.Item,
         include: imageIncludes,
         through: { model: ListItem, attributes: [] },
       });
@@ -96,7 +78,7 @@ module.exports.getSingleList = async (req, res, next) => {
 
   options.where = whereCondition;
   options.include = includes;
-  options.attributes = listAttributes;
+  options.attributes = Attributes.List;
 
   List.findOne(options)
     .then((foundList) => {
@@ -141,7 +123,7 @@ module.exports.getAllList = (req, res, next) => {
 
   options.where = whereCondition;
   options.include = includes;
-  options.attributes = listAttributes;
+  options.attributes = Attributes.List;
   options.distinct = true;
 
   List.findAndCountAll(options).then(({ count, rows }) => {

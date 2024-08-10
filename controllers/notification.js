@@ -11,36 +11,7 @@ const User = require("../model/user");
 const Status = require("../model/status");
 const { stat } = require("fs");
 
-const notificationAttributes = ["id", "type", "text", "objectId"];
-const userAttributes = [
-  "id",
-  "firstName",
-  "lastName",
-  [
-    Sequelize.fn(
-      "CONCAT",
-      Sequelize.col("user.firstName"),
-      " ",
-      Sequelize.col("user.lastName")
-    ),
-    "fullName",
-  ],
-];
-const senderAttributes = [
-  "id",
-  "firstName",
-  "lastName",
-  [
-    Sequelize.fn(
-      "CONCAT",
-      Sequelize.col("sender.firstName"),
-      " ",
-      Sequelize.col("sender.lastName")
-    ),
-    "fullName",
-  ],
-];
-const statusAttributes = ["id", "name"];
+const Attributes = require("../model/attributes")
 
 module.exports.getSingleNotification = (req, res, next) => {
   const notificationToFind = req.params.notificationId;
@@ -56,15 +27,15 @@ module.exports.getSingleNotification = (req, res, next) => {
   }
   
   const includes = [];
-  includes.push({ model: User, attributes: userAttributes });
-  includes.push({ model: User, attributes: senderAttributes, as: "sender" });
+  includes.push({ model: User, attributes: Attributes.NotificationUser });
+  includes.push({ model: User, attributes: Attributes.NotificationSender, as: "sender" });
   includes.push({
     model: Status,
-    attributes: statusAttributes,
+    attributes: Attributes.Status,
   });
 
   options.where = whereCondition;
-  options.attributes = notificationAttributes;
+  options.attributes = Attributes.Notification;
   options.include = includes;
 
   Notification.findOne(options)
@@ -84,12 +55,12 @@ module.exports.getAllNotification = (req, res, next) => {
   whereCondition.userId = req.authUserId;
 
   const includes = [];
-  includes.push({ model: User, attributes: userAttributes });
-  includes.push({ model: User, attributes: senderAttributes, as: "sender" });
-  includes.push({ model: Status, attributes: statusAttributes });
+  includes.push({ model: User, attributes: Attributes.NotificationUser });
+  includes.push({ model: User, attributes: Attributes.NotificationSender, as: "sender" });
+  includes.push({ model: Status, attributes: Attributes.Status });
 
   options.where = whereCondition;
-  options.attributes = notificationAttributes;
+  options.attributes = Attributes.Notification;
   options.include = includes;
   options.distinct = true;
 
