@@ -102,7 +102,7 @@ User.findOne({ where: { alias: "root" } })
 
     newImage.name = "TestImage1";
     newImage.description = "A picture of a grape";
-    newImage.url = "http://localhost:9876/images/grape.png";
+    newImage.filename = "grape.png";
     newImage.contentType = "image/png";
     newImage.categoryId = newCategory.id;
 
