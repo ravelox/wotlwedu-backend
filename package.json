@@ -1,0 +1,33 @@
+{
+  "name": "wotlwedu backend",
+  "version": "0.0.1",
+  "description": "Puts important decisions to a vote",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon app.js"
+  },
+  "author": "Dave Kelly",
+  "license": "ISC",
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  },
+  "dependencies": {
+    "@aws-sdk/client-ses": "^3.592.0",
+    "@aws-sdk/credential-provider-node": "^3.592.0",
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "hi-base32": "^0.5.1",
+    "jsonwebtoken": "^9.0.2",
+    "mariadb": "^3.3.0",
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.9.3",
+    "nodemailer": "^6.9.13",
+    "npm": "^10.6.0",
+    "otpauth": "^9.3.1",
+    "qrcode": "^1.5.3",
+    "sequelize": "^6.37.2"
+  }
+}

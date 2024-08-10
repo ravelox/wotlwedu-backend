@@ -1,0 +1,32 @@
+***=> if(Array.isArray( object ))
+** DONE ** > Multiple users add to role
+** DONE ** > Multiple capabilities add to role
+** DONE ** > Multiple items add to list
+** DONE ** > Multiple users add to group
+
+> Cast vote
+** DONE ** > Delete role
+** NOT DOING ** > Delete vote
+
+**DONE ** > Determine active elections that a user is part of
+**DONE ** > Determine partial elections for a user and start at next items
+
+** DONE ** > Determine which elections a user is holding
+** DONE ** > Show current status of an elections
+> Show current status of all elections
+
+** DONE ** > Add pagination for findAll endpoints
+
+***=> Email functions
+** DONE ** > Registration confirmation
+** DONE ** > Password reset
+
+** DONE **> Add checks in user.js for admin vs creator-only operations
+
+> Documentation (Swagger) for REST API
+
+***=> UTILITY FUNCTIONS
+> Expire elections
+> Expire tokens
+
+> Filter by Creator
