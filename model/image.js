@@ -16,7 +16,7 @@ const Image = database.define("image", {
     type: Sequelize.STRING,
     allowNull: false,
   },
-  url: {
+  filename: {
     type: Sequelize.STRING,
   },
   contentType: {

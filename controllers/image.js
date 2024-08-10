@@ -2,6 +2,7 @@ const Util = require("util");
 const { Op } = require("sequelize");
 const FS = require("fs");
 const Path = require("path");
+const Sequelize = require("sequelize")
 
 const Security = require("../util/security");
 const UUID = require("../util/mini-uuid");
@@ -19,23 +20,14 @@ const Item = require("../model/item");
 const Friend = require("../model/friend");
 const Notification = require("../model/notification");
 
-const imageAttributes = [
-  "id",
-  "name",
-  "description",
-  "url",
-  "contentType",
-  "statusId",
-];
-
-const categoryAttributes = ["id", "name", "description"];
+const Attributes = require("../model/attributes");
 
 function generateIncludes(details) {
   let includes = [];
   if (details) {
     const splitDetail = details.split(",");
     if (splitDetail.includes("category")) {
-      includes.push({ model: Category, attributes: categoryAttributes });
+      includes.push({ model: Category, attributes: Attributes.Category });
     }
   }
   return includes;
@@ -72,8 +64,13 @@ module.exports.getImage = async (req, res, next) => {
 
   const includes = generateIncludes(req.query.detail);
 
+  const modImageAttributes = Attributes.Image.slice();
+  modImageAttributes.push([
+    Sequelize.fn("CONCAT", Config.imageURL, Sequelize.col("filename")),
+    "url",
+  ]);
   options.where = whereCondition;
-  options.attributes = imageAttributes;
+  options.attributes = modImageAttributes;
   options.include = includes;
 
   Image.findOne(options)
@@ -114,9 +111,14 @@ module.exports.getAllImage = (req, res, next) => {
 
   const includes = generateIncludes(req.query.detail);
 
+  const modImageAttributes = Attributes.Image.slice();
+  modImageAttributes.push([
+    Sequelize.fn("CONCAT", Config.imageURL, Sequelize.col("filename")),
+    "url",
+  ]);
   options.where = whereCondition;
   options.include = includes;
-  options.attributes = imageAttributes;
+  options.attributes = modImageAttributes;
   options.distinct = true;
 
   Image.findAndCountAll(options).then(({ count, rows }) => {
@@ -154,7 +156,7 @@ module.exports.postUpdateImage = (req, res, next) => {
 
       if (req.body.name) foundImage.name = req.body.name;
       if (req.body.description) foundImage.description = req.body.description;
-      if (req.body.url) foundImage.url = req.body.url;
+      if (req.body.filename) foundImage.filename = req.body.filename;
       if (req.body.contentType) foundImage.contentType = req.body.contentType;
       if (req.body.statusId) foundImage.statusId = req.body.statusId;
 
@@ -179,16 +181,13 @@ module.exports.putAddImage = (req, res, next) => {
   if (!req.body.description)
     return StatusResponse(res, 421, "No description provided");
 
-  // if (!req.body.image && !req.body.url && !req.body.location)
-  //   return StatusResponse(res, 421, "Must have either image, url or location");
-
   // Populate the image properties
   const imageToAdd = new Image();
   imageToAdd.id = UUID("image");
   imageToAdd.creator = req.authUserId;
   imageToAdd.name = req.body.name;
   imageToAdd.description = req.body.description;
-  if (req.body.url) imageToAdd.url = req.body.url;
+  if (req.body.filename) imageToAdd.filename = req.body.filename;
   if (req.body.contentType) imageToAdd.contentType = req.body.contentType;
   if (req.body.statusId) imageToAdd.statusId = req.body.statusId;
 
@@ -199,7 +198,7 @@ module.exports.putAddImage = (req, res, next) => {
       if (!addedImage) return StatusResponse(res, 500, "Cannot add image");
 
       return StatusResponse(res, 200, "OK", {
-        image: copyObject(addedImage, imageAttributes),
+        image: copyObject(addedImage, Attributes.Image),
       });
     })
     .catch((err) => next(err));
@@ -254,7 +253,7 @@ module.exports.postImageFile = (req, res, next) => {
       .then((foundImage) => {
         if (!foundImage) return StatusResponse(res, 421, "No image found");
 
-        foundImage.url = Config.imageURL + req.file.filename;
+        foundImage.filename = req.file.filename;
         foundImage
           .save()
           .then((updatedImage) => {
@@ -284,10 +283,8 @@ module.exports.deleteImageFile = (req, res, next) => {
       if (!foundImage)
         return StatusResponse(res, 400, "No image found", { whereCondition });
 
-      if (foundImage.url) {
-        const url = new URL(foundImage.url);
-        const filename = Path.basename(url.pathname);
-        FS.unlink(Config.imageDir + filename, (err) => {
+      if (foundImage.filename) {
+        FS.unlink(Config.imageDir + foundImage.filename, (err) => {
           return StatusResponse(res, 200, "OK");
         });
       } else {
