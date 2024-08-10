@@ -210,7 +210,7 @@ module.exports.postUpdateElection = (req, res, next) => {
           if (!updatedElection)
             return StatusResponse(res, 500, "Cannot update election");
           return StatusResponse(res, 200, "OK", {
-            election: copyObject(updatedElection, electionAttributes),
+            election: copyObject(updatedElection, Attributes.Election),
           });
         })
         .catch((err) => next(err));
@@ -256,7 +256,7 @@ module.exports.putAddElection = async (req, res, next) => {
           return StatusResponse(res, 400, "Cannot add election");
 
         return StatusResponse(res, 200, "OK", {
-          election: copyObject(addedElection, electionAttributes),
+          election: copyObject(addedElection, Attributes.Election),
         });
       });
     })

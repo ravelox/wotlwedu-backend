@@ -175,7 +175,7 @@ exports.putAddUser = (req, res, next) => {
                 })
                 .then(() => {
                   return StatusResponse(res, 200, "OK", {
-                    user: copyObject(addedUser, userAttributes),
+                    user: copyObject(addedUser, Attributes.UserFull),
                   });
                 })
                 .catch((err) => next(err));
@@ -308,7 +308,7 @@ exports.postUpdateUser = (req, res, next) => {
             )
               .then(() => {
                 return StatusResponse(res, 200, "User updated", {
-                  user: copyObject(foundUser, userAttributes),
+                  user: copyObject(foundUser, Attributes.UserFull),
                   emailChange: emailChange,
                 });
               })
@@ -322,7 +322,7 @@ exports.postUpdateUser = (req, res, next) => {
               });
           } else {
             return StatusResponse(res, 200, "User updated", {
-              user: copyObject(foundUser, userAttributes),
+              user: copyObject(foundUser, Attributes.UserFull),
               emailChange: emailChange,
             });
           }

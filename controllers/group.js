@@ -142,7 +142,7 @@ module.exports.postUpdateGroup = (req, res, next) => {
             return StatusResponse(res, 500, "Cannot update group");
 
           return StatusResponse(res, 200, "OK", {
-            group: copyObject(foundGroup, groupAttributes),
+            group: copyObject(foundGroup, Attributes.Group),
           });
         })
         .catch((err) => next(err));
@@ -173,7 +173,7 @@ module.exports.putAddGroup = (req, res, next) => {
           if (!addedGroup) return StatusResponse(res, 500, "Cannot add group");
 
           return StatusResponse(res, 200, "OK", {
-            group: copyObject(addedGroup, groupAttributes),
+            group: copyObject(addedGroup, Attributes.Group),
           });
         })
         .catch((err) => next(err));
@@ -212,7 +212,7 @@ module.exports.putUserInGroup = (req, res, next) => {
                 return StatusResponse(res, 500, "Cannot add user to group");
 
               return StatusResponse(res, 200, "OK", {
-                user: copyObject(addedUser, userAttributes),
+                user: copyObject(addedUser, Attributes.User),
               });
             })
             .catch((err) => next(err));

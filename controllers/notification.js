@@ -106,7 +106,7 @@ module.exports.postUpdateNotification = (req, res, next) => {
           if (!updatedNotification)
             return StatusResponse(res, 500, "Unable to update notification");
           return StatusResponse(res, 200, "OK", {
-            category: copyObject(updatedNotification, notificationAttributes),
+            category: copyObject(updatedNotification, Attributes.Notification),
           });
         })
         .catch((err) => next(err));
@@ -142,7 +142,7 @@ module.exports.putAddNotification = (req, res, next) => {
         return StatusResponse(res, 500, "Cannot add Notification");
 
       return StatusResponse(res, 200, "OK", {
-        category: copyObject(addedNotification, notificationAttributes),
+        category: copyObject(addedNotification, Attributes.Notification),
       });
     })
     .catch((err) => next(err));

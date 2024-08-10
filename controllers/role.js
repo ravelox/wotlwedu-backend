@@ -143,7 +143,7 @@ module.exports.postUpdateRole = (req, res, next) => {
           if (!updatedRole)
             return StatusResponse(res, 500, "Cannot update role");
           return StatusResponse(res, 200, "OK", {
-            role: copyObject(updatedRole, roleAttributes),
+            role: copyObject(updatedRole, Attributes.Role),
           });
         })
         .catch((err) => next(err));
@@ -171,7 +171,7 @@ module.exports.putAddRole = (req, res, next) => {
           if (!addedRole) return StatusResponse(res, 500, "Cannot add role");
 
           return StatusResponse(res, 200, "OK", {
-            role: copyObject(addedRole, roleAttributes),
+            role: copyObject(addedRole, Attributes.Role),
           });
         })
         .catch((err) => next(err));

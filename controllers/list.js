@@ -171,7 +171,7 @@ module.exports.postUpdateList = (req, res, next) => {
             return StatusResponse(res, 500, "Cannot update list");
 
           return StatusResponse(res, 200, "OK", {
-            list: copyObject(updatedList, listAttributes),
+            list: copyObject(updatedList, Attributes.List),
           });
         })
         .catch((err) => next(err));
@@ -199,7 +199,7 @@ module.exports.putAddList = (req, res, next) => {
           if (!addedList) return StatusResponse(res, 500, "Cannot add list");
 
           return StatusResponse(res, 200, "OK", {
-            list: copyObject(addedList, listAttributes),
+            list: copyObject(addedList, Attributes.List),
           });
         })
         .catch((err) => next(err));

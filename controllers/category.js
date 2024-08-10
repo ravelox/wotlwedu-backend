@@ -115,7 +115,7 @@ module.exports.postUpdateCategory = (req, res, next) => {
           if (!updatedCategory)
             return StatusResponse(res, 500, "Unable to update Category");
           return StatusResponse(res, 200, "OK", {
-            category: copyObject(updatedCategory, categoryAttributes),
+            category: copyObject(updatedCategory, Attributes.Category),
           });
         })
         .catch((err) => next(err));
@@ -151,7 +151,7 @@ module.exports.putAddCategory = (req, res, next) => {
             return StatusResponse(res, 500, "Cannot add Category");
 
           return StatusResponse(res, 200, "OK", {
-            category: copyObject(addedCategory, categoryAttributes),
+            category: copyObject(addedCategory, Attributes.Category),
           });
         })
         .catch((err) => next(err));

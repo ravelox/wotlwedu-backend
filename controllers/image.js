@@ -167,7 +167,7 @@ module.exports.postUpdateImage = (req, res, next) => {
             return StatusResponse(res, 500, "Cannot update image");
 
           return StatusResponse(res, 200, "OK", {
-            image: copyObject(updatedImage, imageAttributes),
+            image: copyObject(updatedImage, Attributes.Image),
           });
         })
         .catch((err) => next(err));

@@ -120,7 +120,7 @@ module.exports.postUpdateCapability = (req, res, next) => {
             return StatusResponse(res, 500, "Unable to update capability");
 
           return StatusResponse(res, 200, "OK", "Capability updated", {
-            capability: copyObject(updatedCap, capabilityAttributes),
+            capability: copyObject(updatedCap, Attributes.Capability),
           });
         })
         .catch((err) => next(err));
@@ -152,7 +152,7 @@ module.exports.putAddCapability = (req, res, next) => {
             return StatusResponse(res, 500, "Cannot add capability");
 
           return StatusResponse(res, 200, "OK", {
-            capability: copyObject(addedCap, capabilityAttributes),
+            capability: copyObject(addedCap, Attributes.Capability),
           });
         })
         .catch((err) => next(err));

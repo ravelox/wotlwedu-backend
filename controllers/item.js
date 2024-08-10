@@ -158,7 +158,7 @@ module.exports.postUpdateItem = (req, res, next) => {
             return StatusResponse(res, 500, "Unable to update item");
 
           return StatusResponse(res, 200, "OK", {
-            item: copyObject(updatedItem, itemAttributes),
+            item: copyObject(updatedItem, Attributes.Item),
           });
         })
         .catch((err) => next(err));
@@ -198,7 +198,7 @@ module.exports.putAddItem = (req, res, next) => {
           if (!addedItem) return StatusResponse(res, 500, "Cannot add item");
 
           return StatusResponse(res, 200, "OK", {
-            item: copyObject(addedItem, itemAttributes),
+            item: copyObject(addedItem, Attributes.Item),
           });
         })
         .catch((err) => next(err));
