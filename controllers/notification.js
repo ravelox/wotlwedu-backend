@@ -87,7 +87,7 @@ module.exports.postUpdateNotification = (req, res, next) => {
   whereCondition.id = notificationToFind;
 
   if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
-    whereCondition.creator = req.authUserId;
+    whereCondition.userId = req.authUserId;
   }
   Notification.findOne({ where: whereCondition })
     .then((foundNotification) => {
@@ -155,8 +155,10 @@ module.exports.deleteNotification = (req, res, next) => {
 
   let whereCondition = { id: notificationToFind };
 
+  // The creator column is always null so allow the logged in
+  // user to be able to delete notifications which were sent to them
   if (!Security.getVerdict(req.verdicts, "delete").isAdmin) {
-    whereCondition.creator = req.authUserId;
+    whereCondition.userId = req.authUserId;
   }
 
   Notification.findOne({ where: whereCondition })
@@ -189,7 +191,7 @@ module.exports.putSetStatus = (req, res, next) => {
   whereCondition.id = notificationToFind;
 
   if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
-    whereCondition.creator = req.authUserId;
+    whereCondition.userId = req.authUserId;
   }
 
   options.where = whereCondition;
