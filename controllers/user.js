@@ -23,7 +23,7 @@ const Status = require("../model/status");
 const Notification = require("../model/notification");
 const Role = require("../model/role");
 
-const Attributes = require("../model/attributes")
+const Attributes = require("../model/attributes");
 
 function generateIncludes(details) {
   const includes = [];
@@ -57,7 +57,9 @@ exports.getUser = async (req, res, next) => {
 
   whereCondition.id = userToFind;
   if (!Security.getVerdict(req.verdicts, "view").isAdmin) {
-    whereCondition.creator = req.authUserId;
+    if (userToFind !== req.authUserId) {
+      whereCondition.creator = req.authUserId;
+    }
   }
 
   const includes = generateIncludes(req.query.detail);
@@ -152,7 +154,7 @@ exports.putAddUser = (req, res, next) => {
       if (foundUser)
         return StatusResponse(res, 421, "Email address already exists");
 
-      const defaultRoleName = Config.defaultRoleName || "Default Role"
+      const defaultRoleName = Config.defaultRoleName || "Default Role";
       // Must add the user to a default role
       Role.findOne({ where: { name: defaultRoleName } })
         .then((foundRole) => {
