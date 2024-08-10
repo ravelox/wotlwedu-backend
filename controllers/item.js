@@ -1,5 +1,6 @@
 const Util = require("util");
 const { Op } = require("sequelize");
+const Sequelize = require("sequelize")
 
 const Helper = require("./helper");
 const Config = require("../config/wotlwedu");
@@ -23,7 +24,12 @@ function generateIncludes(details) {
     const splitDetail = details.split(",");
 
     if (splitDetail.includes("image")) {
-      includes.push({ model: Image, attributes: Attributes.Image });
+      const modImageAttributes = Attributes.Image.slice();
+      modImageAttributes.push([
+        Sequelize.fn("CONCAT", Config.imageURL, Sequelize.col("filename")),
+        "url",
+      ]);
+      includes.push({ model: Image, attributes: modImageAttributes });
     }
     if (splitDetail.includes("category")) {
       includes.push({ model: Category, attributes: Attributes.Category });
