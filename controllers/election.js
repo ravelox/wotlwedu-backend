@@ -331,7 +331,7 @@ module.exports.putStartElection = (req, res, next) => {
         return StatusResponse(res, 404, "No items configured");
 
       // For each voter and each time, add an uncast vote
-      const electionStartNotification = getStatusIdByName("Election Start")
+      const electionStartNotification = await getStatusIdByName("Election Start")
       const votesToAdd = [];
       for (voter of foundElection.group.users) {
         await Notify.sendNotification(
