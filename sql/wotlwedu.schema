@@ -1,0 +1,456 @@
+-- Server version	10.11.6-MariaDB
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Table structure for table `capabilities`
+--
+
+DROP TABLE IF EXISTS `capabilities`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `capabilities` (
+  `id` varchar(255) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `creator` varchar(255) DEFAULT NULL,
+  `updatedAt` datetime DEFAULT '2024-08-10 18:50:24',
+  `createdAt` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `capabilities_creator` (`creator`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `categories`
+--
+
+DROP TABLE IF EXISTS `categories`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `categories` (
+  `id` varchar(255) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `description` varchar(255) NOT NULL,
+  `creator` varchar(255) DEFAULT NULL,
+  `updatedAt` datetime NOT NULL DEFAULT '2024-08-10 18:50:24',
+  `createdAt` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `categories_creator` (`creator`),
+  CONSTRAINT `categories_ibfk_1` FOREIGN KEY (`creator`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `elections`
+--
+
+DROP TABLE IF EXISTS `elections`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `elections` (
+  `id` varchar(255) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `description` varchar(255) NOT NULL,
+  `text` varchar(255) DEFAULT NULL,
+  `listId` varchar(255) DEFAULT NULL,
+  `imageId` varchar(255) DEFAULT NULL,
+  `electionType` int(11) DEFAULT 1,
+  `expiration` datetime NOT NULL,
+  `groupId` varchar(255) DEFAULT NULL,
+  `categoryId` varchar(255) DEFAULT NULL,
+  `statusId` int(11) DEFAULT 0,
+  `creator` varchar(255) DEFAULT NULL,
+  `updatedAt` datetime NOT NULL DEFAULT '2024-08-10 18:50:24',
+  `createdAt` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `elections_creator` (`creator`),
+  CONSTRAINT `elections_ibfk_1` FOREIGN KEY (`creator`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `friends`
+--
+
+DROP TABLE IF EXISTS `friends`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `friends` (
+  `id` varchar(255) NOT NULL,
+  `statusId` int(11) DEFAULT 0,
+  `userId` varchar(255) NOT NULL,
+  `friendId` varchar(255) NOT NULL,
+  `token` varchar(255) DEFAULT NULL,
+  `tokenExpire` datetime DEFAULT NULL,
+  `creator` varchar(255) DEFAULT NULL,
+  `updatedAt` datetime NOT NULL DEFAULT '2024-08-10 18:50:24',
+  `createdAt` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `friends_creator` (`creator`),
+  KEY `statusId` (`statusId`),
+  KEY `userId` (`userId`),
+  CONSTRAINT `friends_ibfk_1` FOREIGN KEY (`statusId`) REFERENCES `statuses` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `friends_ibfk_2` FOREIGN KEY (`userId`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `groupmembers`
+--
+
+DROP TABLE IF EXISTS `groupmembers`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `groupmembers` (
+  `id` varchar(255) NOT NULL,
+  `groupId` varchar(255) NOT NULL,
+  `userId` varchar(255) NOT NULL,
+  `active` tinyint(1) DEFAULT 0,
+  `creator` varchar(255) DEFAULT NULL,
+  `updatedAt` datetime NOT NULL DEFAULT '2024-08-10 18:50:24',
+  `createdAt` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `groupmembers_groupId_userId_unique` (`groupId`,`userId`),
+  KEY `groupmembers_creator` (`creator`),
+  KEY `userId` (`userId`),
+  CONSTRAINT `groupmembers_ibfk_1` FOREIGN KEY (`groupId`) REFERENCES `groups` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `groupmembers_ibfk_2` FOREIGN KEY (`userId`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `groups`
+--
+
+DROP TABLE IF EXISTS `groups`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `groups` (
+  `id` varchar(255) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `description` varchar(255) NOT NULL,
+  `categoryId` varchar(255) DEFAULT NULL,
+  `listType` int(11) DEFAULT 1,
+  `active` tinyint(1) DEFAULT 0,
+  `creator` varchar(255) DEFAULT NULL,
+  `updatedAt` datetime NOT NULL DEFAULT '2024-08-10 18:50:24',
+  `createdAt` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `groups_creator` (`creator`),
+  CONSTRAINT `groups_ibfk_1` FOREIGN KEY (`creator`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `images`
+--
+
+DROP TABLE IF EXISTS `images`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `images` (
+  `id` varchar(255) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `description` varchar(255) NOT NULL,
+  `filename` varchar(255) DEFAULT NULL,
+  `contentType` varchar(255) DEFAULT NULL,
+  `statusId` int(11) DEFAULT NULL,
+  `categoryId` varchar(255) DEFAULT NULL,
+  `creator` varchar(255) DEFAULT NULL,
+  `updatedAt` datetime NOT NULL DEFAULT '2024-08-10 18:50:24',
+  `createdAt` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `images_creator` (`creator`),
+  CONSTRAINT `images_ibfk_1` FOREIGN KEY (`creator`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `items`
+--
+
+DROP TABLE IF EXISTS `items`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `items` (
+  `id` varchar(255) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `description` varchar(255) NOT NULL,
+  `imageId` varchar(255) DEFAULT NULL,
+  `url` varchar(255) DEFAULT NULL,
+  `location` varchar(255) DEFAULT NULL,
+  `categoryId` varchar(255) DEFAULT NULL,
+  `creator` varchar(255) DEFAULT NULL,
+  `updatedAt` datetime NOT NULL DEFAULT '2024-08-10 18:50:24',
+  `createdAt` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `items_creator` (`creator`),
+  KEY `imageId` (`imageId`),
+  CONSTRAINT `items_ibfk_1` FOREIGN KEY (`imageId`) REFERENCES `images` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `items_ibfk_2` FOREIGN KEY (`creator`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `listitems`
+--
+
+DROP TABLE IF EXISTS `listitems`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `listitems` (
+  `id` varchar(255) NOT NULL,
+  `listId` varchar(255) NOT NULL,
+  `itemId` varchar(255) NOT NULL,
+  `creator` varchar(255) DEFAULT NULL,
+  `updatedAt` datetime NOT NULL DEFAULT '2024-08-10 18:50:24',
+  `createdAt` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `listitems_listId_itemId_unique` (`listId`,`itemId`),
+  KEY `listitems_creator` (`creator`),
+  KEY `itemId` (`itemId`),
+  CONSTRAINT `listitems_ibfk_1` FOREIGN KEY (`listId`) REFERENCES `lists` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `listitems_ibfk_2` FOREIGN KEY (`itemId`) REFERENCES `items` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `lists`
+--
+
+DROP TABLE IF EXISTS `lists`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `lists` (
+  `id` varchar(255) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `description` varchar(255) NOT NULL,
+  `categoryId` varchar(255) DEFAULT NULL,
+  `creator` varchar(255) DEFAULT NULL,
+  `updatedAt` datetime NOT NULL DEFAULT '2024-08-10 18:50:24',
+  `createdAt` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `lists_creator` (`creator`),
+  CONSTRAINT `lists_ibfk_1` FOREIGN KEY (`creator`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `notifications`
+--
+
+DROP TABLE IF EXISTS `notifications`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `notifications` (
+  `id` varchar(255) NOT NULL,
+  `userId` varchar(255) NOT NULL,
+  `type` int(11) NOT NULL,
+  `objectId` varchar(255) DEFAULT NULL,
+  `text` varchar(255) DEFAULT NULL,
+  `senderId` varchar(255) DEFAULT NULL,
+  `statusId` int(11) DEFAULT NULL,
+  `creator` varchar(255) DEFAULT NULL,
+  `updatedAt` datetime NOT NULL DEFAULT '2024-08-10 18:50:24',
+  `createdAt` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `notifications_creator` (`creator`),
+  KEY `notifications_user_id` (`userId`),
+  KEY `senderId` (`senderId`),
+  KEY `statusId` (`statusId`),
+  CONSTRAINT `notifications_ibfk_1` FOREIGN KEY (`userId`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `notifications_ibfk_2` FOREIGN KEY (`senderId`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `notifications_ibfk_3` FOREIGN KEY (`statusId`) REFERENCES `statuses` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `preferences`
+--
+
+DROP TABLE IF EXISTS `preferences`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `preferences` (
+  `id` varchar(255) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `value` varchar(255) DEFAULT NULL,
+  `creator` varchar(255) DEFAULT NULL,
+  `updatedAt` datetime NOT NULL DEFAULT '2024-08-10 18:50:24',
+  `createdAt` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `preferences_creator` (`creator`),
+  CONSTRAINT `preferences_ibfk_1` FOREIGN KEY (`creator`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `rolecapabilities`
+--
+
+DROP TABLE IF EXISTS `rolecapabilities`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `rolecapabilities` (
+  `id` varchar(255) NOT NULL,
+  `roleId` varchar(255) NOT NULL,
+  `capabilityId` varchar(255) NOT NULL,
+  `creator` varchar(255) DEFAULT NULL,
+  `updatedAt` datetime NOT NULL DEFAULT '2024-08-10 18:50:24',
+  `createdAt` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `rolecapabilities_roleId_capabilityId_unique` (`roleId`,`capabilityId`),
+  KEY `rolecapabilities_creator` (`creator`),
+  KEY `capabilityId` (`capabilityId`),
+  CONSTRAINT `rolecapabilities_ibfk_1` FOREIGN KEY (`roleId`) REFERENCES `roles` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `rolecapabilities_ibfk_2` FOREIGN KEY (`capabilityId`) REFERENCES `capabilities` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `roles`
+--
+
+DROP TABLE IF EXISTS `roles`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `roles` (
+  `id` varchar(255) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `description` varchar(255) NOT NULL,
+  `protected` tinyint(1) DEFAULT NULL,
+  `creator` varchar(255) DEFAULT NULL,
+  `updatedAt` datetime NOT NULL DEFAULT '2024-08-10 18:50:24',
+  `createdAt` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `roles_creator` (`creator`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `statuses`
+--
+
+DROP TABLE IF EXISTS `statuses`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `statuses` (
+  `id` int(11) NOT NULL DEFAULT 0,
+  `object` varchar(255) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `creator` varchar(255) DEFAULT NULL,
+  `updatedAt` datetime NOT NULL DEFAULT '2024-08-10 18:50:24',
+  `createdAt` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `statuses_creator` (`creator`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `userroles`
+--
+
+DROP TABLE IF EXISTS `userroles`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `userroles` (
+  `id` varchar(255) NOT NULL,
+  `roleId` varchar(255) NOT NULL,
+  `userId` varchar(255) NOT NULL,
+  `createdAt` datetime NOT NULL,
+  `updatedAt` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `userroles_userId_roleId_unique` (`roleId`,`userId`),
+  KEY `userId` (`userId`),
+  CONSTRAINT `userroles_ibfk_1` FOREIGN KEY (`roleId`) REFERENCES `roles` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `userroles_ibfk_2` FOREIGN KEY (`userId`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `users`
+--
+
+DROP TABLE IF EXISTS `users`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `users` (
+  `id` varchar(255) NOT NULL,
+  `firstName` varchar(255) NOT NULL,
+  `lastName` varchar(255) NOT NULL,
+  `alias` varchar(255) NOT NULL,
+  `imageId` varchar(255) DEFAULT NULL,
+  `email` varchar(255) NOT NULL,
+  `creator` varchar(255) DEFAULT NULL,
+  `lastLogin` datetime DEFAULT NULL,
+  `active` tinyint(1) DEFAULT 0,
+  `admin` tinyint(1) DEFAULT 0,
+  `verified` tinyint(1) DEFAULT 0,
+  `enable2fa` tinyint(1) DEFAULT 0,
+  `secret2fa` varchar(255) DEFAULT NULL,
+  `token2fa` varchar(255) DEFAULT NULL,
+  `auth` varchar(255) DEFAULT NULL,
+  `resetToken` varchar(255) DEFAULT NULL,
+  `resetTokenExpire` datetime DEFAULT NULL,
+  `refreshToken` varchar(255) DEFAULT NULL,
+  `refreshTokenExpire` datetime DEFAULT NULL,
+  `registerToken` varchar(255) DEFAULT NULL,
+  `registerTokenExpire` varchar(255) DEFAULT NULL,
+  `changeToEmail` varchar(255) DEFAULT NULL,
+  `updatedAt` datetime NOT NULL DEFAULT '2024-08-10 18:50:23',
+  `createdAt` datetime NOT NULL,
+  `statusId` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `users_email` (`email`),
+  KEY `users_creator` (`creator`),
+  KEY `statusId` (`statusId`),
+  CONSTRAINT `users_ibfk_1` FOREIGN KEY (`statusId`) REFERENCES `statuses` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `votes`
+--
+
+DROP TABLE IF EXISTS `votes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `votes` (
+  `id` varchar(255) NOT NULL,
+  `electionId` varchar(255) NOT NULL,
+  `userId` varchar(255) NOT NULL,
+  `itemId` varchar(255) NOT NULL,
+  `statusId` int(11) DEFAULT 0,
+  `creator` varchar(255) DEFAULT NULL,
+  `createdAt` datetime DEFAULT NULL,
+  `updatedAt` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `votes_creator` (`creator`),
+  KEY `votes_user_id` (`userId`),
+  KEY `votes_election_id` (`electionId`),
+  KEY `itemId` (`itemId`),
+  CONSTRAINT `votes_ibfk_1` FOREIGN KEY (`userId`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `votes_ibfk_2` FOREIGN KEY (`itemId`) REFERENCES `items` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `votes_ibfk_3` FOREIGN KEY (`creator`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2024-08-10 21:47:44
