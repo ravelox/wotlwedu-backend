@@ -67,7 +67,7 @@ module.exports.getAllCategory = (req, res, next) => {
   }
 
   options.where = whereCondition;
-  options.attributes = attributes.Category;
+  options.attributes = Attributes.Category;
   options.distinct = true;
 
   Category.findAndCountAll(options).then(({ count, rows }) => {
