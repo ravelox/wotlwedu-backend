@@ -50,7 +50,7 @@ function generateIncludes(details) {
         Sequelize.fn(
           "CONCAT",
           Config.imageURL,
-          Sequelize.col("list.items.filename")
+          Sequelize.col("list.items.image.filename")
         ),
         "url",
       ]);
@@ -76,7 +76,7 @@ function generateIncludes(details) {
     if (splitDetail.includes("image")) {
       const modImageAttributes = Attributes.Image.slice();
       modImageAttributes.push([
-        Sequelize.fn("CONCAT", Config.imageURL, Sequelize.col("filename")),
+        Sequelize.fn("CONCAT", Config.imageURL, Sequelize.col("image.filename")),
         "url",
       ]);
       includes.push({
