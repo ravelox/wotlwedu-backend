@@ -19,7 +19,7 @@ const Vote = require("../model/vote");
 const Image = require("../model/image");
 const Status = require("../model/status");
 
-const Attributes = require("../model/attributes")
+const Attributes = require("../model/attributes");
 
 function generateIncludes(details) {
   const includes = [];
@@ -45,12 +45,15 @@ function generateIncludes(details) {
       });
     }
     if (splitDetail.includes("list")) {
-      const modifiedImageAttributes = Attributes.Image.slice();
-      modifiedImageAttributes.push(
-      [
-        Sequelize.fn("CONCAT", Config.imageURL, Sequelize.col("list.items.filename")),
+      const modImageAttributes = Attributes.Image.slice();
+      modImageAttributes.push([
+        Sequelize.fn(
+          "CONCAT",
+          Config.imageURL,
+          Sequelize.col("list.items.filename")
+        ),
         "url",
-      ],);
+      ]);
       includes.push({
         model: List,
         attributes: Attributes.List,
@@ -59,7 +62,7 @@ function generateIncludes(details) {
             model: Item,
             attributes: Attributes.Item,
             through: { attributes: [] },
-            include: [{ model: Image, attributes: Attributes.Image }],
+            include: [{ model: Image, attributes: modImageAttributes }],
           },
         ],
       });
@@ -71,6 +74,11 @@ function generateIncludes(details) {
       });
     }
     if (splitDetail.includes("image")) {
+      const modImageAttributes = Attributes.Image.slice();
+      modImageAttributes.push([
+        Sequelize.fn("CONCAT", Config.imageURL, Sequelize.col("filename")),
+        "url",
+      ]);
       includes.push({
         model: Image,
         attributes: Attributes.Image,
@@ -331,7 +339,9 @@ module.exports.putStartElection = (req, res, next) => {
         return StatusResponse(res, 404, "No items configured");
 
       // For each voter and each time, add an uncast vote
-      const electionStartNotification = await getStatusIdByName("Election Start")
+      const electionStartNotification = await getStatusIdByName(
+        "Election Start"
+      );
       const votesToAdd = [];
       for (voter of foundElection.group.users) {
         await Notify.sendNotification(
