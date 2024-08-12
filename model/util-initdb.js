@@ -43,6 +43,7 @@ const rootUser = {
   personType: 1,
   auth: "$2y$12$T54UV8HFNyErzu5KrZG/U.nZYmhGFQx0knV8FsYE3IFd/xzAFEq86",
   active: true,
+  verified: true,
   admin: true,
 };
 
