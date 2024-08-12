@@ -81,7 +81,7 @@ function generateIncludes(details) {
       ]);
       includes.push({
         model: Image,
-        attributes: Attributes.Image,
+        attributes: modImageAttributes,
       });
     }
   }
