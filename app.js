@@ -89,9 +89,7 @@ app.post(
 
 //Add CORS headers
 app.use(
-  cors({
-    origin: Config.corsOrigin,
-  })
+  cors({ origin: true, })
 );
 
 // Set static directory
