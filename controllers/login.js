@@ -161,7 +161,7 @@ exports.postRequestPasswordReset = (req, res, next) => {
           return StatusResponse(res, 500, "No reset token generated");
 
         Mailer.sendPasswordResetMessage(
-          foundUser.emailAddress,
+          foundUser.email,
           foundUser.id,
           foundUser.resetToken
         )
