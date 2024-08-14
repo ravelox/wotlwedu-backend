@@ -369,7 +369,12 @@ exports.getUserFriends = async (req, res, next) => {
 
   const includes = [];
 
-  const imageIncludes = { model: Image, attributes: Attributes.Image };
+  const modImageAttributes = Attributes.Image.slice();
+  modImageAttributes.push([
+    Sequelize.fn("CONCAT", Config.imageURL, Sequelize.col("filename")),
+    "url",
+  ]);
+  const imageIncludes = { model: Image, attributes: modImageAttributes };
   const userIncludes = {
     model: User,
     attributes: Attributes.Friend,
