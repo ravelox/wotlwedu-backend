@@ -40,7 +40,12 @@ function generateIncludes(details) {
       });
     }
     if (splitDetail.includes("image")) {
-      includes.push({ model: Image, attributes: Attributes.Image });
+      const modImageAttributes = Attributes.Image.slice();
+      modImageAttributes.push([
+        Sequelize.fn("CONCAT", Config.imageURL, Sequelize.col("filename")),
+        "url",
+      ]);
+      includes.push({ model: Image, attributes: modImageAttributes });
     }
   }
   return includes;
