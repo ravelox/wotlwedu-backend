@@ -23,7 +23,12 @@ module.exports.mailerSESSecretKey = `${process.env.AWS_SECRET_ACCESS_KEY}`;
 module.exports.mailerFromAddress = "admin@wotlwedu.net";
 module.exports.mailerDisplayName = "Wotlwedu Admin";
 
-module.exports.imageURL = "https://localhost:9876/images/";
+baseApiUrl = "https://www.wotlwedu.com:9876/";
+baseFrontendUrl = "https://www.wotlwedu.com/";
+
+module.exports.baseFrontendUrl = baseFrontendUrl;
+module.exports.baseApiUrl = baseApiUrl;
+module.exports.imageURL = baseApiUrl + "images/";
 module.exports.imageDir = "public/images/";
 
 module.exports.ssl = true;
