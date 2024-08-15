@@ -10,7 +10,7 @@ const { copyObject, getStatusIdByName } = require("../util/helpers");
 const Notify = require("../util/notification");
 
 const List = require("../model/list");
-const ListItem = require('../model/listitem')
+const ListItem = require("../model/listitem");
 const Item = require("../model/item");
 const Image = require("../model/image");
 const Category = require("../model/category");
@@ -18,7 +18,7 @@ const Election = require("../model/election");
 const Friend = require("../model/friend");
 const Notification = require("../model/notification");
 
-const Attributes = require("../model/attributes")
+const Attributes = require("../model/attributes");
 
 function generateIncludes(details) {
   let includes = [];
@@ -32,7 +32,12 @@ function generateIncludes(details) {
       const imageIncludes = [];
 
       if (splitDetails.includes("image")) {
-        imageIncludes.push({ model: Image, attributes: Attributes.Image });
+        const modImageAttributes = Attributes.Image.slice();
+        modImageAttributes.push([
+          Sequelize.fn("CONCAT", Config.imageURL, Sequelize.col("filename")),
+          "url",
+        ]);
+        imageIncludes.push({ model: Image, attributes: modImageAttributes });
       }
 
       includes.push({
@@ -68,7 +73,7 @@ module.exports.getSingleList = async (req, res, next) => {
     }
   }
 
-  if (! bypassSecurityCheck ) {
+  if (!bypassSecurityCheck) {
     if (!Security.getVerdict(req.verdicts, "view").isAdmin) {
       whereCondition.creator = req.authUserId;
     }
