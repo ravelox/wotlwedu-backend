@@ -3,7 +3,7 @@ const Util = require("util");
 const Security = require("../util/security");
 const UUID = require("../util/mini-uuid");
 const StatusResponse = require("../util/statusresponse");
-const { copyObject } = require("../util/helpers");
+const { copyObject, getStatusIdByName } = require("../util/helpers");
 const Sequelize = require("sequelize");
 
 const Notification = require("../model/notification");
@@ -72,6 +72,34 @@ module.exports.getAllNotification = (req, res, next) => {
     }
 
     return StatusResponse(res, 200, "OK", {
+      notifications: foundNotifications,
+    });
+  });
+};
+
+module.exports.getUnreadNotificationCount = async (req,res,next) => {
+  const options = {};
+  const whereCondition = {};
+
+  const unreadStatus = await getStatusIdByName("Unread");
+
+  whereCondition.userId = req.authUserId;
+  whereCondition.statusId = unreadStatus;
+  
+  options.where = whereCondition;
+  options.attributes = Attributes.Notification;
+  options.distinct = true;
+
+  Notification.findAll(options).then((foundNotifications) => {
+    if (!foundNotifications) {
+      return StatusResponse(res, 200, "OK", {
+        unread: 0,
+        notifications: [],
+      });
+    }
+
+    return StatusResponse(res, 200, "OK", {
+      unread: foundNotifications.length,
       notifications: foundNotifications,
     });
   });

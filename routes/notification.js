@@ -19,6 +19,11 @@ router.put(
 );
 
 router.get(
+  "/unreadcount",
+  Security.checkCapability("notification", ["view"]),
+  notificationController.getUnreadNotificationCount
+);
+router.get(
   "/:notificationId",
   Security.checkCapability("notification", ["view"]),
   notificationController.getSingleNotification
