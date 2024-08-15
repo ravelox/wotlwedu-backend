@@ -94,13 +94,11 @@ module.exports.getUnreadNotificationCount = async (req,res,next) => {
     if (!foundNotifications) {
       return StatusResponse(res, 200, "OK", {
         unread: 0,
-        notifications: [],
       });
     }
 
     return StatusResponse(res, 200, "OK", {
       unread: foundNotifications.length,
-      notifications: foundNotifications,
     });
   });
 };
