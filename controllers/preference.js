@@ -4,18 +4,22 @@ const UUID = require("../util/mini-uuid");
 const StatusResponse = require("../util/statusresponse");
 const Config = require("../config/wotlwedu");
 
-const {Op} = require('sequelize');
+const { Op } = require("sequelize");
 
 const Preference = require("../model/preference");
 
-const Attributes = require("../model/attributes")
+const Attributes = require("../model/attributes");
 
 module.exports.getPreference = (req, res, next) => {
   const preferenceToFind = req.params.preferenceName;
   if (!preferenceToFind)
     return StatusResponse(res, 421, "No preference name provided");
 
-  const whereCondition = { name: preferenceToFind, creator: req.authUserId };
+  // The preference name might actually be a preference ID too
+  const whereCondition = {
+    [Op.or]: [{ name: preferenceToFind }, { id: preferenceToFind }],
+    creator: req.authUserId,
+  };
 
   Preference.findOne({
     where: whereCondition,
@@ -47,9 +51,7 @@ module.exports.getAllPreferences = (req, res, next) => {
 
   if (userFilter) {
     whereCondition = {
-      [Op.or]: [
-        { name: { [Op.like]: "%" + userFilter + "%" } }
-      ],
+      [Op.or]: [{ name: { [Op.like]: "%" + userFilter + "%" } }],
     };
   }
 
@@ -74,7 +76,7 @@ module.exports.getAllPreferences = (req, res, next) => {
         total: count,
         page: page,
         itemsPerPage: itemsPerPage,
-        preferences: rows
+        preferences: rows,
       });
     })
     .catch((err) => next(err));
@@ -123,7 +125,9 @@ exports.putAddPreference = (req, res, next) => {
   preferenceToAdd.id = UUID("pref");
 
   // Check to see if the preference name already exists
-  Preference.findOne({ where: { name: preferenceToAdd.name, creator: preferenceToAdd.creator } })
+  Preference.findOne({
+    where: { name: preferenceToAdd.name, creator: preferenceToAdd.creator },
+  })
     .then((foundPref) => {
       if (foundPref) return StatusResponse(res, 421, "Already exists");
 
