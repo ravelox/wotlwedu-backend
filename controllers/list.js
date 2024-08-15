@@ -1,5 +1,6 @@
 const Util = require("util");
 const { Op } = require("sequelize");
+const Sequelize = require("sequelize");
 
 const Helper = require("./helper");
 const Config = require("../config/wotlwedu");
