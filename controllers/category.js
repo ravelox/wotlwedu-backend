@@ -33,7 +33,7 @@ module.exports.getSingleCategory = (req, res, next) => {
     .then((foundCategory) => {
       if (!foundCategory) return StatusResponse(res, 404, "Category not found");
 
-      return StatusResponse(res, 200, { category: foundCategory });
+      return StatusResponse(res, 200, "OK", { category: foundCategory });
     })
     .catch((err) => next(err));
 };
