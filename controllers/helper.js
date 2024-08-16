@@ -95,7 +95,7 @@ module.exports.copyImage = (origImageId, newOwnerId) => {
       delete foundImage.updatedAt;
       const newImage = new Image(foundImage);
       newImage.id = newImageId;
-      newImage.filename = newFileName;
+      newImage.filename = Path.basename(newFileName);
 
       // Important to set the new owner
       newImage.creator = newOwnerId;
