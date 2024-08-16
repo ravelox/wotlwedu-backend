@@ -36,7 +36,7 @@ module.exports.getCapability = (req, res, next) => {
   ];
 
   options.where = whereCondition;
-  options.includes = includes;
+  options.include = includes;
   options.attributes = Attributes.Capability;
 
   Capability.findOne(options)

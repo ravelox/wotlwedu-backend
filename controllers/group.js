@@ -49,7 +49,7 @@ module.exports.getSingleGroup = (req, res, next) => {
   const options = {};
 
   options.where = whereCondition;
-  options.includes = includes;
+  options.include = includes;
   options.attributes = Attributes.Group;
 
   Group.findOne(options)
