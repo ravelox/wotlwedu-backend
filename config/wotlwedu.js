@@ -1,6 +1,6 @@
 // Required for string to boolean conversations
 // Do not remove
-const Helpers = require("../util/helpers");
+const toBool = require("../util/tobool");
 
 module.exports.app_port = process.env.WOTLWEDU_APP_PORT || 9876;
 module.exports.app_listen = process.env.WOTLWEDU_APP_LISTEN || "0.0.0.0";
