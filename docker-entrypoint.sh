@@ -47,6 +47,14 @@ else
 
     sed -e "s/##dbname##/${WOTLWEDU_DB_NAME}/" -e "s/##dbuser##/${WOTLWEDU_DB_USER}/" -e "s/##dbpassword##/${WOTLWEDU_DB_PASSWORD}/" sql/reset_database.sql.template > reset_database.sql
     mariadb -h ${WOTLWEDU_DB_HOST} -u root < reset_database.sql
+
+    export OLDDIR=$(pwd)
+    cd model
+    node util-initdb
+    node util-setupuser
+    node util-addfriends
+    cd ${OLDDIR}
+    
 fi
 echo
 echo
