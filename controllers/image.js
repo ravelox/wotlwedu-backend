@@ -242,7 +242,8 @@ module.exports.postImageFile = (req, res, next) => {
   if (!req.file) return StatusResponse(res, 421, "No image provided");
 
   if (req.file.path) {
-    // Update the URL on the image object
+
+    // Update the filename details on the image object
     const whereCondition = { id: imageToFind };
 
     if (!Security.getVerdict(req.verdicts, "add").isAdmin) {
@@ -260,7 +261,7 @@ module.exports.postImageFile = (req, res, next) => {
             if (!updatedImage)
               return StatusResponse(res, 500, "Cannot save image to storage");
             return StatusResponse(res, 200, "OK", {
-              filename: req.file.filename,
+              filename: foundImage.filename,
             });
           })
           .catch((err) => next(err));
