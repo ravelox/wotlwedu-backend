@@ -1,0 +1,10 @@
+DROP DATABASE IF EXISTS ##dbname##;
+DROP USER IF EXISTS '##dbuser##'@'%';
+
+CREATE DATABASE ##dbname##;
+
+USE ##dbname##;
+
+CREATE USER '##dbname##'@'%' IDENTIFIED BY '##dbpassword##';
+GRANT ALL PRIVILEGES ON ##dbname##.* TO '##dbuser##'@'%';
+FLUSH PRIVILEGES;
