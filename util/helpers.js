@@ -15,7 +15,12 @@ module.exports.getStatusIdByName = function (statusName) {
 
 module.exports.logComment = function (comment) {
   return function (req, res, next) {
-    console.log(comment + " :: " + req.method + " :: " + req.originalUrl);
+    let remoteAddress = null;
+    if( req && req.socket && req.socket.remoteAddress )
+    {
+      remoteAddress = req.socket.remoteAddress;
+    }
+    console.log( ( remoteAddress ? remoteAddress + " :: " : "" ) + comment + " :: " + req.method + " :: " + req.originalUrl);
     next();
   };
 };
