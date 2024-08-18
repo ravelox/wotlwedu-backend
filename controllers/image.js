@@ -260,8 +260,8 @@ module.exports.postImageFile = (req, res, next) => {
           .then((updatedImage) => {
             if (!updatedImage)
               return StatusResponse(res, 500, "Cannot save image to storage");
-            return StatusResponse(res, 200, "OK", {
-              filename: foundImage.filename,
+                        return StatusResponse(res, 200, "OK", {
+              filename: updatedImage.filename,
             });
           })
           .catch((err) => next(err));
