@@ -10,9 +10,9 @@ module.exports.db_user = process.env.WOTLWEDU_DB_USER || "wotlwedu";
 module.exports.db_database = process.env.WOTLWEDU_DB_NAME || "wotlwedu";
 module.exports.db_password = process.env.WOTLWEDU_DB_PASSWORD;
 
-module.exports.db_logging = Helpers.toBool( process.env.WOTLWEDU_DB_LOGGING || false );
+module.exports.db_logging = toBool( process.env.WOTLWEDU_DB_LOGGING || false );
 
-module.exports.db_force_sync = Helpers.toBool( process.env.WOTLWEDU_DB_SYNC || true );
+module.exports.db_force_sync = toBool( process.env.WOTLWEDU_DB_SYNC || true );
 
 module.exports.jwtSecret = process.env.WOTLWEDU_JWT_SECRET;
 module.exports.jwtExpiry = "1h";
@@ -35,7 +35,7 @@ module.exports.imageURL =
   process.env.WOTLWEDU_IMAGE_URL || baseApiUrl + "images/";
 module.exports.imageDir = process.env.WOTLWEDU_IMAGE_DIR || "public/images/";
 
-module.exports.ssl = Helpers.toBool( process.env.WOTLWEDU_SSL || true );
+module.exports.ssl = toBool( process.env.WOTLWEDU_SSL || true );
 module.exports.sslKeyFile = process.env.WOTLWEDU_SSL_KEY || "server.key";
 module.exports.sslCert = process.env.WOTLWEDU_SSL_CERT || "server.cert";
 
