@@ -20,7 +20,7 @@ module.exports.logComment = function (comment) {
     {
       remoteAddress = req.socket.remoteAddress;
     }
-    console.log( new Date().toISOString + " :: " + ( remoteAddress ? remoteAddress + " :: " : "" ) + comment + " :: " + req.method + " :: " + req.originalUrl);
+    console.log( new Date().toISOString() + " :: " + ( remoteAddress ? remoteAddress + " :: " : "" ) + comment + " :: " + req.method + " :: " + req.originalUrl);
     next();
   };
 };
