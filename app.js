@@ -49,7 +49,9 @@ let privateKey;
 let certificate;
 
 if (Config.ssl === true) {
+  console.log("SSL Enabled")
   try {
+    console.log("Looking for key and certificates")
     privateKey = FS.readFileSync(Config.sslKeyFile);
     certificate = FS.readFileSync(Config.sslCert);
   } catch (err) {
