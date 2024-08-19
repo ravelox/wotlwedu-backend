@@ -36,7 +36,7 @@ function generateIncludes(details) {
       if (splitDetail.includes("image")) {
         const modImageAttributes = Attributes.Image.slice();
         modImageAttributes.push([
-          Sequelize.fn("CONCAT", Config.imageURL, Sequelize.col("filename")),
+          Sequelize.fn("CONCAT", Config.imageURL, Sequelize.col("election.image.filename")),
           "url",
         ]);
         electionIncludes.include = {
