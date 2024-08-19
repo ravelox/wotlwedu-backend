@@ -17,7 +17,7 @@ const Item = require("../model/item");
 const Image = require("../model/image");
 const Status = require("../model/status");
 
-const Attributes = require("../model/attributes")
+const Attributes = require("../model/attributes");
 const voteAttributes = ["id"];
 
 function generateIncludes(details) {
@@ -34,9 +34,14 @@ function generateIncludes(details) {
         attributes: Attributes.Election,
       };
       if (splitDetail.includes("image")) {
+        const modImageAttributes = Attributes.Image.slice();
+        modImageAttributes.push([
+          Sequelize.fn("CONCAT", Config.imageURL, Sequelize.col("filename")),
+          "url",
+        ]);
         electionIncludes.include = {
           model: Image,
-          attributes: Attributes.Image,
+          attributes: modImageAttributes,
         };
       }
       includes.push(electionIncludes);
@@ -107,7 +112,7 @@ module.exports.getAllVote = (req, res, next) => {
   if (userFilter) {
     whereCondition = {
       [Op.or]: [
-        { "$election.name$" : { [Op.like]: "%" + userFilter + "%" } },
+        { "$election.name$": { [Op.like]: "%" + userFilter + "%" } },
         { "$item.name$": { [Op.like]: "%" + userFilter + "%" } },
       ],
     };
@@ -236,16 +241,15 @@ module.exports.getCastVote = (req, res, next) => {
     const lowerCase = decision.toLowerCase();
     const statusToFind = lowerCase.charAt(0).toUpperCase() + lowerCase.slice(1);
 
-    const statusId = await getStatusIdByName( statusToFind);
+    const statusId = await getStatusIdByName(statusToFind);
 
-    if( ! statusId < 0 ) {
-      return StatusResponse(res, 500, "No decision status found")
+    if (!statusId < 0) {
+      return StatusResponse(res, 500, "No decision status found");
     }
 
     foundVote.statusId = statusId;
     foundVote.save().then((savedVote) => {
       if (!savedVote) return StatusResponse(res, 500, "Cannot cast vote");
-
 
       return StatusResponse(res, 200, "OK", { id: foundVote.id });
     });
@@ -279,8 +283,10 @@ module.exports.getNextElectionVote = (req, res, next) => {
 
     // Filter out the possible votes to show one vote from each election
     let tmpVoteId = "";
-    const filteredRows = rows.filter( (r)=>{
-      const returnValue = r.election.id.toString() + r.user.id.toString() !== tmpVoteId.toString();
+    const filteredRows = rows.filter((r) => {
+      const returnValue =
+        r.election.id.toString() + r.user.id.toString() !==
+        tmpVoteId.toString();
       tmpVoteId = r.election.id.toString() + r.user.id.toString();
       return returnValue;
     });
