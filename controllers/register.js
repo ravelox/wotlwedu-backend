@@ -1,11 +1,14 @@
 const Util = require("util");
 const { Op } = require("sequelize");
 
+const Config = require("../config/wotlwedu")
 const UUID = require("../util/mini-uuid");
 const StatusResponse = require("../util/statusresponse");
 const Mailer = require("../util/mailer");
 
 const User = require("../model/user");
+const Role = require("../model/role")
+const UserRole = require("../model/userrole")
 
 exports.postRegisterUser = (req, res, next) => {
   if (
@@ -61,16 +64,38 @@ exports.postRegisterUser = (req, res, next) => {
           Mailer.sendEmailConfirmMessage(
             userToRegister.email,
             userToRegister.registerToken
-          ).catch((err) => {
-            return StatusResponse(
-              res,
-              421,
-              "Failed to send confirmation email: " + err
-            );
-          });
-          return StatusResponse(res, 200, "OK", {
-            registerToken: userToRegister.registerToken,
-          });
+          )
+            .catch((err) => {
+              return StatusResponse(
+                res,
+                421,
+                "Failed to send confirmation email: " + err
+              );
+            })
+            .then(() => {
+              const defaultRoleName = Config.defaultRoleName || "Default Role";
+              // Must add the user to a default role
+              Role.findOne({ where: { name: defaultRoleName } })
+                .then((foundRole) => {
+                  if (!foundRole)
+                    return StatusResponse(
+                      res,
+                      421,
+                      "No default role is available"
+                    );
+
+                  userToRegister
+                    .addRole(foundRole, { through: { id: UUID("userrole") } })
+                    .then(() => {
+                      return StatusResponse(res, 200, "OK", {
+                        registerToken: userToRegister.registerToken,
+                      });
+                    })
+                    .catch((err) => next(err));
+                })
+                .catch((err) => next(err));
+            })
+            .catch((err) => next(err));
         })
         .catch((err) => {
           next(err);
