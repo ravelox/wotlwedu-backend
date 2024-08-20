@@ -49,14 +49,24 @@ function generateIncludes(details) {
     if (splitDetail.includes("item")) {
       const itemIncludes = { model: Item, attributes: Attributes.Item };
       if (splitDetail.includes("image")) {
-        itemIncludes.include = { model: Image, attributes: Attributes.Image };
+        const modImageAttributes = Attributes.Image.slice();
+        modImageAttributes.push([
+          Sequelize.fn("CONCAT", Config.imageURL, Sequelize.col("item.image.filename")),
+          "url",
+        ]);
+        itemIncludes.include = { model: Image, attributes: modImageAttributes };
       }
       includes.push(itemIncludes);
     }
     if (splitDetail.includes("user")) {
       const userIncludes = { model: User, attributes: Attributes.User };
       if (splitDetail.includes("image")) {
-        userIncludes.include = { model: Image, attributes: Attributes.Image };
+        const modImageAttributes = Attributes.Image.slice();
+        modImageAttributes.push([
+          Sequelize.fn("CONCAT", Config.imageURL, Sequelize.col("user.image.filename")),
+          "url",
+        ]);
+        userIncludes.include = { model: Image, attributes: modImageAttributes };
       }
       includes.push(userIncludes);
     }
