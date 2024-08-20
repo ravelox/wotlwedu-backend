@@ -1,6 +1,6 @@
 FROM node:slim
 
-WORKDIR /var/opt/wotlwedu-app
+WORKDIR /var/opt/wotlwedu-backend
 
 RUN apt-get update && apt-get install -y mariadb-client
 
@@ -9,4 +9,4 @@ RUN npm install
 
 EXPOSE 9876
 
-CMD ["/var/opt/wotlwedu-app/docker-entrypoint.sh"]
+CMD ["/var/opt/wotlwedu-backend/docker-entrypoint.sh"]
