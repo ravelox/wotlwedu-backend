@@ -27,7 +27,7 @@ module.exports.mailerDisplayName = "Wotlwedu Admin";
 
 baseApiUrl = process.env.WOTLWEDU_API_URL || "https://api.wotlwedu.com:9876/";
 baseFrontendUrl =
-  process.env.WOTLWEDU_FRONTEND_URL || "https://www.wotlwedu.com/";
+  process.env.WOTLWEDU_FRONTEND_URL || "https://www.wotlwedu.com";
 
 module.exports.baseFrontendUrl = baseFrontendUrl;
 module.exports.baseApiUrl = baseApiUrl;

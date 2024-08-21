@@ -164,7 +164,7 @@ exports.postRequestPasswordReset = (req, res, next) => {
           foundUser.email,
           foundUser.id,
           foundUser.resetToken,
-          req.origin || Config.baseFrontendUrl
+          req.headers.origin || Config.baseFrontendUrl
         )
           .then((success) => {
             return StatusResponse(res, 200, "OK", {

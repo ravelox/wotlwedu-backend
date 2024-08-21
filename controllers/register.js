@@ -64,7 +64,7 @@ exports.postRegisterUser = (req, res, next) => {
           Mailer.sendEmailConfirmMessage(
             userToRegister.email,
             userToRegister.registerToken,
-            req.origin || Config.baseFrontendUrl
+            req.headers.origin || Config.baseFrontendUrl
           )
             .catch((err) => {
               return StatusResponse(
@@ -141,7 +141,7 @@ exports.getConfirmRegistration = (req, res, next) => {
 
           Mailer.sendEmailChangeCompleteMessage(
             foundUser.email,
-            req.origin || Config.baseFrontendUrl
+            req.headers.origin || Config.baseFrontendUrl
           )
             .then((success) => {
               return StatusResponse(res, 200, "OK", {
