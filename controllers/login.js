@@ -163,7 +163,8 @@ exports.postRequestPasswordReset = (req, res, next) => {
         Mailer.sendPasswordResetMessage(
           foundUser.email,
           foundUser.id,
-          foundUser.resetToken
+          foundUser.resetToken,
+          req.origin || Config.baseFrontendUrl
         )
           .then((success) => {
             return StatusResponse(res, 200, "OK", {

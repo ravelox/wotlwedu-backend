@@ -1,14 +1,14 @@
 const Util = require("util");
 const { Op } = require("sequelize");
 
-const Config = require("../config/wotlwedu")
+const Config = require("../config/wotlwedu");
 const UUID = require("../util/mini-uuid");
 const StatusResponse = require("../util/statusresponse");
 const Mailer = require("../util/mailer");
 
 const User = require("../model/user");
-const Role = require("../model/role")
-const UserRole = require("../model/userrole")
+const Role = require("../model/role");
+const UserRole = require("../model/userrole");
 
 exports.postRegisterUser = (req, res, next) => {
   if (
@@ -63,7 +63,8 @@ exports.postRegisterUser = (req, res, next) => {
           if (!result) StatusResponse(res, 500, "Unable to register user");
           Mailer.sendEmailConfirmMessage(
             userToRegister.email,
-            userToRegister.registerToken
+            userToRegister.registerToken,
+            req.origin || Config.baseFrontendUrl
           )
             .catch((err) => {
               return StatusResponse(
@@ -138,7 +139,10 @@ exports.getConfirmRegistration = (req, res, next) => {
           if (!activatedUser)
             return StatusResponse(res, 500, "Cannot activate user");
 
-          Mailer.sendEmailChangeCompleteMessage(foundUser.email)
+          Mailer.sendEmailChangeCompleteMessage(
+            foundUser.email,
+            req.origin || Config.baseFrontendUrl
+          )
             .then((success) => {
               return StatusResponse(res, 200, "OK", {
                 email: foundUser.email,

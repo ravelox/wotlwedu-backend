@@ -316,7 +316,8 @@ exports.postUpdateUser = (req, res, next) => {
             Mailer.sendEmailChangeMessage(
               foundUser.email,
               foundUser.changeToEmail,
-              foundUser.registerToken
+              foundUser.registerToken,
+              req.origin || Config.baseFrontendUrl
             )
               .then(() => {
                 return StatusResponse(res, 200, "User updated", {

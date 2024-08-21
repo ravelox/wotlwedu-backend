@@ -72,14 +72,14 @@ function sendEmail(messageDetails) {
 
 module.exports.sendEmail = sendEmail;
 
-module.exports.sendEmailConfirmMessage = (emailAddress, confirmationToken) => {
+module.exports.sendEmailConfirmMessage = (emailAddress, confirmationToken, frontendUrl ) => {
   return new Promise((resolve, reject) => {
     const textBody =
       `Hi there,
 
 Your email address has been registered with Wotlwedu. To confirm, please follow the link below:
 
-` + Config.baseFrontendUrl + `confirm/` +
+` + frontendUrl + `confirm/` +
       confirmationToken +
       `
 
@@ -104,7 +104,8 @@ Wotlwedu admin team`;
 module.exports.sendPasswordResetMessage = (
   emailAddress,
   userId,
-  resetToken
+  resetToken,
+  frontendUrl
 ) => {
   return new Promise((resolve, reject) => {
     const textBody =
@@ -112,7 +113,7 @@ module.exports.sendPasswordResetMessage = (
   
 We have received a request to reset your password. To proceed, please follow the link below and enter the verification code provided:
 
-` + Config.baseFrontendUrl + `pwdreset/` +
+` + frontendUrl + `pwdreset/` +
       userId +
       `/` +
       resetToken +
@@ -139,7 +140,8 @@ Wotlwedu admin team`;
 module.exports.sendEmailChangeMessage = (
   changeFromEmail,
   changeToEmail,
-  confirmationToken
+  confirmationToken,
+  frontendUrl
 ) => {
   return new Promise((resolve, reject) => {
     const textBody =
@@ -151,7 +153,7 @@ Your email address is being changed from ` +
       changeToEmail +
       `. To confirm, please follow the link below:
 
-` + Config.baseFrontendUrl + `confirm/` +
+` + frontendUrl + `confirm/` +
       confirmationToken +
       `
 
@@ -173,7 +175,7 @@ Wotlwedu admin team`;
   });
 };
 
-module.exports.sendEmailChangeCompleteMessage = (emailAddress) => {
+module.exports.sendEmailChangeCompleteMessage = (emailAddress, frontendUrl) => {
   return new Promise((resolve, reject) => {
     const textBody =
       `Hi there,
