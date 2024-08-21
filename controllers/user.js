@@ -261,13 +261,16 @@ exports.postUpdateUser = (req, res, next) => {
   let emailChange = false;
 
   if (!userToFind) return StatusResponse(res, 421, "No user ID provided");
-  
+
   User.findByPk(userToFind)
     .then((foundUser) => {
       if (!foundUser) return StatusResponse(res, 404, "User not found");
 
       // Ownership check if the curent user is NOT an admin
+      // unless the user is updating their own details
+
       if (
+        !(userToFind === req.authUserId) &&
         !Security.getVerdict(req.verdicts, "edit").isAdmin &&
         !Security.isOwner(req.authUserId, foundUser)
       ) {
@@ -299,7 +302,7 @@ exports.postUpdateUser = (req, res, next) => {
         }
       }
 
-      if( req.body.enable2fa || req.body.enable2fa === false ) {
+      if (req.body.enable2fa || req.body.enable2fa === false) {
         foundUser.enable2fa = req.body.enable2fa;
       }
 
