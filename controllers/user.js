@@ -299,6 +299,10 @@ exports.postUpdateUser = (req, res, next) => {
         }
       }
 
+      if( req.body.enable2fa || req.body.enable2fa === false ) {
+        foundUser.enable2fa = req.body.enable2fa;
+      }
+
       foundUser
         .save()
         .then((user) => {
