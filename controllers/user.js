@@ -261,9 +261,7 @@ exports.postUpdateUser = (req, res, next) => {
   let emailChange = false;
 
   if (!userToFind) return StatusResponse(res, 421, "No user ID provided");
-  if (userToFind === req.authUserId)
-    return StatusResponse(res, 421, "Cannot update your own details");
-
+  
   User.findByPk(userToFind)
     .then((foundUser) => {
       if (!foundUser) return StatusResponse(res, 404, "User not found");
