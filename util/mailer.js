@@ -79,7 +79,7 @@ module.exports.sendEmailConfirmMessage = (emailAddress, confirmationToken, front
 
 Your email address has been registered with Wotlwedu. To confirm, please follow the link below:
 
-` + frontendUrl + `confirm/` +
+` + frontendUrl + `/confirm/` +
       confirmationToken +
       `
 
@@ -113,7 +113,7 @@ module.exports.sendPasswordResetMessage = (
   
 We have received a request to reset your password. To proceed, please follow the link below and enter the verification code provided:
 
-` + frontendUrl + `pwdreset/` +
+` + frontendUrl + `/pwdreset/` +
       userId +
       `/` +
       resetToken +
@@ -153,7 +153,7 @@ Your email address is being changed from ` +
       changeToEmail +
       `. To confirm, please follow the link below:
 
-` + frontendUrl + `confirm/` +
+` + frontendUrl + `/confirm/` +
       confirmationToken +
       `
 
