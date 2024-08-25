@@ -1,0 +1,33 @@
+services:
+  wotlwedudb:
+    environment:
+      - MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=1 
+    image: mariadb
+    ports:
+      - 3306:3306
+    volumes:
+      - wotlwedu-database:/var/lib/mysql
+  wotlwedu-backend:
+    depends_on:
+      - wotlwedudb
+    environment:
+      - WOTLWEDU_DB_HOST=wotlwedudb
+      - WOTLWEDU_DB_USER=wotlwedu
+      - WOTLWEDU_DB_PASSWORD=wotlwedu
+      - WOTLWEDU_APP_PORT=9876
+      - WOTLWEDU_SSL=true
+      - WOTLWEDU_SSL_KEY=/secrets/server.key
+      - WOTLWEDU_SSL_CERT=/secrets/server.crt
+      - WOTLWEDU_API_URL=https://api.wotlwedu.com:9876/
+    env_file: "/secrets/wotlwedu-backend/secrets.env"
+    image: ravelox/wotlwedu-backend
+    ports:
+      - 9876:9876
+    volumes:
+        - /secrets/wotlwedu-backend:/secrets
+        - wotlwedu-images:/var/opt/wotlwedu-backend/public/images
+volumes:
+  wotlwedu-database:
+    driver: local
+  wotlwedu-images:
+    driver: local
