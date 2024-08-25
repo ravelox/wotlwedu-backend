@@ -56,13 +56,14 @@ This API is currently written to talk with a **mariadb** database.
 ### Docker build ###
 A **Dockerfile** is provided in the repository. Additionally, the file **docker-entrypoint.sh** is required for the build. This file should be reviewed. By default, port **9876** is exposed. The docker container is **not** created to use SSL because this can be configured at runtime. It is not advisable to run this without SSL enabled.
 To build the Docker image, run the following command in the wotlwedu-backend repository directory:
-  `docker build --no-cache -t ravelox/wotlwedu-backend .`
+
+`docker build --no-cache -t ravelox/wotlwedu-backend .`
 
 A **docker compose** file is also available as **wotlwedu-backend.compose.yaml**. This file should be reviewed for the required environment variables. It should be noted that the compose file requires a directory **/secrets/wotlwedu-backend** to be available on the **host** machine to hold the SSL certificate and key **and** a file called **secrets.env** which will hold the initialisation for other variables such as **WOTLWEDU_JWT_SECRET**.
 
 When you have the Docker container image created, you can use the compose file to start a container:
 
-  `docker compose -f wotlwedu-backend.compose.yaml up -d`
+`docker compose -f wotlwedu-backend.compose.yaml up -d`
 
-This creates 2 containers. ! for the mariadb and 1 for the **wotlwedu-backend** instance.
+This creates 2 containers. 1 for the mariadb and 1 for the **wotlwedu-backend** instance.
 
