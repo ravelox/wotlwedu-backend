@@ -40,16 +40,17 @@ This API is currently written to talk with a **mariadb** database.
     `npm install`
 
 5. Before running the backend, you will need to initialise the database. You need a mariadb server running somewhere, it doesn't have to be a local instance. The instructions for installing mariadb are out of scope for this so please look at your platform's documentation. When a database server is available, you can use the script **docker-entrypoint.sh** to check for the **wotlwedu** database and initialise it if the database doesn't exist. While this script is intended for a Docker container, it can still be run from the command line. You **must** have a number of environment variables present to configure the database information: **WOTLWEDU_DB_HOST**, **WOTLWEDU_DB_USER**, **WOTLWEDU_DB_NAME** and **WOTLWEDU_DB_PASSWORD**. Note that unless you hard-code these values (instructions later), you will need to make sure that these variables are present **every time** you run **wotlwedu-backend**.
-6. When the script has finished running, it will have initialised the database and populated it with some dummy users and some basic data. These can be deleted at a later time. The script will call **npm start** to run the backend. Logging output 
+6. When the script has finished running, it will have initialised the database and populated it with some dummy users and some basic data. These can be deleted at a later time. The script will call **npm start** to run the backend. Logging output is sent to stdout/stderr.
 7. An admin user is created with the email address **root@localhost.localdomain** and password of **WombatFridgeBucket** (no spaces, capitalisation for each word).
 8. If you want to run the app from a different script, NodeJS are typically called by using the command
 
-    `ndoe app`
-   Where **app* is the name of the main app file. In this case, **wotlwedu-backend** *is* using a file called **app.js**.
-9. At present, **wotlwedu-backend** is written to use AWS SES and so there are additional environment variables that are needed to be set before that functionality can be used. **AWS_ACCESS_KEY_ID** and **AWS_SECRET_ACCESS_KEY**. These are **always** set up outside of the code to avoid security issues.
-10. The file **config/wotlwedu.js** contains more settings that can be configured. If you are running your own **wotlwedu-backend** and **wotlwedu-frontend** or **wotlwedu-minimal**, you will need to change **WOTLWEDU_API_URL** and **WOTLWEDU_FRONTEND_URL** to use your own URLs.
-11. For authentication, you **must** set the environment variable **WOTLWEDU_JWT_SECRET**. This is used to sign JWTs between the backend and the frontend. The value of this variable can be any string, "supersecretkey", "wotlweduisgreat", "a76b4fg!4mm09x))", for example but **must not** be hardcoded for security reasons.
-12. If TLS communication is needed between the frontend and the backend, the environment variable **WOTLWEDU_SSL** must be set to "true" and the variables **WOTLWEDU_SSL_KEY** and **WOTLWEDU_SSL_CERT** should be present to point the key file and certificate files respectively.
+    `node app`
+   
+   Where **app** is the name of the main app file. In this case, **wotlwedu-backend** *is* using a file called **app.js**.
+10. At present, **wotlwedu-backend** is written to use AWS SES for mailing registration and password reset emails so there are additional environment variables that are needed to be set before that functionality can be used. **AWS_ACCESS_KEY_ID** and **AWS_SECRET_ACCESS_KEY**. These are **always** set up outside of the code to avoid security issues. If you need a different email provider, this will be available in later versions.
+11. The file **config/wotlwedu.js** contains more settings that can be configured. If you are running your own **wotlwedu-backend** and **wotlwedu-frontend** or **wotlwedu-minimal**, you will need to change **WOTLWEDU_API_URL** and **WOTLWEDU_FRONTEND_URL** to use your own URLs.
+12. For authentication, you **must** set the environment variable **WOTLWEDU_JWT_SECRET**. This is used to sign JWTs between the backend and the frontend. The value of this variable can be any string: "supersecretkey", "wotlweduisgreat", "a76b4fg!4mm09x))", for example but **must not** be hardcoded in the app for security reasons.
+13. If TLS communication is needed between the frontend and the backend, the environment variable **WOTLWEDU_SSL** must be set to "true" and the variables **WOTLWEDU_SSL_KEY** and **WOTLWEDU_SSL_CERT** should be present to point the key file and certificate files respectively.
    
 
 ### Docker build ###
