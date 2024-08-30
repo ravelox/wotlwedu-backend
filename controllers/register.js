@@ -39,6 +39,7 @@ exports.postRegisterUser = (req, res, next) => {
       if (req.body.alias) userToRegister.alias = req.body.alias;
       if (req.body.firstName) userToRegister.firstName = req.body.firstName;
       if (req.body.lastName) userToRegister.lastName = req.body.lastName;
+      if (req.body.auth) userToRegister.auth = req.body.auth;
 
       // Newly-registered users are marked inactive
       // until they confirm their account
