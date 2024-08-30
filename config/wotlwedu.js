@@ -44,7 +44,7 @@ const mailgun = require("../mailprovider/mailgun")
 // WOTLWEDU_SMTP_PASSWORD
 //
 // If TLS is required for submission, set the following environment variable
-// WOTLWEDU_SMTP_SECURE to truea
+// WOTLWEDU_SMTP_SECURE to true
 const smtp = require("../mailprovider/smtp")
 
 
