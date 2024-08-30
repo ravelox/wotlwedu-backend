@@ -1,17 +1,4 @@
-const nodemailer = require("nodemailer");
-const aws = require("@aws-sdk/client-ses");
-const { defaultProvider } = require("@aws-sdk/credential-provider-node");
-
 const Config = require("../config/wotlwedu");
-
-const ses = new aws.SES({
-  region: "us-east-1",
-  defaultProvider,
-});
-
-const transport = nodemailer.createTransport({
-  SES: { ses, aws },
-});
 
 module.exports.testMessage = (toName, toAddress) => {
   let message = {
@@ -51,35 +38,36 @@ function sendEmail(messageDetails) {
       reject("No message body provided as either text or HTML");
     }
 
-    let message = {
-      to: messageDetails.to,
-      from: Config.mailerDisplayName + " <" + Config.mailerFromAddress + ">",
-      subject: messageDetails.subject,
-    };
-
-    if (messageDetails.text) message.text = messageDetails.text;
-    if (messageDetails.html) message.html = messageDetails.html;
-
-    transport.sendMail(message, function (error, info) {
-      if (error) {
-        console.log(error);
-        reject("Mailer error: " + error);
-      }
-      resolve("OK");
-    });
+    console.log( Config.mailerProvider )
+    Config.mailerProvider
+      .sendEmail(messageDetails)
+      .then((success) => {
+        console.log(success)
+        resolve("OK", { data: success });
+      })
+      .catch((err) => {
+        console.log( err )
+        reject(err);
+      });
   });
-};
+}
 
 module.exports.sendEmail = sendEmail;
 
-module.exports.sendEmailConfirmMessage = (emailAddress, confirmationToken, frontendUrl ) => {
+module.exports.sendEmailConfirmMessage = (
+  emailAddress,
+  confirmationToken,
+  frontendUrl
+) => {
   return new Promise((resolve, reject) => {
     const textBody =
       `Hi there,
 
 Your email address has been registered with Wotlwedu. To confirm, please follow the link below:
 
-` + frontendUrl + `/confirm/` +
+` +
+      frontendUrl +
+      `/confirm/` +
       confirmationToken +
       `
 
@@ -113,7 +101,9 @@ module.exports.sendPasswordResetMessage = (
   
 We have received a request to reset your password. To proceed, please follow the link below and enter the verification code provided:
 
-` + frontendUrl + `/pwdreset/` +
+` +
+      frontendUrl +
+      `/pwdreset/` +
       userId +
       `/` +
       resetToken +
@@ -153,7 +143,9 @@ Your email address is being changed from ` +
       changeToEmail +
       `. To confirm, please follow the link below:
 
-` + frontendUrl + `/confirm/` +
+` +
+      frontendUrl +
+      `/confirm/` +
       confirmationToken +
       `
 
@@ -177,8 +169,7 @@ Wotlwedu admin team`;
 
 module.exports.sendEmailChangeCompleteMessage = (emailAddress, frontendUrl) => {
   return new Promise((resolve, reject) => {
-    const textBody =
-      `Hi there,
+    const textBody = `Hi there,
 
 Your email address at Wotlwedu is now being used by a user.
 If you did not request this change or need further assistance, please contact our support team immediately at [Support Email Address].\
@@ -193,7 +184,11 @@ Wotlwedu admin team`;
       text: textBody,
     };
     sendEmail(messageDetails).catch((err) => {
-      reject(new Error("Failed to send email address change completion message: " + err));
+      reject(
+        new Error(
+          "Failed to send email address change completion message: " + err
+        )
+      );
     });
     resolve("OK");
   });

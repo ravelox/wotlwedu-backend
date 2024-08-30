@@ -20,8 +20,36 @@ module.exports.jwtRefreshExpiry = "2h";
 
 module.exports.defaultItemsPerPage = 10;
 
-module.exports.mailerSESAccessKey = process.env.AWS_ACCESS_KEY_ID;
-module.exports.mailerSESSecretKey = process.env.AWS_SECRET_ACCESS_KEY;
+
+//
+// Set the required mail provider
+//
+
+// Mailgun requires an API key
+// Set the following environment variable:
+// WOTLWEDU_MAILGUN_API_KEY
+const mailgun = require("../mailprovider/mailgun")
+
+// Amazon SES
+// Set the following environemnt variables:
+// AWS_ACCESS_KEY_ID
+// AWS_SECRET_ACCESS_KEY
+//const amazon = require("../mailprovider/amazonses");
+
+// smtp mail provider
+// Set the following environment variables:
+// WOTLWEDU_SMTP_HOST
+// WOTLWEDU_SMTP_PORT
+// WOTLWEDU_SMTP_USER
+// WOTLWEDU_SMTP_PASSWORD
+//
+// If TLS is required for submission, set the following environment variable
+// WOTLWEDU_SMTP_SECURE to truea
+const smtp = require("../mailprovider/smtp")
+
+
+// Set which mail provider to use
+module.exports.mailerProvider = smtp;
 module.exports.mailerFromAddress = "admin@wotlwedu.net";
 module.exports.mailerDisplayName = "Wotlwedu Admin";
 
