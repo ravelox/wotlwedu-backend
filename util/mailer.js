@@ -38,11 +38,9 @@ function sendEmail(messageDetails) {
       reject("No message body provided as either text or HTML");
     }
 
-    console.log( Config.mailerProvider )
     Config.mailerProvider
       .sendEmail(messageDetails)
       .then((success) => {
-        console.log(success)
         resolve("OK", { data: success });
       })
       .catch((err) => {
