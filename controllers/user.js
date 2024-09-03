@@ -61,6 +61,7 @@ exports.getUser = async (req, res, next) => {
   let whereCondition = {};
 
   whereCondition.id = userToFind;
+  whereCondition.protected = false;
   if (!Security.getVerdict(req.verdicts, "view").isAdmin) {
     if (userToFind !== req.authUserId) {
       whereCondition.creator = req.authUserId;
@@ -97,6 +98,7 @@ exports.getAllUser = (req, res, next) => {
 
   let whereCondition = {};
 
+  whereCondition.protected = false;
   if (userFilter) {
     whereCondition = {
       [Op.or]: [
@@ -209,6 +211,8 @@ exports.deleteUser = async (req, res, next) => {
     .then(async (foundUser) => {
       if (!foundUser) return StatusResponse(res, 404, "User not found");
 
+      if( foundUser.protected === true ) return StatusResponse(res, 421, "User is protected");
+
       // Ownership check if the curent user is NOT an admin
       if (
         !Security.getVerdict(req.verdicts, "delete").isAdmin &&
@@ -265,6 +269,8 @@ exports.postUpdateUser = (req, res, next) => {
   User.findByPk(userToFind)
     .then((foundUser) => {
       if (!foundUser) return StatusResponse(res, 404, "User not found");
+
+      if( foundUser.protected === true ) return StatusResponse(res, 421, "User is protected")
 
       // Ownership check if the curent user is NOT an admin
       // unless the user is updating their own details
@@ -423,6 +429,8 @@ exports.putAddFriend = (req, res, next) => {
   const friendToFind = req.params.friendId;
   const userOptions = {};
   const friendOptions = {};
+
+  if( userToFind === 'system') return StatusResponse(res, 421, "User is protected")
 
   if (!userToFind) {
     if (!req.authUserId) return StatusResponse(res, 421, "No user ID provided");
