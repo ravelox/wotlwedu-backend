@@ -18,7 +18,8 @@ const Status = require("./status");
 const User = require("./user");
 const UserRole = require("./userrole");
 const Vote = require("./vote");
-const Metadata = require("./metadata")
+const Metadata = require("./metadata");
+const Preference = require("./preference");
 
 database.sync({force: Config.db_force_sync})
 .then(()=>{

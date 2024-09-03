@@ -1,7 +1,6 @@
 services:
   wotlwedudb:
-    environment:
-      - MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=1 
+    env_file: "/secrets/mariadb/secrets.env"
     image: mariadb
     ports:
       - 3306:3306
