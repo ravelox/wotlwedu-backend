@@ -42,6 +42,10 @@ const User = database.define(
       type: Sequelize.BOOLEAN,
       defaultValue: false,
     },
+    protected: {
+      type: Sequelize.BOOLEAN,
+      defaultValue: false,
+    },
     verified: {
       type: Sequelize.BOOLEAN,
       defaultValue: false,
