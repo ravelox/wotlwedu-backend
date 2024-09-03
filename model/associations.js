@@ -15,6 +15,7 @@ const Status = require("./status");
 const User = require("./user");
 const UserRole = require("./userrole");
 const Vote = require("./vote");
+const Metadata = require("./metadata")
 
 module.exports.setup = function () {
   Capability.belongsToMany(Role, { through: RoleCapability });
@@ -77,6 +78,5 @@ module.exports.setup = function () {
   Notification.hasOne(Status, { foreignKey: "id", sourceKey: "statusId",});
 
   Status.hasMany(Notification);
-  Status.hasMany(User);
   Status.hasMany(Friend);
 };
