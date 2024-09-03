@@ -5,6 +5,8 @@ const Path = require("path");
 
 const Config = require("../config/wotlwedu");
 
+const Housekeeping = require("../util/housekeeping")
+
 const StatusResponse = require("../util/statusresponse");
 const Status = require("../model/status");
 const Image = require("../model/image");
@@ -211,4 +213,10 @@ module.exports.getNotification = async (notificationId)=>{
 
   const notification = await Notification.findByPk( notificationId );
   return (notification? notification : null);
+}
+
+module.exports.getExpireElections = (req,res,next) => {
+  Housekeeping.expireElections();
+
+  return StatusResponse(res, 200, "OK")
 }
