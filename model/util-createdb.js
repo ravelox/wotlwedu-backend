@@ -20,6 +20,7 @@ const UserRole = require("./userrole");
 const Vote = require("./vote");
 const Metadata = require("./metadata");
 const Preference = require("./preference");
+const SocketInfo = require("./socketinfo")
 
 database.sync({force: Config.db_force_sync})
 .then(()=>{

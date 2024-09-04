@@ -5,8 +5,11 @@ const cors = require("cors");
 const multer = require("multer");
 const https = require("https");
 const FS = require("fs");
+const Util = require("util");
 
 const bodyParser = require("body-parser");
+
+const IO = require("./util/wotlwedu-socketio");
 
 // ****
 // Needs to be loaded *before* any database operations
@@ -49,9 +52,9 @@ let privateKey;
 let certificate;
 
 if (Config.ssl === true) {
-  console.log("SSL Enabled")
+  console.log("SSL Enabled");
   try {
-    console.log("Looking for key and certificates")
+    console.log("Looking for key and certificates");
     privateKey = FS.readFileSync(Config.sslKeyFile);
     certificate = FS.readFileSync(Config.sslCert);
   } catch (err) {
@@ -64,7 +67,7 @@ app.use(bodyParser.json());
 
 // Set up multer for PNG and JPEG images
 
-FS.mkdirSync( Config.imageDir, { recursive: true, });
+FS.mkdirSync(Config.imageDir, { recursive: true });
 const multerFileStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, Config.imageDir);
@@ -90,9 +93,7 @@ app.post(
 );
 
 //Add CORS headers
-app.use(
-  cors({ origin: true, })
-);
+app.use(cors({ origin: true }));
 
 // Set static directory
 app.use(express.static(path.join(__dirname, "public")));
@@ -240,20 +241,35 @@ function checkDBConnection() {
 checkDBConnection()
   .then((result) => {
     console.log("Listening on " + Config.app_listen + ":" + Config.app_port);
+    let server;
     if (Config.ssl === true) {
-      https
-        .createServer({ key: privateKey, cert: certificate }, app)
-        .listen(Config.app_port, Config.app_listen)
-        .catch((err) => {
-          console.log("HTTPS startup");
-          console.log(err);
-        });
+      server = https.createServer({ key: privateKey, cert: certificate }, app);
+      server.listen(Config.app_port, Config.app_listen);
     } else {
-      app.listen(Config.app_port, Config.app_listen).catch((err) => {
-        console.log("Non-HTTPS startup");
-        console.log(err);
-      });
+      server = app.listen(Config.app_port, Config.app_listen);
     }
+
+    IO.clearRegistrations().then(() => {
+      console.log("Done")
+
+      const ioServer = IO.init(server);
+
+      ioServer.on("connection", (socket) => {
+        socket.on("register", (data) => {
+          if (data && data.id) {
+            IO.register(data.id, socket.id);
+          }
+        });
+
+        socket.once("unregister", () => {
+          IO.unregister(socket.id);
+        });
+
+        socket.once("disconnect", () => {
+          IO.unregister(socket.id);
+        });
+      });
+    });
   })
   .catch((error) => {
     if (error.name === "SequelizeConnectionRefusedError") {

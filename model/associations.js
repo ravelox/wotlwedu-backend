@@ -16,6 +16,8 @@ const User = require("./user");
 const UserRole = require("./userrole");
 const Vote = require("./vote");
 const Metadata = require("./metadata")
+const Preference = require("./preference")
+const SocketInfo = require("./socketinfo")
 
 module.exports.setup = function () {
   Capability.belongsToMany(Role, { through: RoleCapability });
