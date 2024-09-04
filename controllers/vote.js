@@ -6,11 +6,12 @@ const UUID = require("../util/mini-uuid");
 const StatusResponse = require("../util/statusresponse");
 const { copyObject, getStatusIdByName } = require("../util/helpers");
 const { Op } = require("sequelize");
+const Housekeeping = require("../util/housekeeping");
+const Notify = require("../util/notification");
 
 const Config = require("../config/wotlwedu");
 
 const Vote = require("../model/vote");
-
 const Election = require("../model/election");
 const User = require("../model/user");
 const Item = require("../model/item");
@@ -36,7 +37,11 @@ function generateIncludes(details) {
       if (splitDetail.includes("image")) {
         const modImageAttributes = Attributes.Image.slice();
         modImageAttributes.push([
-          Sequelize.fn("CONCAT", Config.imageURL, Sequelize.col("election.image.filename")),
+          Sequelize.fn(
+            "CONCAT",
+            Config.imageURL,
+            Sequelize.col("election.image.filename")
+          ),
           "url",
         ]);
         electionIncludes.include = {
@@ -51,7 +56,11 @@ function generateIncludes(details) {
       if (splitDetail.includes("image")) {
         const modImageAttributes = Attributes.Image.slice();
         modImageAttributes.push([
-          Sequelize.fn("CONCAT", Config.imageURL, Sequelize.col("item.image.filename")),
+          Sequelize.fn(
+            "CONCAT",
+            Config.imageURL,
+            Sequelize.col("item.image.filename")
+          ),
           "url",
         ]);
         itemIncludes.include = { model: Image, attributes: modImageAttributes };
@@ -63,7 +72,11 @@ function generateIncludes(details) {
       if (splitDetail.includes("image")) {
         const modImageAttributes = Attributes.Image.slice();
         modImageAttributes.push([
-          Sequelize.fn("CONCAT", Config.imageURL, Sequelize.col("user.image.filename")),
+          Sequelize.fn(
+            "CONCAT",
+            Config.imageURL,
+            Sequelize.col("user.image.filename")
+          ),
           "url",
         ]);
         userIncludes.include = { model: Image, attributes: modImageAttributes };
@@ -238,7 +251,7 @@ module.exports.getCastVote = (req, res, next) => {
   whereCondition.userId = req.authUserId;
   whereCondition["$status.name$"] = "Pending";
 
-  const includes = generateIncludes("");
+  const includes = generateIncludes("election");
   const options = {};
   options.include = includes;
   options.where = whereCondition;
@@ -258,8 +271,30 @@ module.exports.getCastVote = (req, res, next) => {
     }
 
     foundVote.statusId = statusId;
-    foundVote.save().then((savedVote) => {
+    foundVote.save().then(async (savedVote) => {
       if (!savedVote) return StatusResponse(res, 500, "Cannot cast vote");
+      const electionEnded = await Housekeeping.isElectionEnded(
+        foundVote.election.id
+      );
+      if (electionEnded) {
+        const electionEndNotification = await getStatusIdByName("Election End");
+        // Send an election end notification to the creator
+        await Notify.sendNotification(
+          "system",
+          foundVote.election.creator,
+          electionEndNotification,
+          foundVote.election.id,
+          "Election Ended: " + foundVote.election.name
+        );
+
+        // Mark the election as ended
+        const electionEndedStatus = await getStatusIdByName("Ended")
+        const foundElection = await Election.findByPk( foundVote.election.id );
+         if( foundElection ) {
+          foundElection.statusId = electionEndedStatus;
+          await foundElection.save();
+        }
+      }
 
       return StatusResponse(res, 200, "OK", { id: foundVote.id });
     });

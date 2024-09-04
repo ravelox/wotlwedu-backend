@@ -6,6 +6,7 @@ const Election = require("../model/election");
 const Status = require("../model/status");
 const Vote = require("../model/vote");
 const Notification = require("../model/notification");
+const Friend = require("../model/friend");
 
 const Notify = require("./notification");
 const { getStatusIdByName } = require("./helpers");
@@ -29,6 +30,9 @@ module.exports.isElectionEnded = async (electionId) => {
   // Look for any more Pending votes on this election
   // If none are found, the election is over
   const foundVotes = await Vote.findAll(options);
+
+  console.log( "isElectionEnded: foundVotes = " + foundVotes.length)
+  console.log( "isElectionEnded: " + (foundVotes.length === 0))
 
   return foundVotes.length === 0;
 };
@@ -85,22 +89,73 @@ module.exports.expireElections = () => {
         notifIncludes.push({ model: Status, attributes: Attributes.Status });
 
         notifOptions.include = notifIncludes;
-        notifOptions.where = notifWhere
+        notifOptions.where = notifWhere;
 
         // Delete any unread notifications that relate to this election
-        Notification.findAll( notifOptions )
-        .then((foundNotifications)=>{
-          foundNotifications.forEach((n)=>{
+        Notification.findAll(notifOptions).then((foundNotifications) => {
+          foundNotifications.forEach((n) => {
             n.destroy();
-          })
-        })
+          });
+        });
       });
     });
   });
 };
 
-module.exports.cleanRegistrations = () => {};
+module.exports.cleanRegistrations = () => {
+  // If there is a registration token present
+  // and has expired and there is no last login date
+  // - Delete the user entry
 
-module.exports.cleanResetTokens = () => {};
+  const options = {};
 
-module.exports.cleanFriendshipTokens = () => [];
+  const whereCondition = {
+    registerToken: { [Sequelize.Op.not]: null },
+    registerTokenExpire: { [Sequelize.Op.lte]: Date.now() },
+    lastLogin: null,
+  };
+
+  options.where = whereCondition;
+
+  User.findAll(options).then(async (hangingRegistrations) => {
+    hangingRegistrations.forEach((r) => {
+      r.destroy();
+    });
+  });
+};
+
+module.exports.cleanResetTokens = () => {
+  const options = {};
+
+  const whereCondition = {
+    resetToken: { [Sequelize.Op.not]: null },
+    resetTokenExpire: { [Sequelize.Op.lte]: Date.now() },
+  };
+
+  options.where = whereCondition;
+
+  User.findAll(options).then(async (expiredReset) => {
+    expiredReset.forEach((r) => {
+      r.resetToken = null;
+      r.resetTokenExpire = null;
+      r.save();
+    });
+  });
+};
+
+module.exports.cleanFriendshipTokens = () => {
+  const options = {};
+  const whereCondition = {
+    token: { [Sequelize.Op.not]: null },
+    tokenExpire: { [Sequelize.Op.lte]: Date.now() },
+  };
+  options.where = whereCondition;
+
+  Friend.findAll(options).then(async (expiredFriendTokens) => {
+    expiredFriendTokens.forEach((t) => {
+      t.token = null;
+      t.tokenExpire = null;
+      t.save();
+    });
+  });
+};

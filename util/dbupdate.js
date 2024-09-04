@@ -47,8 +47,6 @@ module.exports.checkForUpdates = async () => {
       updateModule.init(queryInterface);
       result = await updateModule.apply(true);
 
-      console.log(result);
-
       // If an error occured, call the remove method to clean up
       if (result.status === -1) {
         console.log("Database Updates: Removing update");

@@ -7,13 +7,14 @@ module.exports.Election = [
   "description",
   "electionType",
   "expiration",
+  "creator"
 ];
 
-module.exports.Group = ["id", "name", "description"];
+module.exports.Group = ["id", "name", "description","creator"];
 
-module.exports.List = ["id", "name", "description"];
+module.exports.List = ["id", "name", "description","creator"];
 
-module.exports.Item = ["id", "name", "description", "url", "location"];
+module.exports.Item = ["id", "name", "description", "url", "location","creator"];
 
 module.exports.StatsItem = ["id", "name"];
 
@@ -32,6 +33,7 @@ module.exports.User = [
   ],
   "alias",
   "email",
+  "creator"
 ];
 
 module.exports.StatsUser = [
@@ -55,6 +57,7 @@ module.exports.Image = [
   "filename",
 // Concatenation of filename and URL base needs to be done in each controller 
   "statusId",
+  "creator"
 ];
 
 module.exports.Status = ["id", "object", "name"];
@@ -112,7 +115,7 @@ module.exports.Friend = [
     "alias",
     "email",
     "imageId",
-    "statusId",
+//    "statusId",
   ];
 
   module.exports.UserFull = [
