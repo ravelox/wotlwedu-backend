@@ -5,6 +5,10 @@ const FS = require("fs");
 
 const Status = require("../model/status");
 
+const packageJSON = require("../package.json");
+
+module.exports.package = packageJSON;
+
 module.exports.getStatusIdByName = function (statusName) {
   if (!statusName) return -1;
   return Status.findOne({ where: { name: statusName } }).then((foundStatus) => {
