@@ -33,7 +33,7 @@ This API is currently written to talk with a **mariadb** database.
 
 3. Change directory to the checked out repository
 
-    `cd wotlwedu-minimal`
+    `cd wotlwedu-backend`
 
 4.  Install the npm packages required by this app. For those not familiar with NodeJS, the package versions are listed in the **packages.json** file. This step may take some time to complete as each package has their own dependencies that they need to download.
 
