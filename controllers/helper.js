@@ -5,7 +5,7 @@ const Path = require("path");
 
 const Config = require("../config/wotlwedu");
 
-const Housekeeping = require("../util/housekeeping")
+const Housekeeping = require("../util/housekeeping");
 
 const StatusResponse = require("../util/statusresponse");
 const Status = require("../model/status");
@@ -17,7 +17,7 @@ const ListItem = require("../model/listitem");
 const UUID = require("../util/mini-uuid");
 const Notification = require("../model/notification");
 
-const Attributes = require("../model/attributes")
+const Attributes = require("../model/attributes");
 
 module.exports.getStatusNames = (req, res, next) => {
   const objectName = req.params.objectName;
@@ -76,8 +76,7 @@ module.exports.copyImage = (origImageId, newOwnerId) => {
     if (!origImageId || !newOwnerId)
       reject(new Error("Need image ID and owner"));
 
-    Image.findByPk(origImageId, { raw: true })
-    .then((foundImage) => {
+    Image.findByPk(origImageId, { raw: true }).then((foundImage) => {
       if (!foundImage) return reject(new Error("No image found"));
 
       const newImageId = UUID("image");
@@ -208,15 +207,9 @@ module.exports.copyList = (origListId, newOwnerId) => {
   });
 };
 
-module.exports.getNotification = async (notificationId)=>{
-  if(! notificationId ) return null;
+module.exports.getNotification = async (notificationId) => {
+  if (!notificationId) return null;
 
-  const notification = await Notification.findByPk( notificationId );
-  return (notification? notification : null);
-}
-
-module.exports.getExpireElections = (req,res,next) => {
-  Housekeeping.expireElections();
-
-  return StatusResponse(res, 200, "OK")
-}
+  const notification = await Notification.findByPk(notificationId);
+  return notification ? notification : null;
+};
