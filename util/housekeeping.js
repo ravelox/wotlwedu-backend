@@ -7,9 +7,11 @@ const Status = require("../model/status");
 const Vote = require("../model/vote");
 const Notification = require("../model/notification");
 const Friend = require("../model/friend");
+const User = require("../model/user");
 
 const Notify = require("./notification");
 const { getStatusIdByName } = require("./helpers");
+const IO = require("./wotlwedu-socketio")
 
 module.exports.isElectionEnded = async (electionId) => {
   if (!electionId) return false;
@@ -30,10 +32,6 @@ module.exports.isElectionEnded = async (electionId) => {
   // Look for any more Pending votes on this election
   // If none are found, the election is over
   const foundVotes = await Vote.findAll(options);
-
-  console.log( "isElectionEnded: foundVotes = " + foundVotes.length)
-  console.log( "isElectionEnded: " + (foundVotes.length === 0))
-
   return foundVotes.length === 0;
 };
 
@@ -70,17 +68,8 @@ module.exports.expireElections = () => {
     // Need to go through each election
     // to set status and send notification to creator
     expiredElections.forEach((election) => {
-      election.status = endedStatusId;
-      election.save().then(async (savedElection) => {
-        // Send an expired notification to the creator
-        await Notify.sendNotification(
-          "system",
-          election.creator,
-          electionExpiredNotification,
-          election.id,
-          "Expired election: " + election.name
-        );
-
+      election.statusId = endedStatusId;
+      election.save().then((savedElection) => {
         const notifOptions = {};
         const notifWhere = { objectId: election.id };
         notifWhere["$status.name$"] = "Unread";
@@ -92,11 +81,23 @@ module.exports.expireElections = () => {
         notifOptions.where = notifWhere;
 
         // Delete any unread notifications that relate to this election
-        Notification.findAll(notifOptions).then((foundNotifications) => {
-          foundNotifications.forEach((n) => {
-            n.destroy();
+        Notification.findAll(notifOptions)
+          .then((foundNotifications) => {
+            foundNotifications.forEach((n) => {
+              n.destroy();
+            });
+          })
+          .then(async () => {
+            // Send an expired notification to the creator
+            await Notify.sendNotification(
+              "system",
+              election.creator,
+              electionExpiredNotification,
+              election.id,
+              "Expired election: " + election.name
+            );
+            IO.notifyUser(election.creator, "refresh")
           });
-        });
       });
     });
   });
