@@ -12,6 +12,4 @@ router.get("/status/id/:statusName", helperController.getStatusId)
 
 router.get("/status", helperController.getStatusNames);
 
-router.get("/expireelections", helperController.getExpireElections);
-
 module.exports = router;
