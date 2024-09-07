@@ -23,13 +23,12 @@ function sendEmail(messageDetails) {
     if (messageDetails.text) message.text = messageDetails.text;
     if (messageDetails.html) message.html = messageDetails.html;
 
-    console.log( transport )
-
     transport.sendMail(message, function (error, info) {
       if (error) {
         console.log(error);
         reject("SMTP Mailer error: " + error);
       }
+      console.log(info)
       resolve("OK");
     });
   });
