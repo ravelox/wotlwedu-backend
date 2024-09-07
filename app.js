@@ -16,6 +16,8 @@ const IO = require("./util/wotlwedu-socketio");
 // ****
 const Config = require("./config/wotlwedu");
 
+const Housekeeping = require("./util/housekeeping")
+
 const UUID = require("./util/mini-uuid");
 const database = require("./util/database");
 
@@ -112,7 +114,7 @@ app.use(
   Security.checkAuthentication,
   (req, res, next) => {
     return StatusResponse(res, 200, "OK", {
-      version: "0.0.1",
+      version: Helpers.package.version,
       date: new Date(),
     });
   }
@@ -248,6 +250,14 @@ checkDBConnection()
     } else {
       server = app.listen(Config.app_port, Config.app_listen);
     }
+
+    console.log("Starting housekeeping")
+    setInterval(()=>{
+        Housekeeping.expireElections();
+        Housekeeping.cleanRegistrations();
+        Housekeeping.cleanResetTokens();
+        Housekeeping.cleanFriendshipTokens();
+    }, Config.housekeepingInterval * 1000);
 
     IO.clearRegistrations().then(() => {
       console.log("Done")

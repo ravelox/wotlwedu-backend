@@ -71,6 +71,8 @@ module.exports.defaultRoleName = "Default Role";
 
 module.exports.corsOrigin = ["http://localhost:4200"];
 
+module.exports.housekeepingInterval = 300;
+
 module.exports.dump = () => {
   console.log("*___*___*___*___*___*");
   console.log("Config dump");
