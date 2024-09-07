@@ -36,5 +36,5 @@ module.exports.sendNotification = async (
   notification.statusId = foundStatus;
 
   await notification.save();
-  IO.notifyUser( notifRcpt );
+  IO.notifyUser( notifRcpt, "notification" );
 };
