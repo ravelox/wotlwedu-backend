@@ -1,0 +1,2275 @@
+openapi: 3.0.0
+info:
+  title: WOTLWEDU API
+  version: 1.0.0
+
+paths:
+  /image/:imageId/notif/:notificationId:
+    get:
+      summary: GET /image/:imageId/notif/:notificationId
+      parameters:
+      - name: imageId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: notificationId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /image/share/:imageId/recipient/:recipient:
+    get:
+      summary: GET /image/share/:imageId/recipient/:recipient
+      parameters:
+      - name: imageId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: recipient
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /image/accept/:notificationId:
+    get:
+      summary: GET /image/accept/:notificationId
+      parameters:
+      - name: notificationId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /image/:imageId:
+    get:
+      summary: GET /image/:imageId
+      parameters:
+      - name: imageId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+    post:
+      summary: POST /image/:imageId
+      parameters:
+      - name: imageId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+    delete:
+      summary: DELETE /image/:imageId
+      parameters:
+      - name: imageId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /image/:
+    get:
+      summary: GET /image/
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+    put:
+      summary: PUT /image/
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+  /image/file/:imageId:
+    post:
+      summary: POST /image/file/:imageId
+      parameters:
+      - name: imageId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+    delete:
+      summary: DELETE /image/file/:imageId
+      parameters:
+      - name: imageId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /preference/:preferenceName:
+    get:
+      summary: GET /preference/:preferenceName
+      parameters:
+      - name: preferenceName
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+    post:
+      summary: POST /preference/:preferenceName
+      parameters:
+      - name: preferenceName
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+    delete:
+      summary: DELETE /preference/:preferenceName
+      parameters:
+      - name: preferenceName
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /preference/:
+    get:
+      summary: GET /preference/
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+    put:
+      summary: PUT /preference/
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+  /notification/status/:notificationId/:statusId:
+    put:
+      summary: PUT /notification/status/:notificationId/:statusId
+      parameters:
+      - name: notificationId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: statusId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+  /notification/:
+    put:
+      summary: PUT /notification/
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+    get:
+      summary: GET /notification/
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /notification/unreadcount:
+    get:
+      summary: GET /notification/unreadcount
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /notification/:notificationId:
+    get:
+      summary: GET /notification/:notificationId
+      parameters:
+      - name: notificationId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+    post:
+      summary: POST /notification/:notificationId
+      parameters:
+      - name: notificationId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+    delete:
+      summary: DELETE /notification/:notificationId
+      parameters:
+      - name: notificationId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /register/confirm/:tokenId:
+    get:
+      summary: GET /register/confirm/:tokenId
+      parameters:
+      - name: tokenId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /register/:
+    post:
+      summary: POST /register/
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+  /item/share/:itemId/recipient/:recipient:
+    get:
+      summary: GET /item/share/:itemId/recipient/:recipient
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: recipient
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /item/accept/:notificationId:
+    get:
+      summary: GET /item/accept/:notificationId
+      parameters:
+      - name: notificationId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /item/:itemId/notif/:notificationId:
+    get:
+      summary: GET /item/:itemId/notif/:notificationId
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: notificationId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /item/:itemId:
+    get:
+      summary: GET /item/:itemId
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+    post:
+      summary: POST /item/:itemId
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+    delete:
+      summary: DELETE /item/:itemId
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /item/:
+    get:
+      summary: GET /item/
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+    put:
+      summary: PUT /item/
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+  /vote/:voteId:
+    get:
+      summary: GET /vote/:voteId
+      parameters:
+      - name: voteId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+    post:
+      summary: POST /vote/:voteId
+      parameters:
+      - name: voteId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+  /vote/:
+    get:
+      summary: GET /vote/
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+    put:
+      summary: PUT /vote/
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+  /vote/election/:electionId:
+    get:
+      summary: GET /vote/election/:electionId
+      parameters:
+      - name: electionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /vote/:electionId/next:
+    get:
+      summary: GET /vote/:electionId/next
+      parameters:
+      - name: electionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /vote/next/all:
+    get:
+      summary: GET /vote/next/all
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /list/share/:listId/recipient/:recipient:
+    get:
+      summary: GET /list/share/:listId/recipient/:recipient
+      parameters:
+      - name: listId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: recipient
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /list/accept/:notificationId:
+    get:
+      summary: GET /list/accept/:notificationId
+      parameters:
+      - name: notificationId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /list/:listId/notif/:notificationId:
+    get:
+      summary: GET /list/:listId/notif/:notificationId
+      parameters:
+      - name: listId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: notificationId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /list/:listId:
+    get:
+      summary: GET /list/:listId
+      parameters:
+      - name: listId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+    post:
+      summary: POST /list/:listId
+      parameters:
+      - name: listId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+    delete:
+      summary: DELETE /list/:listId
+      parameters:
+      - name: listId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /list/:
+    get:
+      summary: GET /list/
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+    put:
+      summary: PUT /list/
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+  /list/:listId/bulkitemadd:
+    put:
+      summary: PUT /list/:listId/bulkitemadd
+      parameters:
+      - name: listId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+  /list/:listId/bulkitemdel:
+    put:
+      summary: PUT /list/:listId/bulkitemdel
+      parameters:
+      - name: listId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+  /list/:listId/item/:itemId:
+    put:
+      summary: PUT /list/:listId/item/:itemId
+      parameters:
+      - name: listId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+    delete:
+      summary: DELETE /list/:listId/item/:itemId
+      parameters:
+      - name: listId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /login/verify2fa:
+    post:
+      summary: POST /login/verify2fa
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+  /login/2fa:
+    get:
+      summary: GET /login/2fa
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /login/gentoken:
+    get:
+      summary: GET /login/gentoken
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /login/refresh:
+    post:
+      summary: POST /login/refresh
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+  /login/resetreq:
+    post:
+      summary: POST /login/resetreq
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+  /login/password/:userid:
+    put:
+      summary: PUT /login/password/:userid
+      parameters:
+      - name: userid
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+  /login/:
+    post:
+      summary: POST /login/
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+  /user/accept/:tokenId:
+    get:
+      summary: GET /user/accept/:tokenId
+      parameters:
+      - name: tokenId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /user/friend:
+    get:
+      summary: GET /user/friend
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /user/:userId/friend:
+    get:
+      summary: GET /user/:userId/friend
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /user/:userId:
+    get:
+      summary: GET /user/:userId
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+    post:
+      summary: POST /user/:userId
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+    delete:
+      summary: DELETE /user/:userId
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /user/:
+    get:
+      summary: GET /user/
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+    put:
+      summary: PUT /user/
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+  /user/block/:blockUser:
+    put:
+      summary: PUT /user/block/:blockUser
+      parameters:
+      - name: blockUser
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+  /user/:userId/block/:blockUser:
+    put:
+      summary: PUT /user/:userId/block/:blockUser
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: blockUser
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+  /user/:userId/friend/:friendId:
+    put:
+      summary: PUT /user/:userId/friend/:friendId
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: friendId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+    delete:
+      summary: DELETE /user/:userId/friend/:friendId
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: friendId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /user/request/:friendId:
+    post:
+      summary: POST /user/request/:friendId
+      parameters:
+      - name: friendId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+  /user/request:
+    post:
+      summary: POST /user/request
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+  /user/relationship/:relationshipId:
+    delete:
+      summary: DELETE /user/relationship/:relationshipId
+      parameters:
+      - name: relationshipId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /user/:userId/relationship/:relationshipId:
+    delete:
+      summary: DELETE /user/:userId/relationship/:relationshipId
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: relationshipId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /user/friend/:friendId:
+    delete:
+      summary: DELETE /user/friend/:friendId
+      parameters:
+      - name: friendId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /user/:userId/reassign/:ownerId:
+    delete:
+      summary: DELETE /user/:userId/reassign/:ownerId
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: ownerId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /group/:
+    put:
+      summary: PUT /group/
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+    get:
+      summary: GET /group/
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /group/:groupId:
+    get:
+      summary: GET /group/:groupId
+      parameters:
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+    post:
+      summary: POST /group/:groupId
+      parameters:
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+    delete:
+      summary: DELETE /group/:groupId
+      parameters:
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /group/:groupId/user/:userId:
+    put:
+      summary: PUT /group/:groupId/user/:userId
+      parameters:
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+    delete:
+      summary: DELETE /group/:groupId/user/:userId
+      parameters:
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /group/:groupId/bulkuseradd:
+    put:
+      summary: PUT /group/:groupId/bulkuseradd
+      parameters:
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+  /group/:groupId/bulkuserdel:
+    put:
+      summary: PUT /group/:groupId/bulkuserdel
+      parameters:
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+  /capability/:capId:
+    get:
+      summary: GET /capability/:capId
+      parameters:
+      - name: capId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+    post:
+      summary: POST /capability/:capId
+      parameters:
+      - name: capId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+    delete:
+      summary: DELETE /capability/:capId
+      parameters:
+      - name: capId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /capability/:
+    get:
+      summary: GET /capability/
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+    put:
+      summary: PUT /capability/
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+  /cast/:voteId/:decision:
+    get:
+      summary: GET /cast/:voteId/:decision
+      parameters:
+      - name: voteId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: decision
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /election/:
+    put:
+      summary: PUT /election/
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+    get:
+      summary: GET /election/
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /election/:electionId/stats:
+    get:
+      summary: GET /election/:electionId/stats
+      parameters:
+      - name: electionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /election/:electionId:
+    get:
+      summary: GET /election/:electionId
+      parameters:
+      - name: electionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+    post:
+      summary: POST /election/:electionId
+      parameters:
+      - name: electionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+    delete:
+      summary: DELETE /election/:electionId
+      parameters:
+      - name: electionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /election/:electionId/start:
+    put:
+      summary: PUT /election/:electionId/start
+      parameters:
+      - name: electionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+  /election/:electionId/stop:
+    put:
+      summary: PUT /election/:electionId/stop
+      parameters:
+      - name: electionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+  /helper/status/object/:objectName:
+    get:
+      summary: GET /helper/status/object/:objectName
+      parameters:
+      - name: objectName
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /helper/status/object:
+    get:
+      summary: GET /helper/status/object
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /helper/status/id/:statusName:
+    get:
+      summary: GET /helper/status/id/:statusName
+      parameters:
+      - name: statusName
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /helper/status:
+    get:
+      summary: GET /helper/status
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /role/:
+    put:
+      summary: PUT /role/
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+    get:
+      summary: GET /role/
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /role/:roleId:
+    get:
+      summary: GET /role/:roleId
+      parameters:
+      - name: roleId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+    post:
+      summary: POST /role/:roleId
+      parameters:
+      - name: roleId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+    delete:
+      summary: DELETE /role/:roleId
+      parameters:
+      - name: roleId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /role/:roleId/bulkcapadd:
+    put:
+      summary: PUT /role/:roleId/bulkcapadd
+      parameters:
+      - name: roleId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+  /role/:roleId/bulkcapdel:
+    put:
+      summary: PUT /role/:roleId/bulkcapdel
+      parameters:
+      - name: roleId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+  /role/:roleId/cap/:capabilityId:
+    put:
+      summary: PUT /role/:roleId/cap/:capabilityId
+      parameters:
+      - name: roleId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: capabilityId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+    delete:
+      summary: DELETE /role/:roleId/cap/:capabilityId
+      parameters:
+      - name: roleId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: capabilityId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /role/:roleId/bulkuseradd:
+    put:
+      summary: PUT /role/:roleId/bulkuseradd
+      parameters:
+      - name: roleId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+  /role/:roleId/bulkuserdel:
+    put:
+      summary: PUT /role/:roleId/bulkuserdel
+      parameters:
+      - name: roleId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+  /role/:roleId/user/:userId:
+    put:
+      summary: PUT /role/:roleId/user/:userId
+      parameters:
+      - name: roleId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+    delete:
+      summary: DELETE /role/:roleId/user/:userId
+      parameters:
+      - name: roleId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /category/:
+    put:
+      summary: PUT /category/
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+    get:
+      summary: GET /category/
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /category/:categoryId:
+    get:
+      summary: GET /category/:categoryId
+      parameters:
+      - name: categoryId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+    post:
+      summary: POST /category/:categoryId
+      parameters:
+      - name: categoryId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+    delete:
+      summary: DELETE /category/:categoryId
+      parameters:
+      - name: categoryId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Capability:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        creator:
+          type: string
+        updatedAt:
+          type: string
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        creator:
+          type: string
+        updatedAt:
+          type: string
+    Election:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        text:
+          type: string
+        listId:
+          type: string
+        imageId:
+          type: string
+        electionType:
+          type: integer
+        expiration:
+          type: string
+        groupId:
+          type: string
+        categoryId:
+          type: string
+        statusId:
+          type: integer
+        creator:
+          type: string
+        updatedAt:
+          type: string
+    Friend:
+      type: object
+      properties:
+        id:
+          type: string
+        statusId:
+          type: integer
+        userId:
+          type: string
+        friendId:
+          type: string
+        token:
+          type: string
+        tokenExpire:
+          type: string
+        creator:
+          type: string
+        updatedAt:
+          type: string
+    Group:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        categoryId:
+          type: string
+        listType:
+          type: integer
+        active:
+          type: boolean
+        creator:
+          type: string
+        updatedAt:
+          type: string
+    Groupmember:
+      type: object
+      properties:
+        id:
+          type: string
+        groupId:
+          type: string
+        userId:
+          type: string
+        active:
+          type: boolean
+        creator:
+          type: string
+        updatedAt:
+          type: string
+    Image:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        filename:
+          type: string
+        contentType:
+          type: string
+        statusId:
+          type: integer
+        categoryId:
+          type: string
+        creator:
+          type: string
+        updatedAt:
+          type: string
+    Item:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        imageId:
+          type: string
+        url:
+          type: string
+        location:
+          type: string
+        categoryId:
+          type: string
+        creator:
+          type: string
+        updatedAt:
+          type: string
+    List:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        categoryId:
+          type: string
+        creator:
+          type: string
+        updatedAt:
+          type: string
+    Listitem:
+      type: object
+      properties:
+        id:
+          type: string
+        listId:
+          type: string
+        itemId:
+          type: string
+        creator:
+          type: string
+        updatedAt:
+          type: string
+    Metadata:
+      type: object
+      properties:
+        name:
+          type: string
+        value:
+          type: string
+        comment:
+          type: string
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        type:
+          type: integer
+        objectId:
+          type: string
+        text:
+          type: string
+        senderId:
+          type: string
+        statusId:
+          type: integer
+        creator:
+          type: string
+        updatedAt:
+          type: string
+    Preference:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        value:
+          type: string
+        creator:
+          type: string
+        updatedAt:
+          type: string
+    Role:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        protected:
+          type: boolean
+        creator:
+          type: string
+        updatedAt:
+          type: string
+    Rolecapability:
+      type: object
+      properties:
+        id:
+          type: string
+        roleId:
+          type: string
+        capabilityId:
+          type: string
+        creator:
+          type: string
+        updatedAt:
+          type: string
+    Socketinfo:
+      type: object
+      properties:
+        userId:
+          type: string
+        socketId:
+          type: string
+    Status:
+      type: object
+      properties:
+        id:
+          type: integer
+        object:
+          type: string
+        name:
+          type: string
+        creator:
+          type: string
+        updatedAt:
+          type: string
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        alias:
+          type: string
+        imageId:
+          type: string
+        email:
+          type: string
+        creator:
+          type: string
+        lastLogin:
+          type: string
+        active:
+          type: boolean
+        admin:
+          type: boolean
+        protected:
+          type: boolean
+        verified:
+          type: boolean
+        enable2fa:
+          type: boolean
+        secret2fa:
+          type: string
+        token2fa:
+          type: string
+        auth:
+          type: string
+        resetToken:
+          type: string
+        resetTokenExpire:
+          type: string
+        refreshToken:
+          type: string
+        refreshTokenExpire:
+          type: string
+        registerToken:
+          type: string
+        registerTokenExpire:
+          type: string
+        changeToEmail:
+          type: string
+        updatedAt:
+          type: string
+    Userrole:
+      type: object
+      properties:
+        id:
+          type: string
+        roleId:
+          type: string
+        userId:
+          type: string
+    Vote:
+      type: object
+      properties:
+        id:
+          type: string
+        electionId:
+          type: string
+        userId:
+          type: string
+        itemId:
+          type: string
+        statusId:
+          type: integer
+        creator:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string

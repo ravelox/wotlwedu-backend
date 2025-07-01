@@ -99,6 +99,7 @@ app.use(cors({ origin: true }));
 
 // Set static directory
 app.use(express.static(path.join(__dirname, "public")));
+app.use('/docs', express.static(path.join(__dirname, 'docs')));
 
 // Stop the favicon request in its tracks
 app.get("/favicon.ico", (req, res) => res.status(204));
