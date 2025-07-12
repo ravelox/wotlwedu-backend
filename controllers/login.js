@@ -270,7 +270,7 @@ exports.enable2FA = (req, res, next) => {
         })
         .catch((err) => next(err));
     })
-    .catch((err) => nexy(err));
+    .catch((err) => next(err));
 };
 
 exports.getGenerate2FAVerification = (req, res, next) => {
