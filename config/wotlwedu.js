@@ -1,4 +1,4 @@
-// Required for string to boolean conversations
+// Required for string to boolean conversions
 // Do not remove
 const toBool = require("../util/tobool");
 
