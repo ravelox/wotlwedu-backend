@@ -38,11 +38,16 @@ module.exports.isElectionEnded = async (electionId) => {
 module.exports.isElectionExpired = async (electionId) => {
   if (!electionId) return false;
 
-  const foundElection = Election.findByPk(electionId);
+  try {
+    const foundElection = await Election.findByPk(electionId);
 
-  if (!foundElection) return false;
+    if (!foundElection) return false;
 
-  return foundElection.expiration < new Date();
+    return foundElection.expiration < new Date();
+  } catch (err) {
+    console.error("isElectionExpired error:", err);
+    return false;
+  }
 };
 
 module.exports.expireElections = () => {
