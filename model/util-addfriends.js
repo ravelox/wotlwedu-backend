@@ -437,7 +437,7 @@ let rootUser = null;
 
 async function addUsers() {
   const defaultRoleName = Config.defaultRoleName || "Default Role";
-  for (user of userList) {
+  for (const user of userList) {
     console.log("Looking for " + user.alias);
     const foundUser = await User.findOne({ where: { alias: user.alias } });
     if (foundUser) {
@@ -468,7 +468,7 @@ async function addUsers() {
 
 async function addFriends() {
   const friendStatus = await getStatusIdByName("Friend");
-  for (relationship of relationships) {
+  for (const relationship of relationships) {
     userid1 = userList.find((user) => user.alias === relationship.name1).id;
     userid2 = userList.find((user) => user.alias === relationship.name2).id;
 
@@ -503,7 +503,7 @@ async function addFriends() {
 }
 
 async function addCategories() {
-  for (category of categories) {
+  for (const category of categories) {
     const newCategory = new Category();
     newCategory.id = UUID("category");
     newCategory.creator = rootUser.id;
@@ -523,7 +523,7 @@ function random_number(range) {
 }
 
 async function addGroups() {
-  for (group of groups) {
+  for (const group of groups) {
     const newGroup = new Group();
     newGroup.id = UUID("group");
     newGroup.creator = rootUser.id;

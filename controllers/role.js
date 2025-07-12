@@ -393,7 +393,7 @@ module.exports.putBulkAddCapToRole = (req, res, next) => {
 
       // Work through the list of capabilities
       const results = [];
-      for (capaToFind of capaList) {
+      for (const capaToFind of capaList) {
         await Capability.findByPk(capaToFind)
           .then(async (capaFound) => {
             if (!capaFound) {
@@ -462,7 +462,7 @@ module.exports.deleteBulkCapFromRole = (req, res, next) => {
           }
 
           const results = [];
-          for (capaToFind of capList) {
+          for (const capaToFind of capList) {
             await Capability.findByPk(capaToFind)
               .then(async (capaFound) => {
                 if (!capaFound) {
@@ -536,7 +536,7 @@ module.exports.putBulkAddUserToRole = (req, res, next) => {
             return StatusResponse(res, 421, "Cannot update own capabilities");
 
           const results = [];
-          for (user of userList) {
+          for (const user of userList) {
             await User.findByPk(user)
               .then(async (foundUser) => {
                 if (!foundUser) {
@@ -592,7 +592,7 @@ module.exports.deleteBulkUserFromRole = (req, res, next) => {
 
       const results = [];
 
-      for (user of userList) {
+      for (const user of userList) {
         await User.findByPk(user)
           .then(async (foundUser) => {
             if (!foundUser) {

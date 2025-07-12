@@ -33,7 +33,7 @@ async function createRole(rolename, description, capabilityList) {
     role = await Role.create(r);
   }
 
-  for (capname of capabilityList) {
+  for (const capname of capabilityList) {
     console.log(module_id + ": Adding  " + capname + " to " + role.name);
     const capaToAdd = await Capability.findOne({ where: { name: capname } });
     await role.addCapability(capaToAdd, {

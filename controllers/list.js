@@ -331,7 +331,7 @@ module.exports.putBulkAddItemToList = (req, res, next) => {
 
     // Work through the list of items
     const results = [];
-    for (itemToFind of itemList) {
+    for (const itemToFind of itemList) {
       await Item.findByPk(itemToFind)
         .then(async (itemFound) => {
           if (!itemFound) {
@@ -389,7 +389,7 @@ module.exports.deleteBulkItemFromList = (req, res, next) => {
       if (!foundList) return StatusResponse(res, 404, "List not found");
 
       const results = [];
-      for (itemToFind of itemList) {
+      for (const itemToFind of itemList) {
         await Item.findByPk(itemToFind)
           .then(async (itemFound) => {
             if (!itemFound) {
