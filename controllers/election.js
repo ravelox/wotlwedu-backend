@@ -200,7 +200,7 @@ module.exports.postUpdateElection = (req, res, next) => {
         foundElection.description = req.body.description;
 
       if (req.body.electionType)
-        foundELection.electionType = req.body.electionType;
+        foundElection.electionType = req.body.electionType;
       if (req.body.groupId || req.body.groupId === null)
         foundElection.groupId = req.body.groupId;
       if (req.body.categoryId || req.body.groupId === null)
