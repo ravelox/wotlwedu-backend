@@ -57,7 +57,7 @@ async function apply(update) {
       status: -1,
       message: "No query interface available. Call init() method first",
     };
-  for (s of statusNames) {
+  for (const s of statusNames) {
     s.creator = "system";
     try {
       const foundStatus = await Status.findOne({where: {id: s.id}});

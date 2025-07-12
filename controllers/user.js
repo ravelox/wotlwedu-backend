@@ -237,7 +237,7 @@ exports.deleteUser = async (req, res, next) => {
       await Image.findAll({ where: { creator: foundUser.id } }).then(
         (foundImages) => {
           if (foundImages) {
-            for (i of foundImages) {
+            for (const i of foundImages) {
               deleteImageFile(Config.imageDir + i.filename)
                 .then((result) => {
                   /* File deleted */

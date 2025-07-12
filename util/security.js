@@ -38,10 +38,10 @@ async function getUserCaps(userToCheck) {
   let currentCaps = [];
 
   await UserRole.findAll(options).then((foundUserRoles) => {
-    for (userrole of foundUserRoles) {
+    for (const userrole of foundUserRoles) {
       if (userrole.role) {
         if (userrole.role.capabilities) {
-          for (capa of userrole.role.capabilities) {
+          for (const capa of userrole.role.capabilities) {
             const capUnit = capa.name.split(".");
             const obj = capUnit[0];
             const op = capUnit[1];
@@ -156,7 +156,7 @@ module.exports.checkCapability = function (objectToCheck, opList) {
     req.verdicts = [];
 
     if (opList) {
-      for (op of opList) {
+      for (const op of opList) {
         let isAdmin = false;
         let isAuthorized = false;
         if (

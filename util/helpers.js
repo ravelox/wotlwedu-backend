@@ -33,7 +33,7 @@ module.exports.logComment = function (comment) {
 module.exports.copyObject = function (obj, attr) {
   const returnObject = {};
   if (attr) {
-    for (k of attr) {
+    for (const k of attr) {
       returnObject[k] = obj[k];
     }
   }
@@ -71,7 +71,7 @@ module.exports.deleteImageFile = function (images) {
       imageList = [images];
     }
 
-    for (i of imageList) {
+    for (const i of imageList) {
       FS.unlink(i, (err) => {
         if (err) reject(err);
       });

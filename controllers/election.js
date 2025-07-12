@@ -343,7 +343,7 @@ module.exports.putStartElection = (req, res, next) => {
         "Election Start"
       );
       const votesToAdd = [];
-      for (voter of foundElection.group.users) {
+      for (const voter of foundElection.group.users) {
         await Notify.sendNotification(
           req.authUserId,
           voter.id,
@@ -351,7 +351,7 @@ module.exports.putStartElection = (req, res, next) => {
           foundElection.id,
           req.authName + " started a vote."
         );
-        for (item of foundElection.list.items) {
+          for (const item of foundElection.list.items) {
           const vote = new Vote();
 
           vote.id = UUID("vote");
@@ -366,7 +366,7 @@ module.exports.putStartElection = (req, res, next) => {
 
       const voteErrors = [];
       // If there are votes to be added, add them
-      for (vote of votesToAdd) {
+      for (const vote of votesToAdd) {
         await vote
           .save()
           .then(() => {})
@@ -513,7 +513,7 @@ module.exports.getStats = async (req, res, next) => {
           let statistics = { Results: {}, "By Voter": {} };
           let lookup = {};
 
-          for (r of result) {
+          for (const r of result) {
             const statusName = r["status.name"];
             if (!statistics["Results"][r.itemId]) {
               statistics["Results"][r.itemId] = {};

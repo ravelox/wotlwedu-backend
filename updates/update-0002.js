@@ -19,9 +19,9 @@ function genDefaultCaps() {
   const operations = ["manage", "delete", "edit", "add", "view"];
   const usertypes = ["admin", "owner"];
 
-  for (model of datamodels) {
-    for (operation of operations) {
-      for (usertype of usertypes) {
+  for (const model of datamodels) {
+    for (const operation of operations) {
+      for (const usertype of usertypes) {
         caps.push({
           id: "capa_" + capNumber.toString().padStart(3, "0"),
           name: [model, operation, usertype].join("."),
@@ -61,7 +61,7 @@ async function apply(update) {
       status: -1,
       message: "No query interface available. Call init() method first",
     };
-  for (cap of defaultCaps) {
+  for (const cap of defaultCaps) {
     const cap_id = cap.id;
     const cap_name = cap.name;
     const c = new Capability({

@@ -303,7 +303,7 @@ module.exports.putBulkAddUserToRole = (req, res, next) => {
 
     // Work through the list of users
     const results = [];
-    for (userToFind of userList) {
+    for (const userToFind of userList) {
       await User.findByPk(userToFind)
         .then(async (userFound) => {
           if (!userFound) {
@@ -358,7 +358,7 @@ module.exports.deleteBulkUserFromGroup = (req, res, next) => {
       if (!foundGroup) return StatusResponse(res, 404, "Group not found");
 
       const results = [];
-      for (userToFind of userList) {
+      for (const userToFind of userList) {
         await User.findByPk(userToFind)
           .then(async (userFound) => {
             if (!userFound) {
