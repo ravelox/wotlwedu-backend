@@ -26,7 +26,7 @@
 > Documentation (Swagger) for REST API
 
 ***=> UTILITY FUNCTIONS
-> Expire elections
-> Expire tokens
+** DONE **> Expire elections
+** DONE **> Expire tokens
 
 > Filter by Creator
