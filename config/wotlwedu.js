@@ -11,6 +11,8 @@ module.exports.db_database = process.env.WOTLWEDU_DB_NAME || "wotlwedu";
 module.exports.db_password = process.env.WOTLWEDU_DB_PASSWORD;
 
 module.exports.db_logging = toBool( process.env.WOTLWEDU_DB_LOGGING || false );
+// Select which ORM to use. Supported: sequelize (default), mongoose, pg
+module.exports.db_type = process.env.WOTLWEDU_DB_TYPE || "sequelize";
 
 module.exports.db_force_sync = toBool( process.env.WOTLWEDU_DB_SYNC || true );
 

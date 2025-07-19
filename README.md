@@ -9,7 +9,7 @@ For some details, take a look at the blog post at https://www.raveloxprojects.co
 ## What is wotlwedu-backend?
 This is the REST API server for wotlwedu to provide an interface for **wotlwedu-frontend** and **wotlwedu-minimal**. The code repositories for both those interfaces are https://github.com/ravelox/wotlwedu-frontend and https://github.com/ravelox/wotlwedu-minimal
 More details can be found at https://www.raveloxprojects.com/blog/?p=892 https://www.raveloxprojects.com/blog/?p=911.
-This API is currently written to talk with a **mariadb** database.
+This API uses an abstracted database layer. By default it uses **Sequelize** with a **MariaDB** backend, but support for other ORMs such as **Mongoose** and a Postgres based adapter can be added by setting `WOTLWEDU_DB_TYPE`.
 ## How is wotlwedu-backend installed?
 **wotlwedu-backend** is an NodeJS app so there are a few steps to take and it depends on how you want to deploy it.
 ### Manual build
@@ -21,7 +21,7 @@ This API is currently written to talk with a **mariadb** database.
     `cd wotlwedu-backend`
 4.  Install the npm packages required by this app. For those not familiar with NodeJS, the package versions are listed in the **packages.json** file. This step may take some time to complete as each package has their own dependencies that they need to download.
     `npm install`
-5. Before running the backend, you will need to initialise the database. You need a mariadb server running somewhere, it doesn't have to be a local instance. The instructions for installing mariadb are out of scope for this so please look at your platform's documentation. When a database server is available, you can use the script **docker-entrypoint.sh** to check for the **wotlwedu** database and initialise it if the database doesn't exist. While this script is intended for a Docker container, it can still be run from the command line. You **must** have a number of environment variables present to configure the database information: **WOTLWEDU_DB_ROOT_USER**. **WOTLWEDU_DB_ROOT_PASSWORD**, **WOTLWEDU_DB_HOST**, **WOTLWEDU_DB_USER**, **WOTLWEDU_DB_NAME** and **WOTLWEDU_DB_PASSWORD**. Note that unless you hard-code these values (instructions later), you will need to make sure that these variables are present **every time** you run **wotlwedu-backend**.
+5. Before running the backend, you will need to initialise the database. The required database server depends on the ORM in use. When using the default Sequelize adapter, a MariaDB server is required. The instructions for installing MariaDB are out of scope for this so please look at your platform's documentation. When a database server is available, you can use the script **docker-entrypoint.sh** to check for the **wotlwedu** database and initialise it if the database doesn't exist. While this script is intended for a Docker container, it can still be run from the command line. You **must** have a number of environment variables present to configure the database information: **WOTLWEDU_DB_ROOT_USER**. **WOTLWEDU_DB_ROOT_PASSWORD**, **WOTLWEDU_DB_HOST**, **WOTLWEDU_DB_USER**, **WOTLWEDU_DB_NAME** and **WOTLWEDU_DB_PASSWORD**. Note that unless you hard-code these values (instructions later), you will need to make sure that these variables are present **every time** you run **wotlwedu-backend**.
 6. When the script has finished running, it will have initialised the database and populated it with some dummy users and some basic data. These can be deleted at a later time. The script will call **npm start** to run the backend. Logging output is sent to stdout/stderr.
 7. An admin user is created with the email address **root@localhost.localdomain** and password of **WombatFridgeBucket** (no spaces, capitalisation for each word).
 8. If you want to run the app from a different script, NodeJS are typically called by using the command
@@ -40,5 +40,5 @@ To build the Docker image, run the following command in the wotlwedu-backend rep
 A **docker compose** file is also available as **docker-compose.compose.yaml**. This file should be reviewed for the required environment variables. It should be noted that the compose file requires a directory **/secrets/wotlwedu-backend** to be available on the **host** machine to hold the SSL certificate and key **and** a file called **secrets.env** which will hold the initialisation for other variables such as **WOTLWEDU_JWT_SECRET**.
 When you have the Docker container image created, you can use the compose file to start a container:
 `docker compose -f docker-compose.compose.yaml up -d`
-This creates 2 containers. 1 for the mariadb and 1 for the **wotlwedu-backend** instance.
+This creates 2 containers when using MariaDB with Sequelize: one for the database and one for the **wotlwedu-backend** instance.
 See docs/codebase_overview.md for a project overview.
