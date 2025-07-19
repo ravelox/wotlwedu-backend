@@ -10,18 +10,17 @@ module.exports.db_user = process.env.WOTLWEDU_DB_USER || "wotlwedu";
 module.exports.db_database = process.env.WOTLWEDU_DB_NAME || "wotlwedu";
 module.exports.db_password = process.env.WOTLWEDU_DB_PASSWORD;
 
-module.exports.db_logging = toBool( process.env.WOTLWEDU_DB_LOGGING || false );
+module.exports.db_logging = toBool(process.env.WOTLWEDU_DB_LOGGING || false);
 // Select which ORM to use. Supported: sequelize (default), mongoose, pg
 module.exports.db_type = process.env.WOTLWEDU_DB_TYPE || "sequelize";
 
-module.exports.db_force_sync = toBool( process.env.WOTLWEDU_DB_SYNC || true );
+module.exports.db_force_sync = toBool(process.env.WOTLWEDU_DB_SYNC || true);
 
 module.exports.jwtSecret = process.env.WOTLWEDU_JWT_SECRET;
 module.exports.jwtExpiry = "1h";
 module.exports.jwtRefreshExpiry = "2h";
 
 module.exports.defaultItemsPerPage = 10;
-
 
 //
 // Set the required mail provider
@@ -30,7 +29,7 @@ module.exports.defaultItemsPerPage = 10;
 // Mailgun requires an API key
 // Set the following environment variable:
 // WOTLWEDU_MAILGUN_API_KEY
-const mailgun = require("../mailprovider/mailgun")
+const mailgun = require("../mailprovider/mailgun");
 
 // Amazon SES
 // Set the following environemnt variables:
@@ -47,27 +46,28 @@ const mailgun = require("../mailprovider/mailgun")
 //
 // If TLS is required for submission, set the following environment variable
 // WOTLWEDU_SMTP_SECURE to true
-const smtp = require("../mailprovider/smtp")
-
+const smtp = require("../mailprovider/smtp");
 
 // Set which mail provider to use
 module.exports.mailerProvider = smtp;
 module.exports.mailerFromAddress = "admin@wotlwedu.net";
 module.exports.mailerDisplayName = "Wotlwedu Admin";
 
+enable_ssl = toBool(process.env.WOTLWEDU_SSL || true);
+module.exports.ssl = enable_ssl;
+
+module.exports.sslKeyFile = process.env.WOTLWEDU_SSL_KEY || "server.key";
+module.exports.sslCert = process.env.WOTLWEDU_SSL_CERT || "server.cert";
+
 baseApiUrl = process.env.WOTLWEDU_API_URL || "https://api.wotlwedu.com:9876/";
 baseFrontendUrl =
-  process.env.WOTLWEDU_FRONTEND_URL || "https://www.wotlwedu.com";
+  process.env.WOTLWEDU_FRONTEND_URL || "http" + ( enable_ssl ? "s" : "") + "://www.wotlwedu.com";
 
 module.exports.baseFrontendUrl = baseFrontendUrl;
 module.exports.baseApiUrl = baseApiUrl;
 module.exports.imageURL =
   process.env.WOTLWEDU_IMAGE_URL || baseApiUrl + "images/";
 module.exports.imageDir = process.env.WOTLWEDU_IMAGE_DIR || "public/images/";
-
-module.exports.ssl = toBool( process.env.WOTLWEDU_SSL || true );
-module.exports.sslKeyFile = process.env.WOTLWEDU_SSL_KEY || "server.key";
-module.exports.sslCert = process.env.WOTLWEDU_SSL_CERT || "server.cert";
 
 module.exports.defaultRoleName = "Default Role";
 
