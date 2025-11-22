@@ -7,7 +7,7 @@ const router = express.Router();
 const electionController = require("../controllers/election");
 
 // Add election
-router.put(
+router.post(
   "/",
   Security.checkCapability("election", ["add"]),
   electionController.putAddElection
@@ -32,7 +32,7 @@ router.get(
 );
 
 // Edit an selection
-router.post(
+router.put(
   "/:electionId",
   Security.checkCapability("election", ["edit"]),
   electionController.postUpdateElection
@@ -46,14 +46,14 @@ router.delete(
 );
 
 // Start election
-router.put(
+router.post(
   "/:electionId/start",
   Security.checkCapability("election", ["edit"]),
   electionController.putStartElection
 );
 
 // Stop election
-router.put(
+router.post(
   "/:electionId/stop",
   Security.checkCapability("election", ["edit"]),
   electionController.putStopElection

@@ -241,7 +241,7 @@ module.exports.putAddVote = (req, res, next) => {
 
 module.exports.getCastVote = (req, res, next) => {
   const voteToFind = req.params.voteId;
-  const decision = req.params.decision;
+  const decision = req.body.decision || req.params.decision;
 
   if (!voteToFind) return StatusResponse(res, 421, "No vote ID provided");
   if (!decision) return StatusResponse(res, 421, "No decision provided");

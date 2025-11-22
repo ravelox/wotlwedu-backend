@@ -12,7 +12,7 @@ router.put(
   notificationController.putSetStatus
 );
 
-router.put(
+router.post(
   "/",
   Security.checkCapability("notification", ["add"]),
   notificationController.putAddNotification
@@ -34,7 +34,7 @@ router.get(
   notificationController.getAllNotification
 );
 
-router.post(
+router.put(
   "/:notificationId",
   Security.checkCapability("notification", ["edit"]),
   notificationController.postUpdateNotification

@@ -226,6 +226,13 @@ app.use((error, req, res, next) => {
     .json({ status: status, message: message, type: errType, data: data });
 });
 
+module.exports = app;
+
+// Skip starting listeners during automated tests
+if (process.env.NODE_ENV === "test") {
+  return;
+}
+
 function checkDBConnection() {
   return new Promise(async (resolve, reject) => {
     try {

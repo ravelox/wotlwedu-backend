@@ -16,12 +16,12 @@ router.get(
   Security.checkCapability("capability", ["view"]),
   capabilityController.getAllCapability
 );
-router.post(
+router.put(
   "/:capId",
   Security.checkCapability("capability", ["edit"]),
   capabilityController.postUpdateCapability
 );
-router.put(
+router.post(
   "/",
   Security.checkCapability("capability", ["add"]),
   capabilityController.putAddCapability

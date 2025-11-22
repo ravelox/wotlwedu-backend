@@ -6,8 +6,8 @@ const router = express.Router();
 
 const itemController = require("../controllers/item");
 
-router.get("/share/:itemId/recipient/:recipient", Security.checkCapability("item",["view"]), itemController.getShareItem);
-router.get("/accept/:notificationId", Security.checkCapability("item",["view"]), itemController.getAcceptItem);
+router.post("/share/:itemId/recipient/:recipient", Security.checkCapability("item",["view"]), itemController.getShareItem);
+router.post("/accept/:notificationId", Security.checkCapability("item",["view"]), itemController.getAcceptItem);
 router.get("/:itemId/notif/:notificationId", itemController.getItem);
 
 // Get/Edit item
@@ -22,13 +22,13 @@ router.get(
   itemController.getAllItem
 );
 
-router.post(
+router.put(
   "/:itemId",
   Security.checkCapability("item", ["edit"]),
   itemController.postUpdateItem
 );
 
-router.put(
+router.post(
   "/",
   Security.checkCapability("item", ["add"]),
   itemController.putAddItem

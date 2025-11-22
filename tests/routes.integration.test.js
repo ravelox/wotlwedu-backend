@@ -1,0 +1,205 @@
+const assert = require("assert");
+const http = require("http");
+const bodyParser = require("body-parser");
+const express = require("express");
+
+// Configure environment for in-memory sqlite before loading app/config
+process.env.NODE_ENV = "test";
+process.env.WOTLWEDU_DB_DIALECT = "sqlite";
+process.env.WOTLWEDU_DB_STORAGE = ":memory:";
+process.env.WOTLWEDU_DB_LOGGING = "false";
+process.env.WOTLWEDU_JWT_SECRET = "testsecret";
+process.env.WOTLWEDU_DB_SYNC = "true";
+
+const database = require("../util/database");
+const Associations = require("../model/associations");
+const User = require("../model/user");
+const Security = require("../util/security");
+
+let skipReason = null;
+try {
+  require("sqlite3");
+} catch (err) {
+  skipReason = "sqlite3 not installed; cannot run integration tests";
+}
+
+const resolvedDialect =
+  typeof database.getDialect === "function" ? database.getDialect() : null;
+if (!skipReason && resolvedDialect && resolvedDialect !== "sqlite") {
+  skipReason = `integration skipped: dialect ${resolvedDialect} (requires sqlite)`;
+}
+
+// Stub security to always authorize during tests
+Security.checkAuthentication = (req, res, next) => {
+  req.authUserId = "user_test";
+  req.authName = "Test User";
+  req.verdicts = [];
+  req.isAdmin = true;
+  next();
+};
+Security.checkCapability = (_objectToCheck, opList) => {
+  return (req, res, next) => {
+    req.authUserId = "user_test";
+    req.verdicts = (opList || []).map((op) => ({
+      op,
+      isAuthorized: true,
+      isAdmin: true,
+    }));
+    next();
+  };
+};
+
+// Build an express app matching the production routing without starting a listener
+function buildApp() {
+  const baseApp = express();
+  baseApp.use(bodyParser.json());
+
+  const itemRoutes = require("../routes/item");
+  const listRoutes = require("../routes/list");
+
+  // Mirror app.js protected routes used in tests
+  baseApp.use("/item", Security.checkAuthentication, itemRoutes);
+  baseApp.use("/list", Security.checkAuthentication, listRoutes);
+
+  // Ping route
+  baseApp.use(
+    "/ping",
+    Security.checkAuthentication,
+    (req, res) => res.status(200).json({ status: 200, message: "OK" })
+  );
+
+  return baseApp;
+}
+
+// Minimal HTTP helper without external deps
+function request(server, method, path, body) {
+  return new Promise((resolve, reject) => {
+    if (skipReason) {
+      return reject(new Error(skipReason));
+    }
+    if (!server || !server.address()) {
+      return reject(new Error("Server is not running"));
+    }
+    const payload = body ? JSON.stringify(body) : null;
+    const addressInfo = server.address();
+    const options = {
+      method,
+      path,
+      host: addressInfo.address || "127.0.0.1",
+      port: addressInfo.port,
+      headers: payload
+        ? {
+            "Content-Type": "application/json",
+            "Content-Length": Buffer.byteLength(payload),
+          }
+        : {},
+    };
+
+    const req = http.request(options, (res) => {
+      let data = "";
+      res.on("data", (chunk) => (data += chunk));
+      res.on("end", () => {
+        try {
+          const parsed = data ? JSON.parse(data) : {};
+          resolve({ status: res.statusCode, body: parsed });
+        } catch (err) {
+          reject(err);
+        }
+      });
+    });
+
+    req.on("error", reject);
+    if (payload) req.write(payload);
+    req.end();
+  });
+}
+
+module.exports = (addTest) => {
+  if (skipReason) {
+    addTest(`integration skipped: ${skipReason}`, () => {
+      console.warn(skipReason);
+    });
+    return;
+  }
+
+  let server;
+  let app;
+  let createdItemId;
+
+  addTest("setup test database", async () => {
+    Associations.setup();
+    if (resolvedDialect === "sqlite" && typeof database.query === "function") {
+      await database.query("PRAGMA foreign_keys = OFF;");
+    }
+    await database.sync({ force: true });
+    await User.create({
+      id: "user_test",
+      firstName: "Test",
+      lastName: "User",
+      alias: "tester",
+      email: "test@example.com",
+      creator: "user_test",
+      active: true,
+      admin: true,
+    });
+  });
+
+  addTest("start test server", async () => {
+    app = buildApp();
+    try {
+      await new Promise((resolve, reject) => {
+        server = app.listen(0, "127.0.0.1", resolve);
+        server.on("error", reject);
+      });
+    } catch (err) {
+      skipReason = `integration skipped: cannot start server (${err.message})`;
+      server = null;
+      throw new Error(skipReason);
+    }
+  });
+
+  addTest("ping responds with OK", async () => {
+    const res = await request(server, "GET", "/ping");
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.message, "OK");
+  });
+
+  addTest("can create item via POST /item", async () => {
+    const res = await request(server, "POST", "/item", {
+      name: "Test Item",
+      description: "Item description",
+      url: "http://example.com",
+    });
+    assert.strictEqual(res.status, 200);
+    assert.ok(res.body.data && res.body.data.item && res.body.data.item.id);
+    createdItemId = res.body.data.item.id;
+  });
+
+  addTest("list items via GET /item", async () => {
+    const res = await request(server, "GET", "/item");
+    assert.strictEqual(res.status, 200);
+    assert.ok(Array.isArray(res.body.data.items));
+    assert.ok(res.body.data.items.length >= 1);
+  });
+
+  addTest("update item via PUT /item/:id", async () => {
+    const res = await request(server, "PUT", `/item/${createdItemId}`, {
+      name: "Updated Item",
+      description: "Updated",
+    });
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.data.item.name, "Updated Item");
+  });
+
+  addTest("delete item via DELETE /item/:id", async () => {
+    const res = await request(server, "DELETE", `/item/${createdItemId}`);
+    assert.strictEqual(res.status, 200);
+  });
+
+  addTest("teardown server", async () => {
+    if (server) {
+      await new Promise((resolve) => server.close(resolve));
+    }
+    await database.close();
+  });
+};

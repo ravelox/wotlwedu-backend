@@ -7,9 +7,9 @@ const preferenceController = require("../controllers/preference");
 
 router.get("/:preferenceName", preferenceController.getPreference);
 router.get("/", preferenceController.getAllPreferences);
-router.post("/:preferenceName", preferenceController.postUpdatePreference);
+router.put("/:preferenceName", preferenceController.postUpdatePreference);
 router.delete("/:preferenceName", preferenceController.deletePreference);
 
-router.put("/", preferenceController.putAddPreference);
+router.post("/", preferenceController.putAddPreference);
 
 module.exports = router;

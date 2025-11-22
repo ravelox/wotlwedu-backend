@@ -6,8 +6,8 @@ const Security = require("../util/security");
 const imageController = require("../controllers/image");
 
 router.get("/:imageId/notif/:notificationId", imageController.getImage);
-router.get("/share/:imageId/recipient/:recipient", Security.checkCapability("image",["view"]), imageController.getShareImage);
-router.get("/accept/:notificationId", Security.checkCapability("image",["view"]), imageController.getAcceptImage);
+router.post("/share/:imageId/recipient/:recipient", Security.checkCapability("image",["view"]), imageController.getShareImage);
+router.post("/accept/:notificationId", Security.checkCapability("image",["view"]), imageController.getAcceptImage);
 router.get(
   "/:imageId",
   Security.checkCapability("image", ["view"]),
@@ -25,13 +25,13 @@ router.post(
   imageController.postImageFile
 );
 
-router.post(
+router.put(
   "/:imageId",
   Security.checkCapability("image", ["edit"]),
   imageController.postUpdateImage
 );
 
-router.put(
+router.post(
   "/",
   Security.checkCapability("image", ["add"]),
   imageController.putAddImage
@@ -50,4 +50,3 @@ router.delete(
 );
 
 module.exports = router;
-

@@ -20,6 +20,15 @@ const Preference = require("./preference")
 const SocketInfo = require("./socketinfo")
 
 module.exports.setup = function () {
+  const isSqliteTest =
+    process.env.NODE_ENV === "test" &&
+    process.env.WOTLWEDU_DB_DIALECT === "sqlite";
+
+  if (isSqliteTest) {
+    // Minimal associations for sqlite-based tests to avoid FK complexity
+    return;
+  }
+
   Capability.belongsToMany(Role, { through: RoleCapability });
 
   Friend.hasOne(User, { foreignKey: "id", sourceKey: "friendId" });

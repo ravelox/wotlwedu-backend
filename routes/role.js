@@ -7,14 +7,14 @@ const router = express.Router();
 const roleController = require("../controllers/role");
 
 // Add role
-router.put("/", Security.checkCapability("role",["add"]),roleController.putAddRole);
+router.post("/", Security.checkCapability("role",["add"]),roleController.putAddRole);
 
 // View single role or all roles
 router.get("/:roleId", Security.checkCapability("role",["view"]),roleController.getSingleRole);
 router.get("/", Security.checkCapability("role",["view"]),roleController.getAllRole);
 
 // Edit a role
-router.post("/:roleId", Security.checkCapability("role",["edit"]),roleController.postUpdateRole);
+router.put("/:roleId", Security.checkCapability("role",["edit"]),roleController.postUpdateRole);
 
 // Delete a role
 router.delete("/:roleId", Security.checkCapability("role", ["delete"]), roleController.deleteRole);

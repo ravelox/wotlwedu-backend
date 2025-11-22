@@ -24,8 +24,8 @@ paths:
       security:
       - bearerAuth: []
   /image/share/:imageId/recipient/:recipient:
-    get:
-      summary: GET /image/share/:imageId/recipient/:recipient
+    post:
+      summary: POST /image/share/:imageId/recipient/:recipient
       parameters:
       - name: imageId
         in: path
@@ -43,8 +43,8 @@ paths:
       security:
       - bearerAuth: []
   /image/accept/:notificationId:
-    get:
-      summary: GET /image/accept/:notificationId
+    post:
+      summary: POST /image/accept/:notificationId
       parameters:
       - name: notificationId
         in: path
@@ -70,8 +70,8 @@ paths:
           description: Successful response
       security:
       - bearerAuth: []
-    post:
-      summary: POST /image/:imageId
+    put:
+      summary: PUT /image/:imageId
       parameters:
       - name: imageId
         in: path
@@ -112,8 +112,8 @@ paths:
           description: Successful response
       security:
       - bearerAuth: []
-    put:
-      summary: PUT /image/
+    post:
+      summary: POST /image/
       parameters: []
       responses:
         '200':
@@ -175,8 +175,8 @@ paths:
           description: Successful response
       security:
       - bearerAuth: []
-    post:
-      summary: POST /preference/:preferenceName
+    put:
+      summary: PUT /preference/:preferenceName
       parameters:
       - name: preferenceName
         in: path
@@ -217,8 +217,8 @@ paths:
           description: Successful response
       security:
       - bearerAuth: []
-    put:
-      summary: PUT /preference/
+    post:
+      summary: POST /preference/
       parameters: []
       responses:
         '200':
@@ -259,8 +259,8 @@ paths:
               type: object
               additionalProperties: true
   /notification/:
-    put:
-      summary: PUT /notification/
+    post:
+      summary: POST /notification/
       parameters: []
       responses:
         '200':
@@ -305,8 +305,8 @@ paths:
           description: Successful response
       security:
       - bearerAuth: []
-    post:
-      summary: POST /notification/:notificationId
+    put:
+      summary: PUT /notification/:notificationId
       parameters:
       - name: notificationId
         in: path
@@ -339,8 +339,8 @@ paths:
       security:
       - bearerAuth: []
   /register/confirm/:tokenId:
-    get:
-      summary: GET /register/confirm/:tokenId
+    post:
+      summary: POST /register/confirm/:tokenId
       parameters:
       - name: tokenId
         in: path
@@ -369,8 +369,8 @@ paths:
               type: object
               additionalProperties: true
   /item/share/:itemId/recipient/:recipient:
-    get:
-      summary: GET /item/share/:itemId/recipient/:recipient
+    post:
+      summary: POST /item/share/:itemId/recipient/:recipient
       parameters:
       - name: itemId
         in: path
@@ -388,8 +388,8 @@ paths:
       security:
       - bearerAuth: []
   /item/accept/:notificationId:
-    get:
-      summary: GET /item/accept/:notificationId
+    post:
+      summary: POST /item/accept/:notificationId
       parameters:
       - name: notificationId
         in: path
@@ -434,8 +434,8 @@ paths:
           description: Successful response
       security:
       - bearerAuth: []
-    post:
-      summary: POST /item/:itemId
+    put:
+      summary: PUT /item/:itemId
       parameters:
       - name: itemId
         in: path
@@ -476,8 +476,8 @@ paths:
           description: Successful response
       security:
       - bearerAuth: []
-    put:
-      summary: PUT /item/
+    post:
+      summary: POST /item/
       parameters: []
       responses:
         '200':
@@ -505,8 +505,8 @@ paths:
           description: Successful response
       security:
       - bearerAuth: []
-    post:
-      summary: POST /vote/:voteId
+    put:
+      summary: PUT /vote/:voteId
       parameters:
       - name: voteId
         in: path
@@ -534,8 +534,8 @@ paths:
           description: Successful response
       security:
       - bearerAuth: []
-    put:
-      summary: PUT /vote/
+    post:
+      summary: POST /vote/
       parameters: []
       responses:
         '200':
@@ -587,8 +587,8 @@ paths:
       security:
       - bearerAuth: []
   /list/share/:listId/recipient/:recipient:
-    get:
-      summary: GET /list/share/:listId/recipient/:recipient
+    post:
+      summary: POST /list/share/:listId/recipient/:recipient
       parameters:
       - name: listId
         in: path
@@ -606,8 +606,8 @@ paths:
       security:
       - bearerAuth: []
   /list/accept/:notificationId:
-    get:
-      summary: GET /list/accept/:notificationId
+    post:
+      summary: POST /list/accept/:notificationId
       parameters:
       - name: notificationId
         in: path
@@ -652,8 +652,8 @@ paths:
           description: Successful response
       security:
       - bearerAuth: []
-    post:
-      summary: POST /list/:listId
+    put:
+      summary: PUT /list/:listId
       parameters:
       - name: listId
         in: path
@@ -694,8 +694,8 @@ paths:
           description: Successful response
       security:
       - bearerAuth: []
-    put:
-      summary: PUT /list/
+    post:
+      summary: POST /list/
       parameters: []
       responses:
         '200':
@@ -710,8 +710,8 @@ paths:
               type: object
               additionalProperties: true
   /list/:listId/bulkitemadd:
-    put:
-      summary: PUT /list/:listId/bulkitemadd
+    post:
+      summary: POST /list/:listId/bulkitemadd
       parameters:
       - name: listId
         in: path
@@ -731,8 +731,8 @@ paths:
               type: object
               additionalProperties: true
   /list/:listId/bulkitemdel:
-    put:
-      summary: PUT /list/:listId/bulkitemdel
+    post:
+      summary: POST /list/:listId/bulkitemdel
       parameters:
       - name: listId
         in: path
@@ -812,8 +812,8 @@ paths:
               type: object
               additionalProperties: true
   /login/2fa:
-    get:
-      summary: GET /login/2fa
+    post:
+      summary: POST /login/2fa
       parameters: []
       responses:
         '200':
@@ -821,8 +821,8 @@ paths:
       security:
       - bearerAuth: []
   /login/gentoken:
-    get:
-      summary: GET /login/gentoken
+    post:
+      summary: POST /login/gentoken
       parameters: []
       responses:
         '200':
@@ -898,8 +898,8 @@ paths:
               type: object
               additionalProperties: true
   /user/accept/:tokenId:
-    get:
-      summary: GET /user/accept/:tokenId
+    post:
+      summary: POST /user/accept/:tokenId
       parameters:
       - name: tokenId
         in: path
@@ -948,8 +948,8 @@ paths:
           description: Successful response
       security:
       - bearerAuth: []
-    post:
-      summary: POST /user/:userId
+    put:
+      summary: PUT /user/:userId
       parameters:
       - name: userId
         in: path
@@ -989,8 +989,8 @@ paths:
           description: Successful response
       security:
       - bearerAuth: []
-    put:
-      summary: PUT /user/
+    post:
+      summary: POST /user/
       parameters: []
       responses:
         '200':
@@ -1193,8 +1193,8 @@ paths:
       security:
       - bearerAuth: []
   /group/:
-    put:
-      summary: PUT /group/
+    post:
+      summary: POST /group/
       parameters: []
       responses:
         '200':
@@ -1230,8 +1230,8 @@ paths:
           description: Successful response
       security:
       - bearerAuth: []
-    post:
-      summary: POST /group/:groupId
+    put:
+      summary: PUT /group/:groupId
       parameters:
       - name: groupId
         in: path
@@ -1307,8 +1307,8 @@ paths:
       security:
       - bearerAuth: []
   /group/:groupId/bulkuseradd:
-    put:
-      summary: PUT /group/:groupId/bulkuseradd
+    post:
+      summary: POST /group/:groupId/bulkuseradd
       parameters:
       - name: groupId
         in: path
@@ -1327,8 +1327,8 @@ paths:
             schema:
               $ref: '#/components/schemas/User'
   /group/:groupId/bulkuserdel:
-    put:
-      summary: PUT /group/:groupId/bulkuserdel
+    post:
+      summary: POST /group/:groupId/bulkuserdel
       parameters:
       - name: groupId
         in: path
@@ -1360,8 +1360,8 @@ paths:
           description: Successful response
       security:
       - bearerAuth: []
-    post:
-      summary: POST /capability/:capId
+    put:
+      summary: PUT /capability/:capId
       parameters:
       - name: capId
         in: path
@@ -1402,8 +1402,8 @@ paths:
           description: Successful response
       security:
       - bearerAuth: []
-    put:
-      summary: PUT /capability/
+    post:
+      summary: POST /capability/
       parameters: []
       responses:
         '200':
@@ -1417,16 +1417,11 @@ paths:
             schema:
               type: object
               additionalProperties: true
-  /cast/:voteId/:decision:
-    get:
-      summary: GET /cast/:voteId/:decision
+  /cast/:voteId/decision:
+    post:
+      summary: POST /cast/:voteId/decision
       parameters:
       - name: voteId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: decision
         in: path
         required: true
         schema:
@@ -1437,8 +1432,8 @@ paths:
       security:
       - bearerAuth: []
   /election/:
-    put:
-      summary: PUT /election/
+    post:
+      summary: POST /election/
       parameters: []
       responses:
         '200':
@@ -1488,8 +1483,8 @@ paths:
           description: Successful response
       security:
       - bearerAuth: []
-    post:
-      summary: POST /election/:electionId
+    put:
+      summary: PUT /election/:electionId
       parameters:
       - name: electionId
         in: path
@@ -1522,8 +1517,8 @@ paths:
       security:
       - bearerAuth: []
   /election/:electionId/start:
-    put:
-      summary: PUT /election/:electionId/start
+    post:
+      summary: POST /election/:electionId/start
       parameters:
       - name: electionId
         in: path
@@ -1543,8 +1538,8 @@ paths:
               type: object
               additionalProperties: true
   /election/:electionId/stop:
-    put:
-      summary: PUT /election/:electionId/stop
+    post:
+      summary: POST /election/:electionId/stop
       parameters:
       - name: electionId
         in: path
@@ -1610,8 +1605,8 @@ paths:
       security:
       - bearerAuth: []
   /role/:
-    put:
-      summary: PUT /role/
+    post:
+      summary: POST /role/
       parameters: []
       responses:
         '200':
@@ -1647,8 +1642,8 @@ paths:
           description: Successful response
       security:
       - bearerAuth: []
-    post:
-      summary: POST /role/:roleId
+    put:
+      summary: PUT /role/:roleId
       parameters:
       - name: roleId
         in: path
@@ -1681,8 +1676,8 @@ paths:
       security:
       - bearerAuth: []
   /role/:roleId/bulkcapadd:
-    put:
-      summary: PUT /role/:roleId/bulkcapadd
+    post:
+      summary: POST /role/:roleId/bulkcapadd
       parameters:
       - name: roleId
         in: path
@@ -1702,8 +1697,8 @@ paths:
               type: object
               additionalProperties: true
   /role/:roleId/bulkcapdel:
-    put:
-      summary: PUT /role/:roleId/bulkcapdel
+    post:
+      summary: POST /role/:roleId/bulkcapdel
       parameters:
       - name: roleId
         in: path
@@ -1767,8 +1762,8 @@ paths:
       security:
       - bearerAuth: []
   /role/:roleId/bulkuseradd:
-    put:
-      summary: PUT /role/:roleId/bulkuseradd
+    post:
+      summary: POST /role/:roleId/bulkuseradd
       parameters:
       - name: roleId
         in: path
@@ -1787,8 +1782,8 @@ paths:
             schema:
               $ref: '#/components/schemas/User'
   /role/:roleId/bulkuserdel:
-    put:
-      summary: PUT /role/:roleId/bulkuserdel
+    post:
+      summary: POST /role/:roleId/bulkuserdel
       parameters:
       - name: roleId
         in: path
@@ -1850,8 +1845,8 @@ paths:
       security:
       - bearerAuth: []
   /category/:
-    put:
-      summary: PUT /category/
+    post:
+      summary: POST /category/
       parameters: []
       responses:
         '200':
@@ -1887,8 +1882,8 @@ paths:
           description: Successful response
       security:
       - bearerAuth: []
-    post:
-      summary: POST /category/:categoryId
+    put:
+      summary: PUT /category/:categoryId
       parameters:
       - name: categoryId
         in: path
