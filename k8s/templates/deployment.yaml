@@ -1,0 +1,109 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "wotlwedu-backend.fullname" . }}
+  labels:
+    {{- include "wotlwedu-backend.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "wotlwedu-backend.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "wotlwedu-backend.selectorLabels" . | nindent 8 }}
+      annotations:
+        {{- toYaml .Values.podAnnotations | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.serviceAccount.create }}
+      serviceAccountName: {{ default (include "wotlwedu-backend.fullname" .) .Values.serviceAccount.name }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ include "wotlwedu-backend.name" . }}
+          image: "{{ .Values.image.repository }}{{- if .Values.image.tag }}:{{ .Values.image.tag }}{{- end }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.env.appPort }}
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: WOTLWEDU_APP_PORT
+              value: "{{ .Values.env.appPort }}"
+            - name: WOTLWEDU_APP_LISTEN
+              value: "{{ .Values.env.appListen }}"
+            - name: WOTLWEDU_SSL
+              value: "{{ ternary "true" "false" .Values.env.sslEnabled }}"
+            - name: WOTLWEDU_DB_HOST
+              value: "{{ .Values.database.host }}"
+            - name: WOTLWEDU_DB_NAME
+              value: "{{ .Values.database.name }}"
+            - name: WOTLWEDU_DB_USER
+              value: "{{ .Values.database.user }}"
+            - name: WOTLWEDU_DB_ROOT_USER
+              value: "{{ .Values.database.rootUser }}"
+            - name: WOTLWEDU_DB_LOGGING
+              value: "{{ ternary "true" "false" .Values.env.dbLogging }}"
+            - name: WOTLWEDU_DB_SYNC
+              value: "{{ ternary "true" "false" .Values.env.dbSync }}"
+            - name: WOTLWEDU_HOUSEKEEPING_INTERVAL
+              value: "{{ .Values.env.housekeepingInterval }}"
+            - name: WOTLWEDU_IMAGE_DIR
+              value: "{{ .Values.persistence.mountPath }}"
+            - name: WOTLWEDU_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: db-password
+            - name: WOTLWEDU_DB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: db-root-password
+            - name: WOTLWEDU_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: jwt-secret
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          volumeMounts:
+            {{- if .Values.persistence.enabled }}
+            - name: image-store
+              mountPath: {{ .Values.persistence.mountPath }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- if .Values.persistence.enabled }}
+      volumes:
+        - name: image-store
+          {{- if .Values.persistence.existingClaim }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim }}
+          {{- else }}
+          persistentVolumeClaim:
+            claimName: {{ include "wotlwedu-backend.fullname" . }}-images
+          {{- end }}
+      {{- end }}
+      nodeSelector:
+        {{- toYaml .Values.nodeSelector | nindent 8 }}
+      affinity:
+        {{- toYaml .Values.affinity | nindent 8 }}
+      tolerations:
+        {{- toYaml .Values.tolerations | nindent 8 }}

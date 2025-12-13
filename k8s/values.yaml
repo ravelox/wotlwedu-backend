@@ -1,0 +1,64 @@
+replicaCount: 1
+
+image:
+  repository: wotlwedu-backend
+  tag: ""
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 9876
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+resources: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+env:
+  appPort: 9876
+  appListen: 0.0.0.0
+  sslEnabled: false
+  housekeepingInterval: 300
+  dbLogging: false
+  dbSync: true
+
+database:
+  host: wotlwedu-db
+  name: wotlwedu
+  user: wotlwedu
+  rootUser: root
+
+secrets:
+  create: true
+  name: wotlwedu-backend-secrets
+  dbPassword: change-me
+  dbRootPassword: change-root
+  jwtSecret: change-jwt
+
+persistence:
+  enabled: false
+  existingClaim: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 5Gi
+  storageClass: ""
+  mountPath: /var/opt/wotlwedu-backend/public/images
+
+serviceAccount:
+  create: false
+  annotations: {}
+  name: ""
