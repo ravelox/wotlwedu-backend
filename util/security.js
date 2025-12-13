@@ -90,7 +90,11 @@ module.exports.bypassCheck = (req, res, next) => {
 // Middleware function to check for the presence of an authentication
 // token and verify it
 module.exports.checkAuthentication = async (req, res, next) => {
-  const token = req.get("Authorization");
+  const authHeader = req.get("Authorization");
+  let token = authHeader;
+  if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
+    token = authHeader.slice(7).trim();
+  }
 
   if (!token && req.bypassAuthCheck) {
     req.bypassAuthCheck = false;
