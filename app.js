@@ -16,6 +16,12 @@ const IO = require("./util/wotlwedu-socketio");
 // ****
 const Config = require("./config/wotlwedu");
 
+// Abort early if JWT secret is missing
+if (!Config.jwtSecret) {
+  console.error("Environment variable WOTLWEDU_JWT_SECRET must be set");
+  process.exit(1);
+}
+
 const Housekeeping = require("./util/housekeeping")
 
 const UUID = require("./util/mini-uuid");
