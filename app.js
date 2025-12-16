@@ -67,6 +67,22 @@ if (Config.ssl === true) {
 
 app.use(bodyParser.json());
 
+// Log response details once the response is finished
+app.use((req, res, next) => {
+  res.on("finish", () => {
+    console.log(
+      new Date().toISOString() +
+        " :: Response :: " +
+        req.method +
+        " " +
+        req.originalUrl +
+        " :: " +
+        res.statusCode
+    );
+  });
+  next();
+});
+
 // Set up multer for PNG and JPEG images
 
 FS.mkdirSync(Config.imageDir, { recursive: true });
