@@ -91,6 +91,11 @@ module.exports.bypassCheck = (req, res, next) => {
 // token and verify it
 module.exports.checkAuthentication = async (req, res, next) => {
   const authHeader = req.get("Authorization");
+  console.log(
+    new Date().toISOString() +
+      " :: Authorization header :: " +
+      (authHeader ? authHeader : "<none>")
+  );
   let token = authHeader;
   if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
     token = authHeader.slice(7).trim();
