@@ -20,11 +20,28 @@ module.exports.getStatusIdByName = function (statusName) {
 module.exports.logComment = function (comment) {
   return function (req, res, next) {
     let remoteAddress = null;
-    if( req && req.socket && req.socket.remoteAddress )
-    {
+    if (req && req.socket && req.socket.remoteAddress) {
       remoteAddress = req.socket.remoteAddress;
     }
-    console.log( new Date().toISOString() + " :: " + ( remoteAddress ? remoteAddress + " :: " : "" ) + comment + " :: " + req.method + " :: " + req.originalUrl);
+    const startTime = Date.now();
+    res.once("finish", () => {
+      const duration = Date.now() - startTime;
+      console.log(
+        new Date().toISOString() +
+          " :: " +
+          (remoteAddress ? remoteAddress + " :: " : "") +
+          comment +
+          " :: " +
+          req.method +
+          " :: " +
+          req.originalUrl +
+          " :: " +
+          res.statusCode +
+          " :: " +
+          duration +
+          "ms"
+      );
+    });
     next();
   };
 };
