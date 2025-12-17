@@ -15,6 +15,7 @@ const IO = require("./util/wotlwedu-socketio");
 // Needs to be loaded *before* any database operations
 // ****
 const Config = require("./config/wotlwedu");
+const packageJSON = require("./package.json");
 
 // Abort early if JWT secret is missing
 if (Config.jwtSecret) {
@@ -23,6 +24,8 @@ if (Config.jwtSecret) {
   console.error("Environment variable WOTLWEDU_JWT_SECRET must be set");
   process.exit(1);
 }
+
+console.log(`Starting wotlwedu-backend version ${packageJSON.version}`);
 
 const Housekeeping = require("./util/housekeeping")
 
