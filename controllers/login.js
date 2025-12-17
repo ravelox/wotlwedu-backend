@@ -59,6 +59,11 @@ exports.postLogin = async (req, res, next) => {
         return StatusResponse(res, 403, "Invalid credentials");
       }
 
+      // Prevent login for inactive accounts
+      if (!foundUser.active) {
+        return StatusResponse(res, 403, "Account disabled");
+      }
+
       if (!foundUser.auth)
         return StatusResponse(res, 403, "Invalid credentials");
       if (foundUser.auth === "")
