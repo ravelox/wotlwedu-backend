@@ -17,7 +17,9 @@ const IO = require("./util/wotlwedu-socketio");
 const Config = require("./config/wotlwedu");
 
 // Abort early if JWT secret is missing
-if (!Config.jwtSecret) {
+if (Config.jwtSecret) {
+  console.log("WOTLWEDU_JWT_SECRET is set");
+} else {
   console.error("Environment variable WOTLWEDU_JWT_SECRET must be set");
   process.exit(1);
 }
