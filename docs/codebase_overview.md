@@ -1,57 +1,118 @@
 # Codebase Overview
 
-## Application structure
+## Application entrypoint
 
-The API server is implemented with [Express](https://expressjs.com/) and starts in [`app.js`](../app.js). At startup the app loads configuration from [`config/wotlwedu.js`](../config/wotlwedu.js) and establishes the Sequelize database connection before registering routes.
+The API server boots from [`app.js`](../app.js) using Express.
+
+Startup sequence:
+- Loads config from [`config/wotlwedu.js`](../config/wotlwedu.js).
+- Aborts early if `WOTLWEDU_JWT_SECRET` is missing.
+- Logs backend version from `package.json`.
+- Loads DB adapter via [`util/database.js`](../util/database.js).
+- Sets up model associations via [`model/associations.js`](../model/associations.js).
+- Registers all route modules and middleware.
+- Starts HTTP/HTTPS listener only after `database.authenticate()` succeeds.
+- Starts housekeeping interval tasks.
+- Initializes Socket.IO registration hooks.
+
+For tests (`NODE_ENV=test`), `app.js` exports the Express app and skips starting listeners.
 
 ## Configuration
 
-All runtime settings come from environment variables with fallbacks defined in `config/wotlwedu.js`. Important options include the listening port and database credentials shown on lines 5–11:
+Runtime configuration is centralized in [`config/wotlwedu.js`](../config/wotlwedu.js) and primarily driven by environment variables.
 
-```javascript
-module.exports.app_port = process.env.WOTLWEDU_APP_PORT || 9876;
-module.exports.app_listen = process.env.WOTLWEDU_APP_LISTEN || "0.0.0.0";
-module.exports.db_host = process.env.WOTLWEDU_DB_HOST || "localhost";
-module.exports.db_user = process.env.WOTLWEDU_DB_USER || "wotlwedu";
-module.exports.db_database = process.env.WOTLWEDU_DB_NAME || "wotlwedu";
+Key settings:
+- App bind address/port (`WOTLWEDU_APP_LISTEN`, `WOTLWEDU_APP_PORT`)
+- DB settings and adapter selection (`WOTLWEDU_DB_*`, `WOTLWEDU_DB_TYPE`)
+- JWT auth secret (`WOTLWEDU_JWT_SECRET`)
+- SSL enablement and cert/key paths (`WOTLWEDU_SSL`, `WOTLWEDU_SSL_KEY`, `WOTLWEDU_SSL_CERT`)
+- API/frontend/image URLs
+- Housekeeping interval
+- Mail provider configuration
+
+## Database and models
+
+Database access is abstracted through [`util/database.js`](../util/database.js), which selects an ORM adapter:
+- `sequelize` (default)
+- `mongoose`
+- `pg` / `postgres` / `postgresql`
+
+Model definitions live in [`model/`](../model) and include core entities such as users, roles, capabilities, groups, lists/items, elections/votes, images, preferences, notifications, friendships, and statuses.
+
+Relationships are defined in [`model/associations.js`](../model/associations.js). In sqlite test mode, a reduced association set is used to simplify integration tests.
+
+## Routing and middleware
+
+Route modules are in [`routes/`](../routes) with controllers in [`controllers/`](../controllers).
+
+Unauthenticated routes:
+- `/login`
+- `/register`
+
+Authenticated route groups (all behind `Security.checkAuthentication`):
+- `/ping`, `/helper`, `/user`, `/role`, `/capability`, `/item`, `/list`, `/group`, `/image`, `/category`, `/election`, `/vote`, `/preference`, `/cast`, `/notification`, `/ai`
+
+Response payloads typically use [`util/statusresponse.js`](../util/statusresponse.js):
+```json
+{ "status": 200, "message": "OK", "data": { ... } }
 ```
 
-Further options configure mail providers and SSL certificates for HTTPS support.
+## Security model
 
-## Database layer
+Authentication and capability authorization are implemented in [`util/security.js`](../util/security.js):
+- JWT auth from `Authorization` header (supports optional `Bearer ` prefix).
+- Rejects missing/invalid tokens.
+- Rejects inactive users (`active === false`).
+- Attaches `req.authUserId`, `req.authName`, and `req.isAdmin`.
+- Per-route capability checks via `checkCapability(object, ops)`.
 
-The project uses [Sequelize](https://sequelize.org/) to manage a MariaDB database. Connection parameters are passed to Sequelize in [`util/database.js`](../util/database.js). Lines 5–21 define the connection options and pool settings:
+## AI-assisted endpoints
 
-```javascript
-const options = {
-  host: Config.db_host,
-  dialect: "mariadb",
-  omitNull: false,
-};
-if (Config.db_logging === false) {
-  options.logging = false;
-}
-options.pool = {
-  max: 5,
-  min: 0,
-  acquire: 30000,
-  idle: 10000
-};
-```
+The AI feature set is deterministic and self-hosted (no external LLM/API dependency).
 
-Model definitions are stored under the `model/` directory and relationships are wired up in [`model/associations.js`](../model/associations.js). These associations connect users, roles, groups, lists, elections and more as seen around lines 22–80.
+Implementation:
+- Routes: [`routes/ai.js`](../routes/ai.js)
+- Controller: [`controllers/ai.js`](../controllers/ai.js)
+- Heuristics/utilities: [`util/ai.js`](../util/ai.js)
 
-## Routing and controllers
+Supported `/ai/*` capabilities include:
+- election recommendations
+- list item suggestions from prompt
+- election summaries
+- notification digest
+- participant suggestions
+- text categorization
+- text moderation
+- image description from metadata
+- smart defaults from preferences
+- assistant query routing
 
-The Express app registers route modules for each resource (users, items, elections, etc.) beginning around line 28 of `app.js`. Each file under `routes/` maps HTTP verbs to functions exported from corresponding controllers in `controllers/`.
-
-The controller functions typically validate permissions, interact with Sequelize models and return JSON using a helper called `StatusResponse`.
+These use existing application models (`Election`, `Vote`, `Item`, `User`, `Notification`, `Friend`, `Image`, `Preference`, etc.) and do not require schema changes.
 
 ## Real-time features and housekeeping
 
-Socket.IO support is implemented in [`util/wotlwedu-socketio.js`](../util/wotlwedu-socketio.js) to push notifications to connected clients. Housekeeping tasks such as expiring elections or clearing stale tokens run on an interval defined by `Config.housekeepingInterval` (see `util/housekeeping.js`).
+Socket.IO support is in [`util/wotlwedu-socketio.js`](../util/wotlwedu-socketio.js) and is used for notifications/refresh events with per-user socket registration.
 
-## Documentation
+Periodic housekeeping is handled by [`util/housekeeping.js`](../util/housekeeping.js), invoked on an interval from `app.js`.
 
-API endpoints are documented with an OpenAPI spec. Opening [`docs/index.html`](index.html) in a browser presents the Swagger UI which loads `openapi.yaml` to display interactive docs.
+## Testing
 
+Tests are run with:
+```bash
+npm test
+```
+
+Test harness:
+- Runner: [`tests/run-tests.js`](../tests/run-tests.js)
+- Unit tests: [`tests/unit-tests.js`](../tests/unit-tests.js)
+- Integration tests: [`tests/routes.integration.test.js`](../tests/routes.integration.test.js)
+
+Integration tests can self-skip in unsupported DB dialect contexts.
+
+## API documentation
+
+OpenAPI spec: [`docs/openapi.yaml`](openapi.yaml)
+
+Swagger UI entrypoint: [`docs/index.html`](index.html)
+- Serves interactive docs at `/docs`
+- Loads `/docs/openapi.yaml`
