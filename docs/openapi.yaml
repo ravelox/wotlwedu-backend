@@ -4,6 +4,144 @@ info:
   version: 1.0.0
 
 paths:
+  /ai/election/:electionId/recommendations:
+    get:
+      summary: GET /ai/election/:electionId/recommendations
+      parameters:
+      - name: electionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /ai/list/suggest-items:
+    post:
+      summary: POST /ai/list/suggest-items
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+  /ai/election/:electionId/summary:
+    get:
+      summary: GET /ai/election/:electionId/summary
+      parameters:
+      - name: electionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /ai/notification/digest:
+    get:
+      summary: GET /ai/notification/digest
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /ai/election/:electionId/suggest-participants:
+    get:
+      summary: GET /ai/election/:electionId/suggest-participants
+      parameters:
+      - name: electionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /ai/item/categorize:
+    post:
+      summary: POST /ai/item/categorize
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+  /ai/moderate:
+    post:
+      summary: POST /ai/moderate
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+  /ai/image/:imageId/describe:
+    get:
+      summary: GET /ai/image/:imageId/describe
+      parameters:
+      - name: imageId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /ai/preferences/defaults:
+    get:
+      summary: GET /ai/preferences/defaults
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /ai/assistant/query:
+    post:
+      summary: POST /ai/assistant/query
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
   /image/:imageId/notif/:notificationId:
     get:
       summary: GET /image/:imageId/notif/:notificationId

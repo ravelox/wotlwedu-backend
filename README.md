@@ -42,3 +42,17 @@ When you have the Docker container image created, you can use the compose file t
 `docker compose -f docker-compose.compose.yaml up -d`
 This creates 2 containers when using MariaDB with Sequelize: one for the database and one for the **wotlwedu-backend** instance.
 See docs/codebase_overview.md for a project overview.
+
+## AI-assisted features
+All AI endpoints are authenticated and use deterministic, self-hosted heuristics (no external LLM dependency).
+
+- `GET /ai/election/:electionId/recommendations`: Recommend election items based on voting activity and text heuristics.
+- `POST /ai/list/suggest-items`: Generate list item suggestions from a prompt with inferred category.
+- `GET /ai/election/:electionId/summary`: Build a summary of election participation and leading items.
+- `GET /ai/notification/digest`: Return a digest of notification activity, unread count, and recent items.
+- `GET /ai/election/:electionId/suggest-participants`: Suggest likely participants from friend/activity signals.
+- `POST /ai/item/categorize`: Categorize arbitrary text into a likely item category.
+- `POST /ai/moderate`: Flag unsafe terms and return moderation severity.
+- `GET /ai/image/:imageId/describe`: Generate an image description from image metadata.
+- `GET /ai/preferences/defaults`: Infer smart defaults from stored user preferences.
+- `POST /ai/assistant/query`: Handle assistant-style freeform queries with deterministic intent routing.
