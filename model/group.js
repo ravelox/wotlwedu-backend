@@ -19,6 +19,10 @@ const Group = database.define("group", {
   categoryId: {
     type: Sequelize.STRING
   },
+  organizationId: {
+    type: Sequelize.STRING,
+    defaultValue: null,
+  },
   listType: {
     type: Sequelize.INTEGER,
     defaultValue: 1,
@@ -42,7 +46,7 @@ const Group = database.define("group", {
   },
 },
 {
-  indexes: [{ fields: ["creator"]}],
+  indexes: [{ fields: ["creator"]}, { fields: ["organizationId"] }],
 });
 
 module.exports = Group;

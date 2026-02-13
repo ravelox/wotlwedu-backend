@@ -10,7 +10,7 @@ module.exports.Election = [
   "creator"
 ];
 
-module.exports.Group = ["id", "name", "description","creator"];
+module.exports.Group = ["id", "name", "description","organizationId","creator"];
 
 module.exports.List = ["id", "name", "description","creator"];
 
@@ -33,6 +33,7 @@ module.exports.User = [
   ],
   "alias",
   "email",
+  "organizationId",
   "creator"
 ];
 
@@ -133,8 +134,15 @@ module.exports.Friend = [
     ],
     "alias",
     "email",
+    "organizationId",
     "active",
     "verified",
     "enable2fa",
     "admin",
+    "systemAdmin",
+    "organizationAdmin",
+    "workgroupAdmin",
+    "adminGroupId",
   ];
+
+module.exports.Organization = ["id", "name", "description", "active", "creator"];

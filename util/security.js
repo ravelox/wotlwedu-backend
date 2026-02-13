@@ -8,6 +8,7 @@ const StatusResponse = require("./statusresponse");
 
 const User = require("../model/user");
 const Capability = require("../model/capability");
+const Group = require("../model/group");
 const Role = require("../model/role");
 const UserRole = require("../model/userrole");
 
@@ -121,6 +122,11 @@ module.exports.checkAuthentication = async (req, res, next) => {
         "fullName",
       ],
       "admin",
+      "systemAdmin",
+      "organizationId",
+      "organizationAdmin",
+      "workgroupAdmin",
+      "adminGroupId",
     ];
     options.raw = true;
 
@@ -136,7 +142,13 @@ module.exports.checkAuthentication = async (req, res, next) => {
     //Save the user ID in the req object
     req.authUserId = decoded.user;
     req.authName = foundUser.fullName;
-    req.isAdmin = foundUser.admin;
+    const isSystemAdmin = foundUser.systemAdmin === true || foundUser.admin === true;
+    req.isSystemAdmin = isSystemAdmin;
+    req.isAdmin = isSystemAdmin;
+    req.authOrganizationId = foundUser.organizationId || null;
+    req.isOrganizationAdmin = foundUser.organizationAdmin === true;
+    req.isWorkgroupAdmin = foundUser.workgroupAdmin === true;
+    req.adminWorkgroupId = foundUser.adminGroupId || null;
 
     next();
   } catch (err) {
@@ -144,6 +156,41 @@ module.exports.checkAuthentication = async (req, res, next) => {
       message: err.message,
     });
   }
+};
+
+module.exports.applyOrganizationScope = (req, whereCondition, field = "organizationId") => {
+  if (!whereCondition) whereCondition = {};
+  if (!req) return whereCondition;
+  if (req.isAdmin === true) return whereCondition;
+  if (!req.authOrganizationId) return whereCondition;
+  whereCondition[field] = req.authOrganizationId;
+  return whereCondition;
+};
+
+module.exports.isInSameOrganization = (req, objectWithOrganizationId) => {
+  if (!req || !objectWithOrganizationId) return false;
+  if (req.isAdmin === true) return true;
+  if (!req.authOrganizationId) return false;
+  return req.authOrganizationId === objectWithOrganizationId.organizationId;
+};
+
+module.exports.canManageWorkgroup = (req, group) => {
+  if (!req || !group) return false;
+  if (req.isAdmin === true) return true;
+  if (!req.authOrganizationId) return false;
+  if (group.organizationId !== req.authOrganizationId) return false;
+  if (req.isOrganizationAdmin === true) return true;
+  if (req.isWorkgroupAdmin === true && req.adminWorkgroupId) {
+    return req.adminWorkgroupId === group.id;
+  }
+  return false;
+};
+
+module.exports.canManageUserInWorkgroup = async (req, groupId) => {
+  if (!groupId) return false;
+  const group = await Group.findByPk(groupId, { raw: true });
+  if (!group) return false;
+  return module.exports.canManageWorkgroup(req, group);
 };
 
 module.exports.checkCapability = function (objectToCheck, opList) {

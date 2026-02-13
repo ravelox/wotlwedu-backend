@@ -54,6 +54,7 @@ const preferenceRoutes = require("./routes/preference");
 const notificationRoutes = require("./routes/notification");
 const aiRoutes = require("./routes/ai");
 const helperRoutes = require("./routes/helper");
+const organizationRoutes = require("./routes/organization");
 
 // Helper middleware and functions
 const Security = require("./util/security");
@@ -134,6 +135,12 @@ app.use(
 );
 
 // Routes that require a login
+app.use(
+  "/organization",
+  Helpers.logComment("Organization"),
+  Security.checkAuthentication,
+  organizationRoutes
+);
 app.use(
   "/helper",
   Helpers.logComment("Helper"),

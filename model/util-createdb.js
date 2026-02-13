@@ -12,6 +12,7 @@ const Item = require("./item");
 const List = require("./list");
 const ListItem = require("./listitem");
 const Notification = require("./notification");
+const Organization = require("./organization");
 const Role = require("./role");
 const RoleCapability = require("./rolecapability");
 const Status = require("./status");

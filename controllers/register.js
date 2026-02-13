@@ -9,6 +9,9 @@ const Mailer = require("../util/mailer");
 const User = require("../model/user");
 const Role = require("../model/role");
 const UserRole = require("../model/userrole");
+const Organization = require("../model/organization");
+
+const DEFAULT_ORGANIZATION_ID = "org_default";
 
 exports.postRegisterUser = (req, res, next) => {
   if (
@@ -52,14 +55,31 @@ exports.postRegisterUser = (req, res, next) => {
         userToRegister.creator = userToRegister.id;
       }
 
+      const requestedOrganizationId = req.body.organizationId || req.authOrganizationId || DEFAULT_ORGANIZATION_ID;
+      userToRegister.organizationId = requestedOrganizationId;
+
       // Create a confirmation token to use in a
       // verification email
       userToRegister.registerToken = UUID("wotlwedu");
       userToRegister.registerTokenExpire = Date.now() + 3600000;
 
-      // Save the user to the database
-      userToRegister
-        .save()
+      // Ensure the organization exists before saving user registration
+      Organization.findOne({ where: { id: userToRegister.organizationId } })
+        .then(async (foundOrganization) => {
+          if (!foundOrganization) {
+            if (userToRegister.organizationId !== DEFAULT_ORGANIZATION_ID) {
+              throw new Error("Organization not found");
+            }
+            await Organization.create({
+              id: DEFAULT_ORGANIZATION_ID,
+              name: "Default Organization",
+              description: "Auto-created default tenant",
+              active: true,
+              creator: "system",
+            });
+          }
+          return userToRegister.save();
+        })
         .then((result) => {
           if (!result) StatusResponse(res, 500, "Unable to register user");
           Mailer.sendEmailConfirmMessage(
@@ -91,6 +111,7 @@ exports.postRegisterUser = (req, res, next) => {
                     .then(() => {
                       return StatusResponse(res, 200, "OK", {
                         registerToken: userToRegister.registerToken,
+                        organizationId: userToRegister.organizationId,
                       });
                     })
                     .catch((err) => next(err));
@@ -100,6 +121,9 @@ exports.postRegisterUser = (req, res, next) => {
             .catch((err) => next(err));
         })
         .catch((err) => {
+          if (err && err.message === "Organization not found") {
+            return StatusResponse(res, 421, "Organization not found");
+          }
           next(err);
         });
     })

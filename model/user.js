@@ -28,6 +28,10 @@ const User = database.define(
       type: Sequelize.STRING,
       allowNull: false,
     },
+    organizationId: {
+      type: Sequelize.STRING,
+      defaultValue: null,
+    },
     creator: {
       type: Sequelize.STRING,
     },
@@ -41,6 +45,22 @@ const User = database.define(
     admin: {
       type: Sequelize.BOOLEAN,
       defaultValue: false,
+    },
+    systemAdmin: {
+      type: Sequelize.BOOLEAN,
+      defaultValue: false,
+    },
+    organizationAdmin: {
+      type: Sequelize.BOOLEAN,
+      defaultValue: false,
+    },
+    workgroupAdmin: {
+      type: Sequelize.BOOLEAN,
+      defaultValue: false,
+    },
+    adminGroupId: {
+      type: Sequelize.STRING,
+      defaultValue: null,
     },
     protected: {
       type: Sequelize.BOOLEAN,
@@ -94,7 +114,13 @@ const User = database.define(
     },
   },
   {
-    indexes: [{ fields: ["email"], unique: true }, { fields: ["creator"] }],
+    indexes: [
+      { fields: ["email"], unique: true },
+      { fields: ["creator"] },
+      { fields: ["organizationId"] },
+      { fields: ["adminGroupId"] },
+      { fields: ["systemAdmin"] },
+    ],
   }
 );
 

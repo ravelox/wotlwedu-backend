@@ -17,13 +17,24 @@ const {
 
 const User = require("../model/user");
 const Friend = require("../model/friend");
+const Group = require("../model/group");
 const Image = require("../model/image");
+const Organization = require("../model/organization");
 const Notify = require("../util/notification");
 const Status = require("../model/status");
 const Notification = require("../model/notification");
 const Role = require("../model/role");
 
 const Attributes = require("../model/attributes");
+
+const DEFAULT_ORGANIZATION_ID = "org_default";
+
+async function getTargetOrganizationId(req) {
+  if (req.isAdmin === true) {
+    return req.body.organizationId || req.authOrganizationId || DEFAULT_ORGANIZATION_ID;
+  }
+  return req.authOrganizationId || null;
+}
 
 function generateIncludes(details) {
   const includes = [];
@@ -62,6 +73,7 @@ exports.getUser = async (req, res, next) => {
 
   whereCondition.id = userToFind;
   whereCondition.protected = false;
+  Security.applyOrganizationScope(req, whereCondition);
   if (!Security.getVerdict(req.verdicts, "view").isAdmin) {
     if (userToFind !== req.authUserId) {
       whereCondition.creator = req.authUserId;
@@ -99,6 +111,7 @@ exports.getAllUser = (req, res, next) => {
   let whereCondition = {};
 
   whereCondition.protected = false;
+  Security.applyOrganizationScope(req, whereCondition);
   if (userFilter) {
     whereCondition = {
       [Op.or]: [
@@ -108,6 +121,7 @@ exports.getAllUser = (req, res, next) => {
         { alias: { [Op.like]: "%" + userFilter + "%" } },
       ],
     };
+    Security.applyOrganizationScope(req, whereCondition);
   }
 
   if (!Security.getVerdict(req.verdicts, "view").isAdmin) {
@@ -142,58 +156,109 @@ exports.getAllUser = (req, res, next) => {
   });
 };
 
-exports.putAddUser = (req, res, next) => {
-  // Populate the user properties from the form
-  const userToAdd = new User();
-  userToAdd.alias = req.body.alias;
-  userToAdd.firstName = req.body.firstName;
-  userToAdd.lastName = req.body.lastName;
-  userToAdd.email = req.body.email;
-  if (req.body.active) userToAdd.active = req.body.active === "on";
-  if (req.body.admin) userToAdd.admin = req.body.admin === "on";
-  if (req.body.imageId) userToAdd.imageId = req.body.imageId;
-  userToAdd.creator = req.authUserId;
-  userToAdd.id = UUID("user");
+exports.putAddUser = async (req, res, next) => {
+  try {
+    // Populate the user properties from the form
+    const userToAdd = new User();
+    userToAdd.alias = req.body.alias;
+    userToAdd.firstName = req.body.firstName;
+    userToAdd.lastName = req.body.lastName;
+    userToAdd.email = req.body.email;
+    if (req.body.active) userToAdd.active = req.body.active === "on";
+    if (req.body.admin || req.body.admin === false) {
+      // Backward compatibility: admin input maps to system-admin behavior.
+      userToAdd.systemAdmin = req.body.admin === true || req.body.admin === "on";
+      userToAdd.admin = userToAdd.systemAdmin;
+    }
+    if (req.body.systemAdmin || req.body.systemAdmin === false) {
+      userToAdd.systemAdmin =
+        req.body.systemAdmin === true || req.body.systemAdmin === "on";
+      userToAdd.admin = userToAdd.systemAdmin;
+    }
+    if (req.body.imageId) userToAdd.imageId = req.body.imageId;
+    userToAdd.creator = req.authUserId;
+    userToAdd.id = UUID("user");
+    userToAdd.organizationId = await getTargetOrganizationId(req);
 
-  // Check to see if the supplied email already exists
-  User.findOne({ where: { email: userToAdd.email } })
-    .then((foundUser) => {
-      if (foundUser)
-        return StatusResponse(res, 421, "Email address already exists");
+    if (!userToAdd.organizationId) {
+      return StatusResponse(res, 421, "No organization context available");
+    }
 
-      const defaultRoleName = Config.defaultRoleName || "Default Role";
-      // Must add the user to a default role
-      Role.findOne({ where: { name: defaultRoleName } })
-        .then((foundRole) => {
-          if (!foundRole)
-            return StatusResponse(res, 421, "No default role is available");
+    if (userToAdd.systemAdmin === true && req.isAdmin !== true) {
+      return StatusResponse(res, 403, "Only system admins can assign system admin");
+    }
 
-          // Save the user to the database
-          userToAdd
-            .save()
-            .then((addedUser) => {
-              if (!addedUser)
-                return StatusResponse(res, 500, "Cannot add user");
+    if (req.body.organizationAdmin || req.body.organizationAdmin === false) {
+      if (!req.isAdmin && req.isOrganizationAdmin !== true) {
+        return StatusResponse(res, 403, "Not authorized to assign organization admin");
+      }
+      userToAdd.organizationAdmin = req.body.organizationAdmin;
+    }
+    if (req.body.workgroupAdmin || req.body.workgroupAdmin === false) {
+      if (!req.isAdmin && req.isOrganizationAdmin !== true) {
+        return StatusResponse(res, 403, "Not authorized to assign workgroup admin");
+      }
+      userToAdd.workgroupAdmin = req.body.workgroupAdmin;
+    }
+    if (req.body.adminGroupId) userToAdd.adminGroupId = req.body.adminGroupId;
 
-              userToAdd
-                .addRole(foundRole, {
-                  through: {
-                    id: UUID("userrole"),
-                    creator: req.authUserId,
-                  },
-                })
-                .then(() => {
-                  return StatusResponse(res, 200, "OK", {
-                    user: copyObject(addedUser, Attributes.UserFull),
-                  });
+    const foundOrganization = await Organization.findByPk(userToAdd.organizationId);
+    if (!foundOrganization) return StatusResponse(res, 421, "Organization not found");
+
+    if (userToAdd.workgroupAdmin === true) {
+      if (!userToAdd.adminGroupId) {
+        return StatusResponse(res, 421, "Workgroup admin requires adminGroupId");
+      }
+      const adminGroup = await Group.findOne({
+        where: { id: userToAdd.adminGroupId, organizationId: userToAdd.organizationId },
+      });
+      if (!adminGroup) {
+        return StatusResponse(res, 421, "Invalid workgroup for workgroup admin");
+      }
+    }
+
+    // Check to see if the supplied email already exists
+    User.findOne({ where: { email: userToAdd.email } })
+      .then((foundUser) => {
+        if (foundUser)
+          return StatusResponse(res, 421, "Email address already exists");
+
+        const defaultRoleName = Config.defaultRoleName || "Default Role";
+        // Must add the user to a default role
+        Role.findOne({ where: { name: defaultRoleName } })
+          .then((foundRole) => {
+            if (!foundRole)
+              return StatusResponse(res, 421, "No default role is available");
+
+            // Save the user to the database
+            userToAdd
+              .save()
+              .then((addedUser) => {
+                if (!addedUser)
+                  return StatusResponse(res, 500, "Cannot add user");
+
+                userToAdd
+                  .addRole(foundRole, {
+                    through: {
+                      id: UUID("userrole"),
+                      creator: req.authUserId,
+                    },
+                  })
+                  .then(() => {
+                    return StatusResponse(res, 200, "OK", {
+                      user: copyObject(addedUser, Attributes.UserFull),
+                    });
+                  })
+                  .catch((err) => next(err));
                 })
                 .catch((err) => next(err));
-            })
-            .catch((err) => next(err));
-        })
-        .catch((err) => next(err));
-    })
-    .catch((err) => next(err));
+          })
+          .catch((err) => next(err));
+      })
+      .catch((err) => next(err));
+  } catch (err) {
+    next(err);
+  }
 };
 
 exports.deleteUser = async (req, res, next) => {
@@ -210,6 +275,8 @@ exports.deleteUser = async (req, res, next) => {
   User.findByPk(userToFind)
     .then(async (foundUser) => {
       if (!foundUser) return StatusResponse(res, 404, "User not found");
+      if (!Security.isInSameOrganization(req, foundUser))
+        return StatusResponse(res, 403, "Cross-organization access denied");
 
       if( foundUser.protected === true ) return StatusResponse(res, 421, "User is protected");
 
@@ -267,8 +334,10 @@ exports.postUpdateUser = (req, res, next) => {
   if (!userToFind) return StatusResponse(res, 421, "No user ID provided");
 
   User.findByPk(userToFind)
-    .then((foundUser) => {
+    .then(async (foundUser) => {
       if (!foundUser) return StatusResponse(res, 404, "User not found");
+      if (!Security.isInSameOrganization(req, foundUser))
+        return StatusResponse(res, 403, "Cross-organization access denied");
 
       if( foundUser.protected === true ) return StatusResponse(res, 421, "User is protected")
 
@@ -290,9 +359,65 @@ exports.postUpdateUser = (req, res, next) => {
         foundUser.active = req.body.active;
       if (req.body.verified || req.body.verified === false)
         foundUser.verified = req.body.verified;
-      if (req.body.admin || req.body.admin === false)
+      if (req.body.admin || req.body.admin === false) {
+        if (!req.isAdmin) {
+          return StatusResponse(res, 403, "Only system admins can update system admin");
+        }
+        foundUser.systemAdmin = req.body.admin;
         foundUser.admin = req.body.admin;
+      }
+      if (req.body.systemAdmin || req.body.systemAdmin === false) {
+        if (!req.isAdmin) {
+          return StatusResponse(res, 403, "Only system admins can update system admin");
+        }
+        foundUser.systemAdmin = req.body.systemAdmin;
+        foundUser.admin = req.body.systemAdmin;
+      }
       if (req.body.imageId) foundUser.imageId = req.body.imageId;
+
+      if (req.body.organizationId && req.body.organizationId !== foundUser.organizationId) {
+        if (!req.isAdmin) {
+          return StatusResponse(res, 421, "A user cannot be moved to another organization");
+        }
+        const foundOrganization = await Organization.findByPk(req.body.organizationId);
+        if (!foundOrganization) {
+          return StatusResponse(res, 421, "Organization not found");
+        }
+        foundUser.organizationId = req.body.organizationId;
+      }
+
+      if (req.body.organizationAdmin || req.body.organizationAdmin === false) {
+        if (!req.isAdmin && req.isOrganizationAdmin !== true) {
+          return StatusResponse(res, 403, "Not authorized to update organization admin");
+        }
+        foundUser.organizationAdmin = req.body.organizationAdmin;
+      }
+
+      if (req.body.workgroupAdmin || req.body.workgroupAdmin === false) {
+        if (!req.isAdmin && req.isOrganizationAdmin !== true) {
+          return StatusResponse(res, 403, "Not authorized to update workgroup admin");
+        }
+        foundUser.workgroupAdmin = req.body.workgroupAdmin;
+      }
+
+      if (req.body.adminGroupId || req.body.adminGroupId === null) {
+        if (!req.isAdmin && req.isOrganizationAdmin !== true) {
+          return StatusResponse(res, 403, "Not authorized to update adminGroupId");
+        }
+        foundUser.adminGroupId = req.body.adminGroupId;
+      }
+
+      if (foundUser.workgroupAdmin === true) {
+        if (!foundUser.adminGroupId) {
+          return StatusResponse(res, 421, "Workgroup admin requires adminGroupId");
+        }
+        const foundAdminGroup = await Group.findOne({
+          where: { id: foundUser.adminGroupId, organizationId: foundUser.organizationId },
+        });
+        if (!foundAdminGroup) {
+          return StatusResponse(res, 421, "Invalid workgroup for workgroup admin");
+        }
+      }
 
       /* If the email address is being changed, keep it in a temporary
       field and get confirmation from the original owner. While that
@@ -453,10 +578,14 @@ exports.putAddFriend = (req, res, next) => {
         return StatusResponse(res, 404, "User not found", {
           userId: userToFind,
         });
+      if (!Security.isInSameOrganization(req, foundUser))
+        return StatusResponse(res, 403, "Cross-organization access denied");
 
       User.findOne(friendOptions)
         .then((foundFriend) => {
           if (!foundFriend) return StatusResponse(res, 404, "Friend not found");
+          if (!Security.isInSameOrganization(req, foundFriend))
+            return StatusResponse(res, 403, "Cross-organization access denied");
 
           Friend.findAll({
             where: {
@@ -623,11 +752,15 @@ exports.putBlockUser = (req, res, next) => {
   User.findByPk(userToFind)
     .then((foundUser) => {
       if (!foundUser) return StatusResponse(res, 404, "User not found");
+      if (!Security.isInSameOrganization(req, foundUser))
+        return StatusResponse(res, 403, "Cross-organization access denied");
 
       User.findByPk(blockToFind)
         .then((blockUser) => {
           if (!blockUser)
             return StatusResponse(res, 404, "Block user not found");
+          if (!Security.isInSameOrganization(req, blockUser))
+            return StatusResponse(res, 403, "Cross-organization access denied");
 
           // Delete any relationship that exists already
           Friend.destroy({
@@ -678,11 +811,15 @@ exports.deleteBlockUser = (req, res, next) => {
   User.findByPk(userToFind)
     .then((foundUser) => {
       if (!foundUser) return StatusResponse(res, 404, "User not found");
+      if (!Security.isInSameOrganization(req, foundUser))
+        return StatusResponse(res, 403, "Cross-organization access denied");
 
       User.findByPk(blockToFind)
         .then((blockUser) => {
           if (!blockUser)
             return StatusResponse(res, 404, "Block user not found");
+          if (!Security.isInSameOrganization(req, blockUser))
+            return StatusResponse(res, 403, "Cross-organization access denied");
 
           // Delete any relationship that exists already
           Friend.destroy({

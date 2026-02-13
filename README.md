@@ -14,6 +14,15 @@ Core stack:
 - Sequelize by default (MariaDB)
 - Optional DB adapters via `WOTLWEDU_DB_TYPE` (`sequelize`, `mongoose`, `pg`)
 - Socket.IO for real-time notifications/refresh events
+- Organization/workgroup tenancy controls
+
+## Multi-tenancy concepts
+- `Organization`: top-level tenant boundary. Data access is restricted by organization context.
+- `Workgroup`: sub-unit inside an organization (implemented on top of `group` with `organizationId`).
+- `User`: belongs to exactly one organization (`organizationId`).
+- `System admin user`: global administrator that can administer any organization and any workgroup.
+- `Organization admin user`: can administer workgroups and users across workgroups in their organization.
+- `Workgroup admin user`: can administer data for one workgroup (`adminGroupId`).
 
 ## Current version
 The backend currently ships as version **0.0.4** (see `package.json` and `CHANGELOG.md`).
@@ -95,6 +104,13 @@ Swagger UI assets are in `docs/` and served by the app at `/docs`.
 
 - OpenAPI spec: `docs/openapi.yaml`
 - Swagger UI launcher: `docs/index.html`
+
+Additional tenancy endpoints:
+- `GET /organization`
+- `GET /organization/:organizationId`
+- `POST /organization`
+- `PUT /organization/:organizationId`
+- `DELETE /organization/:organizationId`
 
 ## AI-assisted features
 All AI endpoints are authenticated and use deterministic, self-hosted heuristics (no external LLM dependency).

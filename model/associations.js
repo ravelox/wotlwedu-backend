@@ -9,6 +9,7 @@ const Item = require("./item");
 const List = require("./list");
 const ListItem = require("./listitem");
 const Notification = require("./notification");
+const Organization = require("./organization");
 const Role = require("./role");
 const RoleCapability = require("./rolecapability");
 const Status = require("./status");
@@ -37,6 +38,7 @@ module.exports.setup = function () {
   Group.belongsToMany(User, { through: GroupMember });
   Group.hasMany(GroupMember);
   Group.hasOne(Category, { foreignKey: "id", sourceKey: "categoryId" });
+  Group.hasOne(Organization, { foreignKey: "id", sourceKey: "organizationId" });
 
   GroupMember.hasOne(Group, { foreignKey: "id", sourceKey: "groupId" });
   GroupMember.hasOne(User, { foreignKey: "id", sourceKey: "userId" });
@@ -63,6 +65,10 @@ module.exports.setup = function () {
   User.hasMany(Vote);
   User.hasMany(Notification);
   User.hasOne(Image, { foreignKey: "id", sourceKey: "imageId" });
+  User.hasOne(Organization, { foreignKey: "id", sourceKey: "organizationId" });
+
+  Organization.hasMany(User, { foreignKey: "organizationId", sourceKey: "id" });
+  Organization.hasMany(Group, { foreignKey: "organizationId", sourceKey: "id" });
 
   Image.hasMany(Item);
   Image.hasOne(Category, { foreignKey: "id", sourceKey: "categoryId" });

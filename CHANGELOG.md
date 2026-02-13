@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.5 - 2026-02-13
+- Add multi-tenant foundations with organizations and organization-scoped workgroups.
+- Add explicit user classifications: `systemAdmin`, `organizationAdmin`, and `workgroupAdmin` (single admin workgroup via `adminGroupId`).
+- Add organization management endpoints (`/organization`) and tenant-aware auth context/scope helpers in security middleware.
+- Add database updates `update-0006` and `update-0007` for tenancy and system-admin schema/data migration.
+- Remove legacy `TODO` file.
+
 ## 0.0.4 - 2026-02-12
 - Add authenticated `/ai` route module with deterministic AI-assisted endpoints for recommendations, summaries, suggestions, moderation, categorization, metadata description, and assistant queries.
 - Add `controllers/ai.js` and `util/ai.js` to provide self-hosted heuristic logic using existing models and `StatusResponse`.
