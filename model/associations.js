@@ -4,6 +4,8 @@ const Election = require("./election");
 const Friend = require("./friend");
 const Group = require("./group");
 const GroupMember = require("./groupmember");
+const Workgroup = require("./workgroup");
+const WorkgroupMember = require("./workgroupmember");
 const Image = require("./image");
 const Item = require("./item");
 const List = require("./list");
@@ -20,13 +22,20 @@ const Metadata = require("./metadata")
 const Preference = require("./preference")
 const SocketInfo = require("./socketinfo")
 
+let _associationsSetup = false;
+
 module.exports.setup = function () {
+  if (_associationsSetup) {
+    return;
+  }
+
   const isSqliteTest =
     process.env.NODE_ENV === "test" &&
     process.env.WOTLWEDU_DB_DIALECT === "sqlite";
 
   if (isSqliteTest) {
     // Minimal associations for sqlite-based tests to avoid FK complexity
+    _associationsSetup = true;
     return;
   }
 
@@ -38,10 +47,17 @@ module.exports.setup = function () {
   Group.belongsToMany(User, { through: GroupMember });
   Group.hasMany(GroupMember);
   Group.hasOne(Category, { foreignKey: "id", sourceKey: "categoryId" });
-  Group.hasOne(Organization, { foreignKey: "id", sourceKey: "organizationId" });
 
   GroupMember.hasOne(Group, { foreignKey: "id", sourceKey: "groupId" });
   GroupMember.hasOne(User, { foreignKey: "id", sourceKey: "userId" });
+
+  Workgroup.belongsToMany(User, { through: WorkgroupMember });
+  Workgroup.hasMany(WorkgroupMember);
+  Workgroup.hasOne(Category, { foreignKey: "id", sourceKey: "categoryId" });
+  Workgroup.hasOne(Organization, { foreignKey: "id", sourceKey: "organizationId" });
+
+  WorkgroupMember.hasOne(Workgroup, { foreignKey: "id", sourceKey: "workgroupId" });
+  WorkgroupMember.hasOne(User, { foreignKey: "id", sourceKey: "userId" });
 
   Item.hasMany(Vote);
   Item.hasMany(ListItem);
@@ -61,6 +77,7 @@ module.exports.setup = function () {
   User.belongsToMany(Role, { through: UserRole });
   User.hasMany(Friend);
   User.hasMany(GroupMember);
+  User.hasMany(WorkgroupMember);
   User.hasMany(UserRole);
   User.hasMany(Vote);
   User.hasMany(Notification);
@@ -68,7 +85,7 @@ module.exports.setup = function () {
   User.hasOne(Organization, { foreignKey: "id", sourceKey: "organizationId" });
 
   Organization.hasMany(User, { foreignKey: "organizationId", sourceKey: "id" });
-  Organization.hasMany(Group, { foreignKey: "organizationId", sourceKey: "id" });
+  Organization.hasMany(Workgroup, { foreignKey: "organizationId", sourceKey: "id" });
 
   Image.hasMany(Item);
   Image.hasOne(Category, { foreignKey: "id", sourceKey: "categoryId" });
@@ -96,4 +113,6 @@ module.exports.setup = function () {
 
   Status.hasMany(Notification);
   Status.hasMany(Friend);
+
+  _associationsSetup = true;
 };

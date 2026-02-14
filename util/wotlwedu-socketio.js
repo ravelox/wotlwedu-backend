@@ -67,5 +67,19 @@ module.exports.notifyUser = async (userId,event) => {
 
 module.exports.clearRegistrations = () => {
   console.log("Clearing registrations");
-  return SocketInfo.truncate();
+  return SocketInfo.sync()
+    .then(() => SocketInfo.truncate())
+    .catch(async (err) => {
+      const missingTable =
+        err &&
+        (err.code === "ER_NO_SUCH_TABLE" ||
+          err.name === "SequelizeDatabaseError");
+
+      if (!missingTable) throw err;
+
+      // Recovery path for out-of-sync metadata/schema states:
+      // ensure table exists, then clear.
+      await SocketInfo.sync();
+      return SocketInfo.truncate();
+    });
 };

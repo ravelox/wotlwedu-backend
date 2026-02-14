@@ -64,48 +64,57 @@ module.exports.expireElections = () => {
   options.include = includes;
   options.where = whereCondition;
 
-  Election.findAll(options).then(async (expiredElections) => {
-    const endedStatusId = await getStatusIdByName("Ended");
-    const electionExpiredNotification = await getStatusIdByName(
-      "Election Expired"
-    );
+  Election.findAll(options)
+    .then(async (expiredElections) => {
+      const endedStatusId = await getStatusIdByName("Ended");
+      const electionExpiredNotification = await getStatusIdByName(
+        "Election Expired"
+      );
 
-    // Need to go through each election
-    // to set status and send notification to creator
-    expiredElections.forEach((election) => {
-      election.statusId = endedStatusId;
-      election.save().then((savedElection) => {
-        const notifOptions = {};
-        const notifWhere = { objectId: election.id };
-        notifWhere["$status.name$"] = "Unread";
+      // Need to go through each election
+      // to set status and send notification to creator
+      expiredElections.forEach((election) => {
+        election.statusId = endedStatusId;
+        election.save().then((savedElection) => {
+          const notifOptions = {};
+          const notifWhere = { objectId: election.id };
+          notifWhere["$status.name$"] = "Unread";
 
-        const notifIncludes = [];
-        notifIncludes.push({ model: Status, attributes: Attributes.Status });
+          const notifIncludes = [];
+          notifIncludes.push({ model: Status, attributes: Attributes.Status });
 
-        notifOptions.include = notifIncludes;
-        notifOptions.where = notifWhere;
+          notifOptions.include = notifIncludes;
+          notifOptions.where = notifWhere;
 
-        // Delete any unread notifications that relate to this election
-        Notification.findAll(notifOptions)
-          .then((foundNotifications) => {
-            foundNotifications.forEach((n) => {
-              n.destroy();
+          // Delete any unread notifications that relate to this election
+          Notification.findAll(notifOptions)
+            .then((foundNotifications) => {
+              foundNotifications.forEach((n) => {
+                n.destroy();
+              });
+            })
+            .then(async () => {
+              // Send an expired notification to the creator
+              await Notify.sendNotification(
+                "system",
+                election.creator,
+                electionExpiredNotification,
+                election.id,
+                "Expired election: " + election.name
+              );
+              IO.notifyUser(election.creator, "refresh");
+            })
+            .catch((err) => {
+              console.log("Housekeeping: expireElections notification step failed");
+              console.log(err);
             });
-          })
-          .then(async () => {
-            // Send an expired notification to the creator
-            await Notify.sendNotification(
-              "system",
-              election.creator,
-              electionExpiredNotification,
-              election.id,
-              "Expired election: " + election.name
-            );
-            IO.notifyUser(election.creator, "refresh")
-          });
+        });
       });
+    })
+    .catch((err) => {
+      console.log("Housekeeping: expireElections failed");
+      console.log(err);
     });
-  });
 };
 
 module.exports.cleanRegistrations = () => {
@@ -123,11 +132,16 @@ module.exports.cleanRegistrations = () => {
 
   options.where = whereCondition;
 
-  User.findAll(options).then(async (hangingRegistrations) => {
-    hangingRegistrations.forEach((r) => {
-      r.destroy();
+  User.findAll(options)
+    .then(async (hangingRegistrations) => {
+      hangingRegistrations.forEach((r) => {
+        r.destroy();
+      });
+    })
+    .catch((err) => {
+      console.log("Housekeeping: cleanRegistrations failed");
+      console.log(err);
     });
-  });
 };
 
 module.exports.cleanResetTokens = () => {
@@ -140,13 +154,18 @@ module.exports.cleanResetTokens = () => {
 
   options.where = whereCondition;
 
-  User.findAll(options).then(async (expiredReset) => {
-    expiredReset.forEach((r) => {
-      r.resetToken = null;
-      r.resetTokenExpire = null;
-      r.save();
+  User.findAll(options)
+    .then(async (expiredReset) => {
+      expiredReset.forEach((r) => {
+        r.resetToken = null;
+        r.resetTokenExpire = null;
+        r.save();
+      });
+    })
+    .catch((err) => {
+      console.log("Housekeeping: cleanResetTokens failed");
+      console.log(err);
     });
-  });
 };
 
 module.exports.cleanFriendshipTokens = () => {
@@ -157,11 +176,16 @@ module.exports.cleanFriendshipTokens = () => {
   };
   options.where = whereCondition;
 
-  Friend.findAll(options).then(async (expiredFriendTokens) => {
-    expiredFriendTokens.forEach((t) => {
-      t.token = null;
-      t.tokenExpire = null;
-      t.save();
+  Friend.findAll(options)
+    .then(async (expiredFriendTokens) => {
+      expiredFriendTokens.forEach((t) => {
+        t.token = null;
+        t.tokenExpire = null;
+        t.save();
+      });
+    })
+    .catch((err) => {
+      console.log("Housekeeping: cleanFriendshipTokens failed");
+      console.log(err);
     });
-  });
 };

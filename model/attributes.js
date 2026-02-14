@@ -7,14 +7,16 @@ module.exports.Election = [
   "description",
   "electionType",
   "expiration",
+  "workgroupId",
   "creator"
 ];
 
-module.exports.Group = ["id", "name", "description","organizationId","creator"];
+module.exports.Group = ["id", "name", "description", "creator"];
+module.exports.Workgroup = ["id", "name", "description", "organizationId", "creator"];
 
-module.exports.List = ["id", "name", "description","creator"];
+module.exports.List = ["id", "name", "description", "workgroupId", "creator"];
 
-module.exports.Item = ["id", "name", "description", "url", "location","creator"];
+module.exports.Item = ["id", "name", "description", "url", "location", "workgroupId", "creator"];
 
 module.exports.StatsItem = ["id", "name"];
 
@@ -58,6 +60,7 @@ module.exports.Image = [
   "filename",
 // Concatenation of filename and URL base needs to be done in each controller 
   "statusId",
+  "workgroupId",
   "creator"
 ];
 
@@ -142,6 +145,7 @@ module.exports.Friend = [
     "systemAdmin",
     "organizationAdmin",
     "workgroupAdmin",
+    "adminWorkgroupId",
     "adminGroupId",
   ];
 

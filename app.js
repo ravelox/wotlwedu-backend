@@ -45,6 +45,7 @@ const capabilityRoutes = require("./routes/capability");
 const itemRoutes = require("./routes/item");
 const listRoutes = require("./routes/list");
 const groupRoutes = require("./routes/group");
+const workgroupRoutes = require("./routes/workgroup");
 const imageRoutes = require("./routes/image");
 const categoryRoutes = require("./routes/category");
 const electionRoutes = require("./routes/election");
@@ -178,6 +179,12 @@ app.use(
   listRoutes
 );
 app.use(
+  "/workgroup",
+  Helpers.logComment("Workgroup"),
+  Security.checkAuthentication,
+  workgroupRoutes
+);
+app.use(
   "/group",
   Helpers.logComment("Group"),
   Security.checkAuthentication,
@@ -287,27 +294,32 @@ checkDBConnection()
         Housekeeping.cleanFriendshipTokens();
     }, Config.housekeepingInterval * 1000);
 
-    IO.clearRegistrations().then(() => {
-      console.log("Done")
+    IO.clearRegistrations()
+      .catch((err) => {
+        console.log("Socket registration cleanup failed; continuing startup");
+        console.log(err);
+      })
+      .then(() => {
+        console.log("Done")
 
-      const ioServer = IO.init(server);
+        const ioServer = IO.init(server);
 
-      ioServer.on("connection", (socket) => {
-        socket.on("register", (data) => {
-          if (data && data.id) {
-            IO.register(data.id, socket.id);
-          }
-        });
+        ioServer.on("connection", (socket) => {
+          socket.on("register", (data) => {
+            if (data && data.id) {
+              IO.register(data.id, socket.id);
+            }
+          });
 
-        socket.once("unregister", () => {
-          IO.unregister(socket.id);
-        });
+          socket.once("unregister", () => {
+            IO.unregister(socket.id);
+          });
 
-        socket.once("disconnect", () => {
-          IO.unregister(socket.id);
+          socket.once("disconnect", () => {
+            IO.unregister(socket.id);
+          });
         });
       });
-    });
   })
   .catch((error) => {
     if (error.name === "SequelizeConnectionRefusedError") {
