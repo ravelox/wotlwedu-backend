@@ -4,6 +4,7 @@ const miniUuid = require("../util/mini-uuid");
 const statusResponse = require("../util/statusresponse");
 const Helpers = require("../util/helpers");
 const AI = require("../util/ai");
+const Security = require("../util/security");
 
 module.exports = (addTest) => {
   addTest("mini-uuid applies prefix and produces unique values", () => {
@@ -71,5 +72,19 @@ module.exports = (addTest) => {
     assert.strictEqual(result.category, "Food");
     assert.ok(result.count <= 10, "count should be bounded to max 10");
     assert.strictEqual(result.suggestions.length, result.count);
+  });
+
+  addTest("security boolean coercion accepts true/false, 0/1, and string booleans", () => {
+    const toBool = Security._toBool;
+    assert.strictEqual(toBool(true), true);
+    assert.strictEqual(toBool(false), false);
+    assert.strictEqual(toBool(1), true);
+    assert.strictEqual(toBool(0), false);
+    assert.strictEqual(toBool("1"), true);
+    assert.strictEqual(toBool("0"), false);
+    assert.strictEqual(toBool("true"), true);
+    assert.strictEqual(toBool("false"), false);
+    assert.strictEqual(toBool(" TRUE "), true);
+    assert.strictEqual(toBool(" FALSE "), false);
   });
 };

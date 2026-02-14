@@ -13,11 +13,20 @@ function assertOrgAdmin(req, organizationId = null) {
   return req.authOrganizationId === organizationId;
 }
 
+// Read access is less restrictive than management access:
+// any authenticated user can read their own organization; only org admins can manage it.
+function canReadOrg(req, organizationId = null) {
+  if (req.isAdmin === true) return true;
+  if (!req.authOrganizationId) return false;
+  if (!organizationId) return true;
+  return req.authOrganizationId === organizationId;
+}
+
 module.exports.getOrganization = async (req, res, next) => {
   try {
     const organizationId = req.params.organizationId;
     if (!organizationId) return StatusResponse(res, 421, "No organization ID provided");
-    if (!assertOrgAdmin(req, organizationId))
+    if (!canReadOrg(req, organizationId))
       return StatusResponse(res, 403, "Not authorized for this organization");
 
     const foundOrganization = await Organization.findByPk(organizationId);
@@ -30,8 +39,10 @@ module.exports.getOrganization = async (req, res, next) => {
 
 module.exports.getAllOrganization = async (req, res, next) => {
   try {
-    if (!assertOrgAdmin(req))
-      return StatusResponse(res, 403, "Not authorized");
+    // System admins can list all orgs; everyone else can only list their own org.
+    if (req.isAdmin !== true && !req.authOrganizationId) {
+      return StatusResponse(res, 403, "No organization context available");
+    }
 
     let page = +req.query.page || 1;
     let itemsPerPage = +req.query.items || 20;

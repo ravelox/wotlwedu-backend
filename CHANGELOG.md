@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.10 - 2026-02-14
+- Fix Sequelize Workgroup/WorkgroupMember association direction that could generate an invalid FK and prevent `workgroups` table creation.
+- Fix auth middleware boolean parsing for admin flags (`true/false`, `0/1`, `"true"/"false"`) when using `raw: true` with SQL dialects.
+- Allow authenticated users to read their own organization while keeping organization management endpoints restricted to admins.
+
 ## 0.0.9 - 2026-02-14
 - Workgroup endpoints self-heal by creating missing `workgroups` tables on first access (useful for partially initialized DBs).
 

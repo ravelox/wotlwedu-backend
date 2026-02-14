@@ -13,6 +13,24 @@ const WorkgroupMember = require("../model/workgroupmember");
 const Role = require("../model/role");
 const UserRole = require("../model/userrole");
 
+function toBool(v) {
+  // Sequelize/MySQL/MariaDB can return booleans as 0/1 (or occasionally '0'/'1') when using `raw: true`.
+  if (v === true || v === false) return v;
+  if (v === 1 || v === 0) return v === 1;
+  if (typeof v === "string") {
+    const s = v.trim().toLowerCase();
+    if (s === "1") return true;
+    if (s === "0") return false;
+    if (s === "true") return true;
+    if (s === "false") return false;
+  }
+  if (Buffer.isBuffer(v) && v.length === 1) return v[0] === 1;
+  return !!v;
+}
+
+// Expose for unit tests (not part of public API contract).
+module.exports._toBool = toBool;
+
 function findCap(capList, cap) {
   const capUnit = cap.split(".");
   if (!capList) return null;
@@ -144,12 +162,12 @@ module.exports.checkAuthentication = async (req, res, next) => {
     //Save the user ID in the req object
     req.authUserId = decoded.user;
     req.authName = foundUser.fullName;
-    const isSystemAdmin = foundUser.systemAdmin === true || foundUser.admin === true;
+    const isSystemAdmin = toBool(foundUser.systemAdmin) || toBool(foundUser.admin);
     req.isSystemAdmin = isSystemAdmin;
     req.isAdmin = isSystemAdmin;
     req.authOrganizationId = foundUser.organizationId || null;
-    req.isOrganizationAdmin = foundUser.organizationAdmin === true;
-    req.isWorkgroupAdmin = foundUser.workgroupAdmin === true;
+    req.isOrganizationAdmin = toBool(foundUser.organizationAdmin);
+    req.isWorkgroupAdmin = toBool(foundUser.workgroupAdmin);
     req.adminWorkgroupId =
       foundUser.adminWorkgroupId || foundUser.adminGroupId || null;
 

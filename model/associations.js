@@ -52,12 +52,24 @@ module.exports.setup = function () {
   GroupMember.hasOne(User, { foreignKey: "id", sourceKey: "userId" });
 
   Workgroup.belongsToMany(User, { through: WorkgroupMember });
-  Workgroup.hasMany(WorkgroupMember);
+  Workgroup.hasMany(WorkgroupMember, { foreignKey: "workgroupId" });
   Workgroup.hasOne(Category, { foreignKey: "id", sourceKey: "categoryId" });
   Workgroup.hasOne(Organization, { foreignKey: "id", sourceKey: "organizationId" });
 
-  WorkgroupMember.hasOne(Workgroup, { foreignKey: "id", sourceKey: "workgroupId" });
-  WorkgroupMember.hasOne(User, { foreignKey: "id", sourceKey: "userId" });
+  // WorkgroupMember rows belong to a Workgroup and a User.
+  // Using `belongsTo` ensures the FK lives on `workgroupmembers` (not on `workgroups` / `users`).
+  WorkgroupMember.belongsTo(Workgroup, {
+    foreignKey: "workgroupId",
+    targetKey: "id",
+    onDelete: "CASCADE",
+    onUpdate: "CASCADE",
+  });
+  WorkgroupMember.belongsTo(User, {
+    foreignKey: "userId",
+    targetKey: "id",
+    onDelete: "CASCADE",
+    onUpdate: "CASCADE",
+  });
 
   Item.hasMany(Vote);
   Item.hasMany(ListItem);
@@ -77,7 +89,7 @@ module.exports.setup = function () {
   User.belongsToMany(Role, { through: UserRole });
   User.hasMany(Friend);
   User.hasMany(GroupMember);
-  User.hasMany(WorkgroupMember);
+  User.hasMany(WorkgroupMember, { foreignKey: "userId" });
   User.hasMany(UserRole);
   User.hasMany(Vote);
   User.hasMany(Notification);
