@@ -18,14 +18,14 @@ Core stack:
 
 ## Multi-tenancy concepts
 - `Organization`: top-level tenant boundary. Data access is restricted by organization context.
-- `Workgroup`: sub-unit inside an organization (implemented on top of `group` with `organizationId`).
+- `Workgroup`: sub-unit inside an organization (dedicated entity/table; separate from election audience groups).
 - `User`: belongs to exactly one organization (`organizationId`).
 - `System admin user`: global administrator that can administer any organization and any workgroup.
 - `Organization admin user`: can administer workgroups and users across workgroups in their organization.
-- `Workgroup admin user`: can administer data for one workgroup (`adminGroupId`).
+- `Workgroup admin user`: can administer data for one workgroup (`adminWorkgroupId`, legacy `adminGroupId`).
 
 ## Current version
-The backend currently ships as version **0.0.4** (see `package.json` and `CHANGELOG.md`).
+The backend currently ships as version **0.0.6** (see `package.json` and `CHANGELOG.md`).
 
 ## Prerequisites
 - Node.js and npm

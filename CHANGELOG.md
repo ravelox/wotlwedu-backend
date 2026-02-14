@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.6 - 2026-02-14
+- Add dedicated workgroup model/API (separate from election audience groups) and org-scoped access controls.
+- Add organization/workgroup capabilities and grant them to the Root Role via `update-0008`.
+- Add workgroup-scoped administration for items/images/lists/elections (admins can target a workgroup).
+- Harden DB update runner to apply only `update-\\d+.js` and backfill metadata when updates are already applied.
+- Add comprehensive curl examples for key endpoints (including organization/workgroup and scoped resources).
+
 ## 0.0.5 - 2026-02-13
 - Add multi-tenant foundations with organizations and organization-scoped workgroups.
 - Add explicit user classifications: `systemAdmin`, `organizationAdmin`, and `workgroupAdmin` (single admin workgroup via `adminGroupId`).
