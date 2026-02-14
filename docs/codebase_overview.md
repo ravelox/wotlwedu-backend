@@ -50,7 +50,7 @@ Unauthenticated routes:
 - `/register`
 
 Authenticated route groups (all behind `Security.checkAuthentication`):
-- `/ping`, `/helper`, `/user`, `/role`, `/capability`, `/item`, `/list`, `/group`, `/image`, `/category`, `/election`, `/vote`, `/preference`, `/cast`, `/notification`, `/ai`
+- `/ping`, `/helper`, `/user`, `/role`, `/capability`, `/item`, `/list`, `/group`, `/image`, `/category`, `/election`, `/vote`, `/preference`, `/cast`, `/notification`
 
 Response payloads typically use [`util/statusresponse.js`](../util/statusresponse.js):
 ```json
@@ -65,29 +65,6 @@ Authentication and capability authorization are implemented in [`util/security.j
 - Rejects inactive users (`active === false`).
 - Attaches `req.authUserId`, `req.authName`, and `req.isAdmin`.
 - Per-route capability checks via `checkCapability(object, ops)`.
-
-## AI-assisted endpoints
-
-The AI feature set is deterministic and self-hosted (no external LLM/API dependency).
-
-Implementation:
-- Routes: [`routes/ai.js`](../routes/ai.js)
-- Controller: [`controllers/ai.js`](../controllers/ai.js)
-- Heuristics/utilities: [`util/ai.js`](../util/ai.js)
-
-Supported `/ai/*` capabilities include:
-- election recommendations
-- list item suggestions from prompt
-- election summaries
-- notification digest
-- participant suggestions
-- text categorization
-- text moderation
-- image description from metadata
-- smart defaults from preferences
-- assistant query routing
-
-These use existing application models (`Election`, `Vote`, `Item`, `User`, `Notification`, `Friend`, `Image`, `Preference`, etc.) and do not require schema changes.
 
 ## Real-time features and housekeeping
 

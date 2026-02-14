@@ -53,7 +53,6 @@ const voteRoutes = require("./routes/vote");
 const castRoutes = require("./routes/cast");
 const preferenceRoutes = require("./routes/preference");
 const notificationRoutes = require("./routes/notification");
-const aiRoutes = require("./routes/ai");
 const helperRoutes = require("./routes/helper");
 const organizationRoutes = require("./routes/organization");
 
@@ -234,7 +233,6 @@ app.use(
   Security.checkAuthentication,
   notificationRoutes
 );
-app.use("/ai", Helpers.logComment("AI"), Security.checkAuthentication, aiRoutes);
 
 app.use((req, res, next) => {
   Helpers.logComment("No Endpoint"),

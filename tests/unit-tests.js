@@ -3,7 +3,6 @@ const assert = require("assert");
 const miniUuid = require("../util/mini-uuid");
 const statusResponse = require("../util/statusresponse");
 const Helpers = require("../util/helpers");
-const AI = require("../util/ai");
 const Security = require("../util/security");
 
 module.exports = (addTest) => {
@@ -48,30 +47,6 @@ module.exports = (addTest) => {
     const token = Helpers.genBase32();
     assert.strictEqual(token.length, 24);
     assert.ok(/^[A-Z2-7]+$/.test(token), "token should be base32 uppercase");
-  });
-
-  addTest("categorizeText infers Food", () => {
-    const result = AI.categorizeText(
-      "Need dinner ideas like pizza or sushi for tonight"
-    );
-    assert.strictEqual(result.category, "Food");
-    assert.ok(result.confidence > 0, "confidence should be positive");
-  });
-
-  addTest("moderateText flags unsafe terms", () => {
-    const result = AI.moderateText("This includes kill and bomb threats");
-    assert.strictEqual(result.safe, false);
-    assert.ok(result.flaggedTerms.length >= 2, "should flag multiple terms");
-  });
-
-  addTest("generateListSuggestions returns bounded count + inferred category", () => {
-    const result = AI.generateListSuggestions(
-      "suggest food options for lunch",
-      99
-    );
-    assert.strictEqual(result.category, "Food");
-    assert.ok(result.count <= 10, "count should be bounded to max 10");
-    assert.strictEqual(result.suggestions.length, result.count);
   });
 
   addTest("security boolean coercion accepts true/false, 0/1, and string booleans", () => {
