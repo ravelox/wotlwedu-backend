@@ -19,6 +19,7 @@ const Category = require("../model/category");
 const Item = require("../model/item");
 const Friend = require("../model/friend");
 const Notification = require("../model/notification");
+const Workgroup = require("../model/workgroup");
 
 const Attributes = require("../model/attributes");
 
@@ -56,12 +57,6 @@ module.exports.getImage = async (req, res, next) => {
     }
   }
 
-  if (!bypassSecurityCheck) {
-    if (!Security.getVerdict(req.verdicts, "view").isAdmin) {
-      whereCondition.creator = req.authUserId;
-    }
-  }
-
   const includes = generateIncludes(req.query.detail);
 
   const modImageAttributes = Attributes.Image.slice();
@@ -74,15 +69,28 @@ module.exports.getImage = async (req, res, next) => {
   options.include = includes;
 
   Image.findOne(options)
-    .then((foundImage) => {
+    .then(async (foundImage) => {
       if (!foundImage) return StatusResponse(res, 404, "Image not found");
+
+      if (!bypassSecurityCheck) {
+        if (foundImage.workgroupId) {
+          const allowed = await Security.canAccessWorkgroup(req, foundImage.workgroupId);
+          if (!allowed) return StatusResponse(res, 403, "Not authorized for this workgroup");
+        } else if (!Security.getVerdict(req.verdicts, "view").isAdmin) {
+          if (foundImage.creator !== req.authUserId) {
+            return StatusResponse(res, 403, "Not authorized for this image");
+          }
+        }
+      }
+
       return StatusResponse(res, 200, "OK", { image: foundImage });
     })
     .catch((err) => next(err));
 };
 
-module.exports.getAllImage = (req, res, next) => {
+module.exports.getAllImage = async (req, res, next) => {
   let userFilter = req.query.filter;
+  const workgroupId = req.query.workgroupId || null;
   let page = +req.query.page;
   let itemsPerPage = +req.query.items;
   if (!page) page = 1;
@@ -105,7 +113,14 @@ module.exports.getAllImage = (req, res, next) => {
     };
   }
 
-  if (!Security.getVerdict(req.verdicts, "view").isAdmin) {
+  if (workgroupId) {
+    const foundWorkgroup = await Workgroup.findByPk(workgroupId, { raw: true });
+    if (!foundWorkgroup) return StatusResponse(res, 421, "Workgroup not found");
+    const allowed = await Security.canAccessWorkgroup(req, foundWorkgroup);
+    if (!allowed) return StatusResponse(res, 403, "Not authorized for this workgroup");
+    whereCondition.workgroupId = workgroupId;
+  } else if (!Security.getVerdict(req.verdicts, "view").isAdmin) {
+    // Legacy creator-owned images
     whereCondition.creator = req.authUserId;
   }
 
@@ -144,21 +159,40 @@ module.exports.postUpdateImage = (req, res, next) => {
   const imageToFind = req.params.imageId;
   if (!imageToFind) return StatusResponse(res, 421, "No image ID provided");
 
-  let whereCondition = {};
-  whereCondition.id = imageToFind;
-
-  if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
-    whereCondition.creator = req.authUserId;
-  }
-  Image.findOne({ where: whereCondition })
-    .then((foundImage) => {
+  Image.findByPk(imageToFind)
+    .then(async (foundImage) => {
       if (!foundImage) return StatusResponse(res, 404, "Image not found");
+
+      if (foundImage.workgroupId) {
+        const allowed = await Security.canAccessWorkgroup(req, foundImage.workgroupId);
+        if (!allowed) return StatusResponse(res, 403, "Not authorized for this workgroup");
+      } else if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
+        if (foundImage.creator !== req.authUserId) {
+          return StatusResponse(res, 403, "Not authorized for this image");
+        }
+      }
 
       if (req.body.name) foundImage.name = req.body.name;
       if (req.body.description) foundImage.description = req.body.description;
       if (req.body.filename) foundImage.filename = req.body.filename;
       if (req.body.contentType) foundImage.contentType = req.body.contentType;
       if (req.body.statusId) foundImage.statusId = req.body.statusId;
+      if (req.body.categoryId || req.body.categoryId === null) foundImage.categoryId = req.body.categoryId;
+
+      if (req.body.workgroupId || req.body.workgroupId === null) {
+        if (req.body.workgroupId === null) {
+          if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
+            return StatusResponse(res, 403, "Not authorized to clear workgroupId");
+          }
+          foundImage.workgroupId = null;
+        } else {
+          const targetWorkgroup = await Workgroup.findByPk(req.body.workgroupId, { raw: true });
+          if (!targetWorkgroup) return StatusResponse(res, 421, "Workgroup not found");
+          const allowed = await Security.canAccessWorkgroup(req, targetWorkgroup);
+          if (!allowed) return StatusResponse(res, 403, "Not authorized for this workgroup");
+          foundImage.workgroupId = targetWorkgroup.id;
+        }
+      }
 
       foundImage
         .save()
@@ -175,7 +209,7 @@ module.exports.postUpdateImage = (req, res, next) => {
     .catch((err) => next(err));
 };
 
-module.exports.putAddImage = (req, res, next) => {
+module.exports.putAddImage = async (req, res, next) => {
   if (!req.body.name) return StatusResponse(res, 421, "No image name provided");
 
   if (!req.body.description)
@@ -190,6 +224,15 @@ module.exports.putAddImage = (req, res, next) => {
   if (req.body.filename) imageToAdd.filename = req.body.filename;
   if (req.body.contentType) imageToAdd.contentType = req.body.contentType;
   if (req.body.statusId) imageToAdd.statusId = req.body.statusId;
+  if (req.body.categoryId) imageToAdd.categoryId = req.body.categoryId;
+
+  if (req.body.workgroupId) {
+    const targetWorkgroup = await Workgroup.findByPk(req.body.workgroupId, { raw: true });
+    if (!targetWorkgroup) return StatusResponse(res, 421, "Workgroup not found");
+    const allowed = await Security.canAccessWorkgroup(req, targetWorkgroup);
+    if (!allowed) return StatusResponse(res, 403, "Not authorized for this workgroup");
+    imageToAdd.workgroupId = targetWorkgroup.id;
+  }
 
   // Save the image to the database
   imageToAdd
@@ -208,14 +251,18 @@ module.exports.deleteImage = (req, res, next) => {
   const imageToFind = req.params.imageId;
   if (!imageToFind) return StatusResponse(res, 421, "No image ID provided");
 
-  let whereCondition = { id: imageToFind };
-  if (!Security.getVerdict(req.verdicts, "delete").isAdmin) {
-    whereCondition.creator = req.authUserId;
-  }
-
-  Image.findOne({ where: whereCondition })
-    .then((foundImage) => {
+  Image.findByPk(imageToFind)
+    .then(async (foundImage) => {
       if (!foundImage) return StatusResponse(res, 404, "Image not found");
+
+      if (foundImage.workgroupId) {
+        const allowed = await Security.canAccessWorkgroup(req, foundImage.workgroupId);
+        if (!allowed) return StatusResponse(res, 403, "Not authorized for this workgroup");
+      } else if (!Security.getVerdict(req.verdicts, "delete").isAdmin) {
+        if (foundImage.creator !== req.authUserId) {
+          return StatusResponse(res, 403, "Not authorized for this image");
+        }
+      }
 
       // Remove the image ID from any item
       Item.update({ imageId: null }, { where: { imageId: foundImage.id } })
@@ -244,15 +291,18 @@ module.exports.postImageFile = (req, res, next) => {
   if (req.file.path) {
 
     // Update the filename details on the image object
-    const whereCondition = { id: imageToFind };
-
-    if (!Security.getVerdict(req.verdicts, "add").isAdmin) {
-      whereCondition.creator = req.authUserId;
-    }
-
-    Image.findOne({ where: whereCondition })
-      .then((foundImage) => {
+    Image.findByPk(imageToFind)
+      .then(async (foundImage) => {
         if (!foundImage) return StatusResponse(res, 421, "No image found");
+
+        if (foundImage.workgroupId) {
+          const allowed = await Security.canAccessWorkgroup(req, foundImage.workgroupId);
+          if (!allowed) return StatusResponse(res, 403, "Not authorized for this workgroup");
+        } else if (!Security.getVerdict(req.verdicts, "add").isAdmin) {
+          if (foundImage.creator !== req.authUserId) {
+            return StatusResponse(res, 403, "Not authorized for this image");
+          }
+        }
 
         foundImage.filename = req.file.filename;
         foundImage
@@ -274,15 +324,19 @@ module.exports.deleteImageFile = (req, res, next) => {
   const imageToFind = req.params.imageId;
   if (!imageToFind) return StatusResponse(res, 421, "No image ID provided");
 
-  const whereCondition = { id: imageToFind };
-  if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
-    whereCondition.creator = req.authUserId;
-  }
-
-  Image.findOne({ where: whereCondition })
-    .then((foundImage) => {
+  Image.findByPk(imageToFind)
+    .then(async (foundImage) => {
       if (!foundImage)
-        return StatusResponse(res, 400, "No image found", { whereCondition });
+        return StatusResponse(res, 400, "No image found");
+
+      if (foundImage.workgroupId) {
+        const allowed = await Security.canAccessWorkgroup(req, foundImage.workgroupId);
+        if (!allowed) return StatusResponse(res, 403, "Not authorized for this workgroup");
+      } else if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
+        if (foundImage.creator !== req.authUserId) {
+          return StatusResponse(res, 403, "Not authorized for this image");
+        }
+      }
 
       if (foundImage.filename) {
         FS.unlink(Config.imageDir + foundImage.filename, (err) => {

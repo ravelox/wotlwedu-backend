@@ -44,6 +44,10 @@ const Election = database.define("election", {
     type: Sequelize.INTEGER,
     defaultValue: 0
   },
+  workgroupId: {
+    type: Sequelize.STRING,
+    allowNull: true,
+  },
   creator: {
     type: Sequelize.STRING,
     onDelete: "CASCADE",
@@ -59,7 +63,7 @@ const Election = database.define("election", {
   },
 },
 {
-  indexes: [{ fields: ["creator"]}],
+  indexes: [{ fields: ["creator"] }, { fields: ["workgroupId"] }],
 });
 
 module.exports = Election;

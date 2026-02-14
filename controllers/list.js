@@ -18,6 +18,7 @@ const Category = require("../model/category");
 const Election = require("../model/election");
 const Friend = require("../model/friend");
 const Notification = require("../model/notification");
+const Workgroup = require("../model/workgroup");
 
 const Attributes = require("../model/attributes");
 
@@ -51,6 +52,15 @@ function generateIncludes(details) {
   }
   return includes;
 }
+
+async function assertCanAccessList(req, list, op) {
+  if (!req || !list) return false;
+  if (list.workgroupId) {
+    return await Security.canAccessWorkgroup(req, list.workgroupId);
+  }
+  return Security.getVerdict(req.verdicts, op).isAdmin || list.creator === req.authUserId;
+}
+
 module.exports.getSingleList = async (req, res, next) => {
   const listToFind = req.params.listId;
   const notificationToFind = req.params.notificationId;
@@ -74,12 +84,6 @@ module.exports.getSingleList = async (req, res, next) => {
     }
   }
 
-  if (!bypassSecurityCheck) {
-    if (!Security.getVerdict(req.verdicts, "view").isAdmin) {
-      whereCondition.creator = req.authUserId;
-    }
-  }
-
   const includes = generateIncludes(req.query.detail);
 
   options.where = whereCondition;
@@ -87,8 +91,13 @@ module.exports.getSingleList = async (req, res, next) => {
   options.attributes = Attributes.List;
 
   List.findOne(options)
-    .then((foundList) => {
+    .then(async (foundList) => {
       if (!foundList) return StatusResponse(res, 404, "List not found");
+
+      if (!bypassSecurityCheck) {
+        const allowed = await assertCanAccessList(req, foundList, "view");
+        if (!allowed) return StatusResponse(res, 403, "Not authorized for this list");
+      }
 
       return StatusResponse(res, 200, "OK", {
         list: foundList,
@@ -97,8 +106,9 @@ module.exports.getSingleList = async (req, res, next) => {
     .catch((err) => next(err));
 };
 
-module.exports.getAllList = (req, res, next) => {
+module.exports.getAllList = async (req, res, next) => {
   let userFilter = req.query.filter;
+  const workgroupId = req.query.workgroupId || null;
   let page = +req.query.page;
   let itemsPerPage = +req.query.items;
   if (!page) page = 1;
@@ -121,7 +131,14 @@ module.exports.getAllList = (req, res, next) => {
     };
   }
 
-  if (!Security.getVerdict(req.verdicts, "view").isAdmin) {
+  if (workgroupId) {
+    const foundWorkgroup = await Workgroup.findByPk(workgroupId, { raw: true });
+    if (!foundWorkgroup) return StatusResponse(res, 421, "Workgroup not found");
+    const allowed = await Security.canAccessWorkgroup(req, foundWorkgroup);
+    if (!allowed) return StatusResponse(res, 403, "Not authorized for this workgroup");
+    whereCondition.workgroupId = workgroupId;
+  } else if (!Security.getVerdict(req.verdicts, "view").isAdmin) {
+    // Legacy creator-owned lists
     whereCondition.creator = req.authUserId;
   }
 
@@ -155,20 +172,32 @@ module.exports.postUpdateList = (req, res, next) => {
   const listToFind = req.params.listId;
   if (!listToFind) return StatusResponse(res, 421, "No list ID provided");
 
-  const whereCondition = { id: listToFind };
-
-  if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
-    whereCondition.creator = req.authUserId;
-  }
-
-  List.findOne({ where: whereCondition })
-    .then((foundList) => {
+  List.findByPk(listToFind)
+    .then(async (foundList) => {
       if (!foundList)
         return StatusResponse(res, 404, "postUpdate: List not found");
 
+      const allowed = await assertCanAccessList(req, foundList, "edit");
+      if (!allowed) return StatusResponse(res, 403, "Not authorized for this list");
+
       if (req.body.name) foundList.name = req.body.name;
       if (req.body.description) foundList.description = req.body.description;
-      if (req.body.categoryId) foundList.categoryId = req.body.categoryId;
+      if (req.body.categoryId || req.body.categoryId === null) foundList.categoryId = req.body.categoryId;
+
+      if (req.body.workgroupId || req.body.workgroupId === null) {
+        if (req.body.workgroupId === null) {
+          if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
+            return StatusResponse(res, 403, "Not authorized to clear workgroupId");
+          }
+          foundList.workgroupId = null;
+        } else {
+          const targetWorkgroup = await Workgroup.findByPk(req.body.workgroupId, { raw: true });
+          if (!targetWorkgroup) return StatusResponse(res, 421, "Workgroup not found");
+          const wgAllowed = await Security.canAccessWorkgroup(req, targetWorkgroup);
+          if (!wgAllowed) return StatusResponse(res, 403, "Not authorized for this workgroup");
+          foundList.workgroupId = targetWorkgroup.id;
+        }
+      }
 
       foundList
         .save()
@@ -185,19 +214,32 @@ module.exports.postUpdateList = (req, res, next) => {
     .catch((err) => next(err));
 };
 
-module.exports.putAddList = (req, res, next) => {
-  // Check to see if this user has already created a list with this name
-  List.findOne({ where: { creator: req.authUserId, name: req.body.name } })
+module.exports.putAddList = async (req, res, next) => {
+  const name = req.body.name;
+  if (!name) return StatusResponse(res, 421, "No list name provided");
+
+  let workgroupId = req.body.workgroupId || null;
+  if (workgroupId) {
+    const targetWorkgroup = await Workgroup.findByPk(workgroupId, { raw: true });
+    if (!targetWorkgroup) return StatusResponse(res, 421, "Workgroup not found");
+    const allowed = await Security.canAccessWorkgroup(req, targetWorkgroup);
+    if (!allowed) return StatusResponse(res, 403, "Not authorized for this workgroup");
+    workgroupId = targetWorkgroup.id;
+  }
+
+  // Check to see if this user has already created a list with this name (scoped by workgroup if present)
+  List.findOne({ where: workgroupId ? { workgroupId, name } : { creator: req.authUserId, name } })
     .then((foundList) => {
       if (foundList) return StatusResponse(res, 421, "List exists");
 
       // Populate the List properties
       const ListToAdd = new List();
-      ListToAdd.name = req.body.name;
+      ListToAdd.name = name;
       ListToAdd.description = req.body.description;
       ListToAdd.id = UUID("list");
       ListToAdd.creator = req.authUserId;
       if (req.body.categoryId) ListToAdd.categoryId = req.body.categoryId;
+      if (workgroupId) ListToAdd.workgroupId = workgroupId;
 
       // Save the List to the database
       ListToAdd.save()
@@ -217,15 +259,12 @@ module.exports.deleteList = (req, res, next) => {
   const listToFind = req.params.listId;
   if (!listToFind) return StatusResponse(res, 421, "No list ID provided");
 
-  let whereCondition = { id: listToFind };
-
-  if (!Security.getVerdict(req.verdicts, "delete").isAdmin) {
-    whereCondition.creator = req.authUserId;
-  }
-
-  List.findOne({ where: whereCondition })
-    .then((foundList) => {
+  List.findByPk(listToFind)
+    .then(async (foundList) => {
       if (!foundList) return StatusResponse(res, 404, "List not found");
+
+      const allowed = await assertCanAccessList(req, foundList, "delete");
+      if (!allowed) return StatusResponse(res, 403, "Not authorized for this list");
 
       // Check to see if the list is being used in an election
       Election.findOne({ where: { listId: foundList.id } })
@@ -252,19 +291,27 @@ module.exports.putItemOnList = (req, res, next) => {
   if (!listToFind) return StatusResponse(res, 421, "No list ID provided");
   if (!itemToFind) return StatusResponse(res, 421, "No item ID provided");
 
-  let whereCondition = { id: listToFind };
-  if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
-    whereCondition.creator = req.authUserId;
-  }
-
-  List.findOne({ where: whereCondition })
-    .then((foundList) => {
+  List.findByPk(listToFind)
+    .then(async (foundList) => {
       if (!foundList) return StatusResponse(res, 404, "List not found");
 
-      // Only items that are created by the current user or everything if the user is admin
+      const allowed = await assertCanAccessList(req, foundList, "edit");
+      if (!allowed) return StatusResponse(res, 403, "Not authorized for this list");
+
       Item.findByPk(itemToFind)
-        .then((foundItem) => {
+        .then(async (foundItem) => {
           if (!foundItem) return StatusResponse(res, 404, "Item not found");
+
+          // Enforce workgroup consistency when list is workgroup-scoped.
+          if (foundList.workgroupId) {
+            if (foundItem.workgroupId !== foundList.workgroupId) {
+              return StatusResponse(res, 403, "Item is not in this workgroup");
+            }
+          } else if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
+            if (foundItem.creator !== req.authUserId) {
+              return StatusResponse(res, 403, "Not authorized for this item");
+            }
+          }
 
           foundList
             .addItem(foundItem, {
@@ -287,18 +334,26 @@ module.exports.deleteItemFromList = (req, res, next) => {
   const itemToFind = req.params.itemId;
   if (!listToFind) return StatusResponse(res, 421, "No list ID provided");
   if (!itemToFind) return StatusResponse(res, 421, "No item ID provided");
-  let whereCondition = { id: listToFind };
-  if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
-    whereCondition.creator = req.authUserId;
-  }
-
-  List.findOne({ where: whereCondition })
-    .then((foundList) => {
+  List.findByPk(listToFind)
+    .then(async (foundList) => {
       if (!foundList) return StatusResponse(res, 404, "List not found");
 
+      const allowed = await assertCanAccessList(req, foundList, "edit");
+      if (!allowed) return StatusResponse(res, 403, "Not authorized for this list");
+
       Item.findByPk(itemToFind)
-        .then((foundItem) => {
+        .then(async (foundItem) => {
           if (!foundItem) return StatusResponse(res, 404, "Item not found");
+
+          if (foundList.workgroupId) {
+            if (foundItem.workgroupId !== foundList.workgroupId) {
+              return StatusResponse(res, 403, "Item is not in this workgroup");
+            }
+          } else if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
+            if (foundItem.creator !== req.authUserId) {
+              return StatusResponse(res, 403, "Not authorized for this item");
+            }
+          }
 
           foundList
             .removeItem(foundItem)
@@ -321,13 +376,11 @@ module.exports.putBulkAddItemToList = (req, res, next) => {
   if (!listToFind) return StatusResponse(res, 421, "No list ID provided");
   if (!itemList) return StatusResponse(res, 421, "No item list provided");
 
-  let whereCondition = { id: listToFind };
-  if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
-    whereCondition.creator = req.authUserId;
-  }
-
-  List.findOne({ where: whereCondition }).then(async (foundList) => {
+  List.findByPk(listToFind).then(async (foundList) => {
     if (!foundList) return StatusResponse(res, 404, "List not found");
+
+    const allowed = await assertCanAccessList(req, foundList, "edit");
+    if (!allowed) return StatusResponse(res, 403, "Not authorized for this list");
 
     // Work through the list of items
     const results = [];
@@ -341,6 +394,26 @@ module.exports.putBulkAddItemToList = (req, res, next) => {
               message: "Item not found",
             });
           } else {
+            if (foundList.workgroupId) {
+              if (itemFound.workgroupId !== foundList.workgroupId) {
+                results.push({
+                  id: itemToFind,
+                  status: 403,
+                  message: "Item is not in this workgroup",
+                });
+                return;
+              }
+            } else if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
+              if (itemFound.creator !== req.authUserId) {
+                results.push({
+                  id: itemToFind,
+                  status: 403,
+                  message: "Not authorized for this item",
+                });
+                return;
+              }
+            }
+
             const throughOption = {
               through: {
                 id: UUID("listitem"),
@@ -379,16 +452,14 @@ module.exports.deleteBulkItemFromList = (req, res, next) => {
   if (!listToFind) return StatusResponse(res, 421, "No list ID provided");
   if (!itemList) return StatusResponse(res, 421, "No item list provided");
 
-  let whereCondition = { id: listToFind };
-  if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
-    whereCondition.creator = req.authUserId;
-  }
-
-  List.findOne({ where: whereCondition })
+  List.findByPk(listToFind)
     .then(async (foundList) => {
       if (!foundList) return StatusResponse(res, 404, "List not found");
 
       const results = [];
+      const allowed = await assertCanAccessList(req, foundList, "edit");
+      if (!allowed) return StatusResponse(res, 403, "Not authorized for this list");
+
       for (const itemToFind of itemList) {
         await Item.findByPk(itemToFind)
           .then(async (itemFound) => {
@@ -399,6 +470,26 @@ module.exports.deleteBulkItemFromList = (req, res, next) => {
                 message: "Item not found",
               });
             } else {
+              if (foundList.workgroupId) {
+                if (itemFound.workgroupId !== foundList.workgroupId) {
+                  results.push({
+                    id: itemToFind,
+                    status: 403,
+                    message: "Item is not in this workgroup",
+                  });
+                  return;
+                }
+              } else if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
+                if (itemFound.creator !== req.authUserId) {
+                  results.push({
+                    id: itemToFind,
+                    status: 403,
+                    message: "Not authorized for this item",
+                  });
+                  return;
+                }
+              }
+
               await foundList
                 .removeItem(itemFound)
                 .then((removedItem) => {
@@ -420,8 +511,8 @@ module.exports.deleteBulkItemFromList = (req, res, next) => {
             }
           })
           .catch((err) => next(err));
-        return StatusResponse(res, 200, "OK", { results: results });
       }
+      return StatusResponse(res, 200, "OK", { results: results });
     })
     .catch((err) => next(err));
 };

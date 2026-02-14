@@ -15,6 +15,7 @@ const Image = require("../model/image");
 const Category = require("../model/category");
 const Friend = require("../model/friend");
 const Notification = require("../model/notification");
+const Workgroup = require("../model/workgroup");
 
 const Attributes = require("../model/attributes")
 
@@ -60,12 +61,6 @@ module.exports.getItem = async (req, res, next) => {
     }
   }
 
-  if (!bypassSecurityCheck) {
-    if (!Security.getVerdict(req.verdicts, "view").isAdmin) {
-      whereCondition.creator = req.authUserId;
-    }
-  }
-
   const includes = generateIncludes(req.query.detail);
 
   options.where = whereCondition;
@@ -73,16 +68,28 @@ module.exports.getItem = async (req, res, next) => {
   options.include = includes;
 
   Item.findOne(options)
-    .then((foundItem) => {
+    .then(async (foundItem) => {
       if (!foundItem) return StatusResponse(res, 404, "Item not found");
+
+      if (!bypassSecurityCheck) {
+        if (foundItem.workgroupId) {
+          const allowed = await Security.canAccessWorkgroup(req, foundItem.workgroupId);
+          if (!allowed) return StatusResponse(res, 403, "Not authorized for this workgroup");
+        } else if (!Security.getVerdict(req.verdicts, "view").isAdmin) {
+          if (foundItem.creator !== req.authUserId) {
+            return StatusResponse(res, 403, "Not authorized for this item");
+          }
+        }
+      }
 
       return StatusResponse(res, 200, "OK", { item: foundItem });
     })
     .catch((err) => next(err));
 };
 
-module.exports.getAllItem = (req, res, next) => {
+module.exports.getAllItem = async (req, res, next) => {
   let userFilter = req.query.filter;
+  const workgroupId = req.query.workgroupId || null;
   let page = +req.query.page;
   let itemsPerPage = +req.query.items;
   if (!page) page = 1;
@@ -105,7 +112,14 @@ module.exports.getAllItem = (req, res, next) => {
     };
   }
 
-  if (!Security.getVerdict(req.verdicts, "view").isAdmin) {
+  if (workgroupId) {
+    const foundWorkgroup = await Workgroup.findByPk(workgroupId, { raw: true });
+    if (!foundWorkgroup) return StatusResponse(res, 421, "Workgroup not found");
+    const allowed = await Security.canAccessWorkgroup(req, foundWorkgroup);
+    if (!allowed) return StatusResponse(res, 403, "Not authorized for this workgroup");
+    whereCondition.workgroupId = workgroupId;
+  } else if (!Security.getVerdict(req.verdicts, "view").isAdmin) {
+    // Legacy mode: items without workgroupId are creator-owned.
     whereCondition.creator = req.authUserId;
   }
 
@@ -135,19 +149,22 @@ module.exports.getAllItem = (req, res, next) => {
   });
 };
 
-module.exports.postUpdateItem = (req, res, next) => {
+module.exports.postUpdateItem = async (req, res, next) => {
   const itemToFind = req.params.itemId;
   if (!itemToFind) return StatusResponse(res, 421, "No item ID provided");
 
-  let whereCondition = {};
-  whereCondition.id = itemToFind;
-
-  if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
-    whereCondition.creator = req.authUserId;
-  }
-  Item.findOne({ where: whereCondition })
-    .then((foundItem) => {
+  Item.findByPk(itemToFind)
+    .then(async (foundItem) => {
       if (!foundItem) return StatusResponse(res, 404, "Item not found");
+
+      if (foundItem.workgroupId) {
+        const allowed = await Security.canAccessWorkgroup(req, foundItem.workgroupId);
+        if (!allowed) return StatusResponse(res, 403, "Not authorized for this workgroup");
+      } else if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
+        if (foundItem.creator !== req.authUserId) {
+          return StatusResponse(res, 403, "Not authorized for this item");
+        }
+      }
 
       if (req.body.name) foundItem.name = req.body.name;
       if (req.body.description) foundItem.description = req.body.description;
@@ -156,6 +173,22 @@ module.exports.postUpdateItem = (req, res, next) => {
       if (req.body.url) foundItem.url = req.body.url;
       if (req.body.location) foundItem.location = req.body.location;
       if (req.body.categoryId) foundItem.categoryId = req.body.categoryId;
+
+      if (req.body.workgroupId || req.body.workgroupId === null) {
+        if (req.body.workgroupId === null) {
+          // Only system admins can remove workgroup scoping.
+          if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
+            return StatusResponse(res, 403, "Not authorized to clear workgroupId");
+          }
+          foundItem.workgroupId = null;
+        } else {
+          const targetWorkgroup = await Workgroup.findByPk(req.body.workgroupId, { raw: true });
+          if (!targetWorkgroup) return StatusResponse(res, 421, "Workgroup not found");
+          const allowed = await Security.canAccessWorkgroup(req, targetWorkgroup);
+          if (!allowed) return StatusResponse(res, 403, "Not authorized for this workgroup");
+          foundItem.workgroupId = targetWorkgroup.id;
+        }
+      }
 
       foundItem
         .save()
@@ -172,7 +205,7 @@ module.exports.postUpdateItem = (req, res, next) => {
     .catch((err) => next(err));
 };
 
-module.exports.putAddItem = (req, res, next) => {
+module.exports.putAddItem = async (req, res, next) => {
   if (!req.body.name) return StatusResponse(res, 421, "No item name provided");
 
   if (!req.body.description)
@@ -190,10 +223,22 @@ module.exports.putAddItem = (req, res, next) => {
   if (req.body.imageId) itemToAdd.imageId = req.body.imageId;
   if (req.body.url) itemToAdd.url = req.body.url;
   if (req.body.location) itemToAdd.location = req.body.location;
-  if (req.body.categoryId) foundItem.categoryId = req.body.categoryId;
+  if (req.body.categoryId) itemToAdd.categoryId = req.body.categoryId;
+
+  if (req.body.workgroupId) {
+    const targetWorkgroup = await Workgroup.findByPk(req.body.workgroupId, { raw: true });
+    if (!targetWorkgroup) return StatusResponse(res, 421, "Workgroup not found");
+    const allowed = await Security.canAccessWorkgroup(req, targetWorkgroup);
+    if (!allowed) return StatusResponse(res, 403, "Not authorized for this workgroup");
+    itemToAdd.workgroupId = targetWorkgroup.id;
+  }
 
   // Check that this user hasn't already added an item with the same name
-  Item.findOne({ where: { name: itemToAdd.name, creator: req.authUserId } })
+  Item.findOne({
+    where: itemToAdd.workgroupId
+      ? { name: itemToAdd.name, workgroupId: itemToAdd.workgroupId }
+      : { name: itemToAdd.name, creator: req.authUserId },
+  })
     .then((foundItem) => {
       if (foundItem) return StatusResponse(res, 421, "Item exists");
 
@@ -216,14 +261,18 @@ module.exports.deleteItem = (req, res, next) => {
   const itemToFind = req.params.itemId;
   if (!itemToFind) return StatusResponse(res, 421, "No item ID provided");
 
-  let whereCondition = { id: itemToFind };
-  if (!Security.getVerdict(req.verdicts, "delete").isAdmin) {
-    whereCondition.creator = req.authUserId;
-  }
-
-  Item.findOne({ where: whereCondition })
-    .then((foundItem) => {
+  Item.findByPk(itemToFind)
+    .then(async (foundItem) => {
       if (!foundItem) return StatusResponse(res, 404, "Item not found");
+
+      if (foundItem.workgroupId) {
+        const allowed = await Security.canAccessWorkgroup(req, foundItem.workgroupId);
+        if (!allowed) return StatusResponse(res, 403, "Not authorized for this workgroup");
+      } else if (!Security.getVerdict(req.verdicts, "delete").isAdmin) {
+        if (foundItem.creator !== req.authUserId) {
+          return StatusResponse(res, 403, "Not authorized for this item");
+        }
+      }
 
       foundItem
         .destroy()

@@ -19,6 +19,10 @@ const List = database.define("list", {
   categoryId: {
     type: Sequelize.STRING
   },
+  workgroupId: {
+    type: Sequelize.STRING,
+    allowNull: true,
+  },
   creator: {
     type: Sequelize.STRING,
     onDelete: "CASCADE",
@@ -34,7 +38,7 @@ const List = database.define("list", {
   },
 },
 {
-  indexes: [{ fields: ["creator"]}],
+  indexes: [{ fields: ["creator"] }, { fields: ["workgroupId"] }],
 });
 
 module.exports = List;

@@ -28,6 +28,10 @@ const Image = database.define("image", {
   categoryId: {
     type: Sequelize.STRING
   },
+  workgroupId: {
+    type: Sequelize.STRING,
+    allowNull: true,
+  },
   creator: {
     type: Sequelize.STRING,
     onDelete: "CASCADE",
@@ -43,7 +47,7 @@ const Image = database.define("image", {
   },
 },
 {
-  indexes: [{ fields: ["creator"]}],
+  indexes: [{ fields: ["creator"] }, { fields: ["workgroupId"] }],
 });
 
 module.exports = Image;

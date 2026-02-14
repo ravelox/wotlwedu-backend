@@ -18,6 +18,7 @@ const Category = require("../model/category");
 const Vote = require("../model/vote");
 const Image = require("../model/image");
 const Status = require("../model/status");
+const Workgroup = require("../model/workgroup");
 
 const Attributes = require("../model/attributes");
 
@@ -89,6 +90,23 @@ function generateIncludes(details) {
   return includes;
 }
 
+async function assertCanAccessElection(req, election, op) {
+  if (!req || !election) return false;
+  if (election.workgroupId) {
+    return await Security.canAccessWorkgroup(req, election.workgroupId);
+  }
+  return (
+    Security.getVerdict(req.verdicts, op).isAdmin ||
+    election.creator === req.authUserId
+  );
+}
+
+async function getWorkgroupOrganizationId(workgroupId) {
+  if (!workgroupId) return null;
+  const wg = await Workgroup.findByPk(workgroupId, { raw: true });
+  return wg ? wg.organizationId || null : null;
+}
+
 module.exports.getSingleElection = (req, res, next) => {
   const electionToFind = req.params.electionId;
   if (!electionToFind)
@@ -96,10 +114,6 @@ module.exports.getSingleElection = (req, res, next) => {
 
   const whereCondition = {};
   whereCondition.id = electionToFind;
-
-  if (!Security.getVerdict(req.verdicts, "view").isAdmin) {
-    whereCondition.creator = req.authUserId;
-  }
 
   const includes = generateIncludes(req.query.detail);
 
@@ -110,15 +124,19 @@ module.exports.getSingleElection = (req, res, next) => {
   options.attributes = Attributes.Election;
 
   Election.findOne(options)
-    .then((foundElection) => {
+    .then(async (foundElection) => {
       if (!foundElection) return StatusResponse(res, 404, "Election not found");
+
+      const allowed = await assertCanAccessElection(req, foundElection, "view");
+      if (!allowed)
+        return StatusResponse(res, 403, "Not authorized for this election");
 
       return StatusResponse(res, 200, "OK", { election: foundElection });
     })
     .catch((err) => next(err));
 };
 
-module.exports.getAllElection = (req, res, next) => {
+module.exports.getAllElection = async (req, res, next) => {
   let userFilter = req.query.filter;
   let page = +req.query.page;
   let itemsPerPage = +req.query.items;
@@ -136,8 +154,16 @@ module.exports.getAllElection = (req, res, next) => {
 
   let whereCondition = {};
 
+  const requestedWorkgroupId = req.query.workgroupId || null;
+  if (requestedWorkgroupId) {
+    const allowed = await Security.canAccessWorkgroup(req, requestedWorkgroupId);
+    if (!allowed) return StatusResponse(res, 403, "Not authorized for this workgroup");
+    whereCondition.workgroupId = requestedWorkgroupId;
+  }
+
   if (userFilter) {
     whereCondition = {
+      ...whereCondition,
       [Op.or]: [
         { name: { [Op.like]: "%" + userFilter + "%" } },
         { description: { [Op.like]: "%" + userFilter + "%" } },
@@ -145,7 +171,7 @@ module.exports.getAllElection = (req, res, next) => {
     };
   }
 
-  if (!Security.getVerdict(req.verdicts, "view").isAdmin) {
+  if (!requestedWorkgroupId && !Security.getVerdict(req.verdicts, "view").isAdmin) {
     whereCondition.creator = req.authUserId;
   }
 
@@ -185,15 +211,70 @@ module.exports.postUpdateElection = (req, res, next) => {
 
   whereCondition.id = electionToFind;
 
-  if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
-    whereCondition.creator = req.authUserId;
-  }
-
   options.where = whereCondition;
 
   Election.findOne(options)
-    .then((foundElection) => {
+    .then(async (foundElection) => {
       if (!foundElection) return StatusResponse(res, 404, "Election not found");
+
+      const allowedExisting = await assertCanAccessElection(
+        req,
+        foundElection,
+        "edit"
+      );
+      if (!allowedExisting)
+        return StatusResponse(res, 403, "Not authorized for this election");
+
+      // Determine what the workgroup would be after this update.
+      let effectiveWorkgroupId = foundElection.workgroupId || null;
+      if (req.body.workgroupId) {
+        const allowedWg = await Security.canAccessWorkgroup(req, req.body.workgroupId);
+        if (!allowedWg)
+          return StatusResponse(res, 403, "Not authorized for this workgroup");
+        effectiveWorkgroupId = req.body.workgroupId;
+      } else if (req.body.workgroupId === null) {
+        if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
+          return StatusResponse(res, 403, "Only system admins can clear workgroupId");
+        }
+        effectiveWorkgroupId = null;
+      }
+
+      // If workgroup-scoped, validate referenced objects are in the same workgroup/org.
+      if (effectiveWorkgroupId) {
+        const effectiveOrgId = await getWorkgroupOrganizationId(effectiveWorkgroupId);
+        if (!effectiveOrgId)
+          return StatusResponse(res, 404, "Workgroup not found");
+
+        if (req.body.listId) {
+          const list = await List.findByPk(req.body.listId, { raw: true });
+          if (!list) return StatusResponse(res, 404, "List not found");
+          if (!list.workgroupId || list.workgroupId !== effectiveWorkgroupId) {
+            return StatusResponse(res, 421, "List is not in the requested workgroup");
+          }
+        }
+        if (req.body.listId === null) {
+          // ok
+        }
+
+        if (req.body.imageId) {
+          const image = await Image.findByPk(req.body.imageId, { raw: true });
+          if (!image) return StatusResponse(res, 404, "Image not found");
+          if (!image.workgroupId || image.workgroupId !== effectiveWorkgroupId) {
+            return StatusResponse(res, 421, "Image is not in the requested workgroup");
+          }
+        }
+        if (req.body.imageId === null) {
+          // ok
+        }
+
+        if (req.body.groupId) {
+          const group = await Group.findByPk(req.body.groupId, { raw: true });
+          if (!group) return StatusResponse(res, 404, "Group not found");
+          if (group.organizationId && group.organizationId !== effectiveOrgId) {
+            return StatusResponse(res, 421, "Group is not in the workgroup's organization");
+          }
+        }
+      }
 
       if (req.body.name) foundElection.name = req.body.name;
       if (req.body.description)
@@ -203,7 +284,7 @@ module.exports.postUpdateElection = (req, res, next) => {
         foundElection.electionType = req.body.electionType;
       if (req.body.groupId || req.body.groupId === null)
         foundElection.groupId = req.body.groupId;
-      if (req.body.categoryId || req.body.groupId === null)
+      if (req.body.categoryId || req.body.categoryId === null)
         foundElection.categoryId = req.body.categoryId;
       if (req.body.statusId) foundElection.statusId = req.body.statusId;
       if (req.body.listId || req.body.listId === null)
@@ -211,6 +292,8 @@ module.exports.postUpdateElection = (req, res, next) => {
       if (req.body.imageId || req.body.imageId === null)
         foundElection.imageId = req.body.imageId;
       if (req.body.expiration) foundElection.expiration = req.body.expiration;
+      if (req.body.workgroupId || req.body.workgroupId === null)
+        foundElection.workgroupId = req.body.workgroupId;
 
       foundElection
         .save()
@@ -234,6 +317,16 @@ module.exports.putAddElection = async (req, res, next) => {
   electionToAdd.description = req.body.description;
   electionToAdd.id = UUID("election");
   electionToAdd.creator = req.authUserId;
+  electionToAdd.workgroupId = null;
+
+  let targetOrgId = null;
+  if (req.body.workgroupId) {
+    const allowedWg = await Security.canAccessWorkgroup(req, req.body.workgroupId);
+    if (!allowedWg) return StatusResponse(res, 403, "Not authorized for this workgroup");
+    targetOrgId = await getWorkgroupOrganizationId(req.body.workgroupId);
+    if (!targetOrgId) return StatusResponse(res, 404, "Workgroup not found");
+    electionToAdd.workgroupId = req.body.workgroupId;
+  }
 
   if (req.body.listId) electionToAdd.listId = req.body.listId;
   if (req.body.electionType) electionToAdd.electionType = req.body.electionType;
@@ -244,15 +337,44 @@ module.exports.putAddElection = async (req, res, next) => {
   if (req.body.groupId) electionToAdd.groupId = req.body.groupId;
   if (req.body.categoryId) electionToAdd.categoryId = req.body.categoryId;
 
-  foundStatus = await Status.findOne({ where: { name: "Not Started" } });
+  const foundStatus = await Status.findOne({ where: { name: "Not Started" } });
   if (foundStatus) electionToAdd.statusId = foundStatus.id;
 
+  // Validate referenced objects for workgroup-scoped elections.
+  if (electionToAdd.workgroupId) {
+    if (electionToAdd.listId) {
+      const list = await List.findByPk(electionToAdd.listId, { raw: true });
+      if (!list) return StatusResponse(res, 404, "List not found");
+      if (!list.workgroupId || list.workgroupId !== electionToAdd.workgroupId) {
+        return StatusResponse(res, 421, "List is not in the requested workgroup");
+      }
+    }
+    if (electionToAdd.imageId) {
+      const image = await Image.findByPk(electionToAdd.imageId, { raw: true });
+      if (!image) return StatusResponse(res, 404, "Image not found");
+      if (!image.workgroupId || image.workgroupId !== electionToAdd.workgroupId) {
+        return StatusResponse(res, 421, "Image is not in the requested workgroup");
+      }
+    }
+    if (electionToAdd.groupId) {
+      const group = await Group.findByPk(electionToAdd.groupId, { raw: true });
+      if (!group) return StatusResponse(res, 404, "Group not found");
+      if (group.organizationId && targetOrgId && group.organizationId !== targetOrgId) {
+        return StatusResponse(res, 421, "Group is not in the workgroup's organization");
+      }
+    }
+  }
+
   const whereCondition = {};
-  whereCondition.creator = req.authUserId;
   whereCondition.name = electionToAdd.name;
+  if (electionToAdd.workgroupId) {
+    whereCondition.workgroupId = electionToAdd.workgroupId;
+  } else {
+    whereCondition.creator = req.authUserId;
+  }
   options.where = whereCondition;
 
-  // Check for an election with the same name created by the current user
+  // Check for an election with the same name in this scope
   Election.findOne(options)
     .then((foundElection) => {
       if (foundElection)
@@ -282,15 +404,15 @@ module.exports.deleteElection = (req, res, next) => {
   let whereCondition = {};
   whereCondition.id = electionToFind;
 
-  if (!Security.getVerdict(req.verdicts, "delete").isAdmin) {
-    whereCondition.creator = req.authUserId;
-  }
-
   options.where = whereCondition;
 
   Election.findOne(options)
-    .then((foundElection) => {
+    .then(async (foundElection) => {
       if (!foundElection) return StatusResponse(res, 404, "Election not found");
+
+      const allowed = await assertCanAccessElection(req, foundElection, "delete");
+      if (!allowed)
+        return StatusResponse(res, 403, "Not authorized for this election");
 
       // Delete any votes that were cast for this election
       Vote.destroy({ where: { electionId: foundElection.id } })
@@ -318,9 +440,6 @@ module.exports.putStartElection = (req, res, next) => {
     return StatusResponse(res, 421, "No election ID provided");
 
   whereCondition.id = electionToFind;
-  if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
-    whereCondition.creator = req.authUserId;
-  }
 
   whereCondition["$status.name$"] = "Not Started";
 
@@ -332,6 +451,10 @@ module.exports.putStartElection = (req, res, next) => {
   Election.findOne(options)
     .then(async (foundElection) => {
       if (!foundElection) return StatusResponse(res, 404, "Election not found");
+
+      const allowed = await assertCanAccessElection(req, foundElection, "edit");
+      if (!allowed)
+        return StatusResponse(res, 403, "Not authorized for this election");
 
       if (!(foundElection.group && foundElection.group.users))
         return StatusResponse(res, 404, "No voters configured");
@@ -413,9 +536,6 @@ module.exports.putStopElection = (req, res, next) => {
     return StatusResponse(res, 421, "No election ID provided");
 
   whereCondition.id = electionToFind;
-  if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
-    whereCondition.creator = req.authUserId;
-  }
 
   includes = generateIncludes("list,group");
 
@@ -427,6 +547,10 @@ module.exports.putStopElection = (req, res, next) => {
   Election.findOne(options)
     .then(async (foundElection) => {
       if (!foundElection) return StatusResponse(res, 404, "Election not found");
+
+      const allowed = await assertCanAccessElection(req, foundElection, "edit");
+      if (!allowed)
+        return StatusResponse(res, 403, "Not authorized for this election");
 
       options = {};
       whereCondition = {};
@@ -490,7 +614,7 @@ module.exports.getStats = async (req, res, next) => {
   options.raw = true;
 
   Election.findByPk(electionToFind)
-    .then((foundElection) => {
+    .then(async (foundElection) => {
       if (!foundElection)
         return StatusResponse(res, 200, "OK", {
           hasElection: false,
@@ -498,6 +622,10 @@ module.exports.getStats = async (req, res, next) => {
           statistics: [],
           lookup: [],
         });
+
+      const allowed = await assertCanAccessElection(req, foundElection, "view");
+      if (!allowed)
+        return StatusResponse(res, 403, "Not authorized for this election");
 
       Vote.findAll(options)
         .then((result) => {
