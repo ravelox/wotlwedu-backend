@@ -18,6 +18,7 @@ const {
 const User = require("../model/user");
 const Friend = require("../model/friend");
 const Workgroup = require("../model/workgroup");
+const WorkgroupMember = require("../model/workgroupmember");
 const Image = require("../model/image");
 const Organization = require("../model/organization");
 const Notify = require("../util/notification");
@@ -95,49 +96,69 @@ exports.getUser = async (req, res, next) => {
     .catch((err) => next(err));
 };
 
-exports.getAllUser = (req, res, next) => {
-  let userFilter = req.query.filter;
-  let page = +req.query.page;
-  let itemsPerPage = +req.query.items;
-  if (!page) page = 1;
-  if (page <= 0) page = 1;
-  if (!itemsPerPage) itemsPerPage = +Config.defaultItemsPerPage;
+exports.getAllUser = async (req, res, next) => {
+  try {
+    let userFilter = req.query.filter;
+    const workgroupId = req.query.workgroupId || null;
+    let page = +req.query.page;
+    let itemsPerPage = +req.query.items;
+    if (!page) page = 1;
+    if (page <= 0) page = 1;
+    if (!itemsPerPage) itemsPerPage = +Config.defaultItemsPerPage;
 
-  const options = {};
+    const options = {};
 
-  options.limit = itemsPerPage;
-  options.offset = (page - 1) * itemsPerPage;
+    options.limit = itemsPerPage;
+    options.offset = (page - 1) * itemsPerPage;
 
-  let whereCondition = {};
+    let whereCondition = {};
 
-  whereCondition.protected = false;
-  Security.applyOrganizationScope(req, whereCondition);
-  if (userFilter) {
-    whereCondition = {
-      [Op.or]: [
-        { firstName: { [Op.like]: "%" + userFilter + "%" } },
-        { lastName: { [Op.like]: "%" + userFilter + "%" } },
-        { email: { [Op.like]: "%" + userFilter + "%" } },
-        { alias: { [Op.like]: "%" + userFilter + "%" } },
-      ],
-    };
+    whereCondition.protected = false;
     Security.applyOrganizationScope(req, whereCondition);
-  }
+    if (userFilter) {
+      whereCondition = {
+        [Op.or]: [
+          { firstName: { [Op.like]: "%" + userFilter + "%" } },
+          { lastName: { [Op.like]: "%" + userFilter + "%" } },
+          { email: { [Op.like]: "%" + userFilter + "%" } },
+          { alias: { [Op.like]: "%" + userFilter + "%" } },
+        ],
+      };
+      Security.applyOrganizationScope(req, whereCondition);
+    }
 
-  if (!Security.getVerdict(req.verdicts, "view").isAdmin) {
-    whereCondition.creator = req.authUserId;
-  }
+    // Optional workgroup scoping: list users who are members of a given workgroup.
+    // This is used by the browser console when a workgroup scope is selected.
+    if (workgroupId) {
+      if (req.isAdmin !== true) {
+        const allowed = await Security.canAccessWorkgroup(req, workgroupId);
+        if (!allowed) return StatusResponse(res, 403, "Not authorized for this workgroup");
+      }
 
-  const includes = generateIncludes(req.query.detail);
+      options.include = [
+        {
+          model: WorkgroupMember,
+          attributes: [],
+          where: { workgroupId: workgroupId },
+          required: true,
+        },
+      ];
+      options.distinct = true;
+    } else if (!Security.getVerdict(req.verdicts, "view").isAdmin) {
+      // Legacy behavior: non-admins only see users they created.
+      whereCondition.creator = req.authUserId;
+    }
 
-  // Sort order
-  options.order = [["lastName"], ["firstName"]];
-  options.where = whereCondition;
-  options.include = includes;
-  options.attributes = Attributes.UserFull;
-  options.distinct = true;
+    const includes = generateIncludes(req.query.detail);
 
-  User.findAndCountAll(options).then(({ count, rows }) => {
+    // Sort order
+    options.order = [["lastName"], ["firstName"]];
+    options.where = whereCondition;
+    options.include = (options.include || []).concat(includes);
+    options.attributes = Attributes.UserFull;
+    options.distinct = true;
+
+    const { count, rows } = await User.findAndCountAll(options);
     if (!rows) {
       return StatusResponse(res, 200, "OK", {
         total: 0,
@@ -153,7 +174,9 @@ exports.getAllUser = (req, res, next) => {
       itemsPerPage: itemsPerPage,
       users: rows,
     });
-  });
+  } catch (err) {
+    return next(err);
+  }
 };
 
 exports.putAddUser = async (req, res, next) => {
