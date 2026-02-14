@@ -36,15 +36,6 @@ module.exports.checkForUpdates = async () => {
   const fullUpdatePath = Path.join(__dirname, "..", updateDirName);
   const dir = FS.readdirSync(fullUpdatePath).sort();
 
-  // Ensure base schema exists before running incremental updates.
-  // This handles cases where the database exists but tables do not.
-  try {
-    await database.sync();
-  } catch (err) {
-    console.log("Database Updates: Failed to sync base schema");
-    throw err;
-  }
-
   // Bootstrap metadata tracking table if it does not yet exist.
   try {
     await Metadata.sync();
@@ -76,9 +67,13 @@ module.exports.checkForUpdates = async () => {
     if (typeof updateModule.isApplied === "function") {
       const physicalCheck = await updateModule.isApplied(queryInterface);
 
+      // Physical checks are best-effort. If they fail (e.g. because a table does not
+      // exist yet), treat as "not applied" and proceed to apply().
       if (physicalCheck && physicalCheck.status === -1) {
-        throw new Error(
-          "Database Updates: Physical check failed for " + updateModule.id
+        console.log(
+          "Database Updates: Physical check errored for " +
+            updateModule.id +
+            "; proceeding to apply"
         );
       }
 

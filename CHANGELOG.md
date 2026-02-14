@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.0.7 - 2026-02-14
+- Fix DB update runner startup crash when the database exists but is missing newer columns (avoid global `sequelize.sync()` before updates).
+
 ## 0.0.6 - 2026-02-14
 - Add dedicated workgroup model/API (separate from election audience groups) and org-scoped access controls.
 - Add organization/workgroup capabilities and grant them to the Root Role via `update-0008`.
