@@ -58,14 +58,15 @@ module.exports.checkForUpdates = async () => {
       throw new Error("Database Updates: Update module has no id: " + entry);
     }
     const updateMetadata = await Metadata.findByPk(updateModule.id);
-    if (updateMetadata) {
-      console.log("Database Updates: Skipping " + updateModule.id);
-      continue;
-    }
 
     let physicallyApplied = false;
     if (typeof updateModule.isApplied === "function") {
-      const physicalCheck = await updateModule.isApplied(queryInterface);
+      let physicalCheck;
+      try {
+        physicalCheck = await updateModule.isApplied(queryInterface);
+      } catch (err) {
+        physicalCheck = { status: -1, message: err };
+      }
 
       // Physical checks are best-effort. If they fail (e.g. because a table does not
       // exist yet), treat as "not applied" and proceed to apply().
@@ -79,6 +80,23 @@ module.exports.checkForUpdates = async () => {
 
       physicallyApplied =
         physicalCheck === true || (physicalCheck && physicalCheck.applied === true);
+    }
+
+    // If metadata says we've applied this update, verify that the change still exists.
+    // If it doesn't, re-apply the update (updates are expected to be idempotent).
+    if (updateMetadata && physicallyApplied) {
+      console.log("Database Updates: Skipping " + updateModule.id);
+      continue;
+    }
+    if (updateMetadata && !physicallyApplied && typeof updateModule.isApplied === "function") {
+      console.log(
+        "Database Updates: Metadata present but physical check indicates not applied; reapplying [" +
+          updateModule.id +
+          "]"
+      );
+    } else if (updateMetadata && typeof updateModule.isApplied !== "function") {
+      console.log("Database Updates: Skipping " + updateModule.id);
+      continue;
     }
 
     if (physicallyApplied) {

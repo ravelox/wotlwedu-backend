@@ -120,14 +120,16 @@ module.exports.getAllWorkgroup = (req, res, next) => {
   options.attributes = Attributes.Workgroup;
   options.distinct = true;
 
-  Workgroup.findAndCountAll(options).then(({ count, rows }) => {
-    return StatusResponse(res, 200, "OK", {
-      total: rows ? count : 0,
-      page: page,
-      itemsPerPage: itemsPerPage,
-      workgroups: rows || [],
-    });
-  });
+  Workgroup.findAndCountAll(options)
+    .then(({ count, rows }) => {
+      return StatusResponse(res, 200, "OK", {
+        total: rows ? count : 0,
+        page: page,
+        itemsPerPage: itemsPerPage,
+        workgroups: rows || [],
+      });
+    })
+    .catch((err) => next(err));
 };
 
 module.exports.postUpdateWorkgroup = (req, res, next) => {

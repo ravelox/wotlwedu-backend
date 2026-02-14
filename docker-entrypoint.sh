@@ -72,7 +72,7 @@ fi
 
 export OLDDIR=$(pwd)
 cd model
-node util-updatedb
+node util-updatedb || exit 1
 cd ${OLDDIR}
 
 echo

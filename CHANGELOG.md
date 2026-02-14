@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.8 - 2026-02-14
+- Make DB updates more resilient on partially migrated databases (re-apply when metadata exists but schema changes are missing).
+- Ensure startup fails fast if database updates fail (docker entrypoint checks `util-updatedb` exit code).
+- Prevent unhandled promise rejection in `/workgroup` listing when the table is missing.
+
 ## 0.0.7 - 2026-02-14
 - Fix DB update runner startup crash when the database exists but is missing newer columns (avoid global `sequelize.sync()` before updates).
 
