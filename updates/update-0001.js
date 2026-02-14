@@ -1,5 +1,6 @@
 const module_id = "update-0001";
 const module_comment = "Create System and Root Users";
+const module_target_database_version = 2;
 
 const UUID = require("../util/mini-uuid");
 
@@ -35,6 +36,7 @@ let _queryInterface = null;
 
 module.exports.id = module_id;
 module.exports.comment = module_comment;
+module.exports.targetDatabaseVersion = module_target_database_version;
 
 function init(queryInterface) {
   if (!queryInterface) {
@@ -48,6 +50,16 @@ function init(queryInterface) {
 
 function cleanup() {
   console.log("Cleaning module [" + module_id + "]");
+}
+
+async function isApplied() {
+  try {
+    const foundSystemUser = await User.findByPk("system");
+    const foundRootUser = await User.findOne({ where: { alias: "root" } });
+    return { status: 0, applied: !!(foundSystemUser && foundRootUser) };
+  } catch (err) {
+    return { status: -1, message: err };
+  }
 }
 
 async function apply(update) {
@@ -91,6 +103,7 @@ function dryRun() {
 
 module.exports.init = init;
 module.exports.cleanup = cleanup;
+module.exports.isApplied = isApplied;
 module.exports.apply = apply;
 module.exports.remove = remove;
 module.exports.dryRun = dryRun;

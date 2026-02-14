@@ -1,10 +1,12 @@
 const module_id = "<YOUR ID HERE>";
-const module_omment = "<YOUR COMMENT HERE>";
+const module_comment = "<YOUR COMMENT HERE>";
+const module_target_database_version = 0;
 
 let _queryInterface = null;
 
 module.exports.id = module_id;
 module.exports.comment = module_comment;
+module.exports.targetDatabaseVersion = module_target_database_version;
 
 function init(queryInterface) {
   if (!queryInterface) {
@@ -41,6 +43,16 @@ async function apply(update) {
   return { status: 0, message: "OK" };
 }
 
+async function isApplied(queryInterface) {
+  if (!queryInterface)
+    return {
+      status: -1,
+      message: "No query interface available. Call init() method first",
+    };
+
+  return { status: 0, applied: false };
+}
+
 async function remove(update) {
   if (!_queryInterface)
     return {
@@ -62,6 +74,7 @@ function dryRun() {
 
 module.exports.init = init;
 module.exports.cleanup = cleanup;
+module.exports.isApplied = isApplied;
 module.exports.apply = apply;
 module.exports.remove = remove;
 module.exports.dryRun = dryRun;

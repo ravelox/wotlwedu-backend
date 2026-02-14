@@ -1,5 +1,6 @@
 const module_id = "update-0003";
 const module_comment = "Add intial roles";
+const module_target_database_version = 4;
 
 const Util = require("util");
 
@@ -16,6 +17,7 @@ let _queryInterface = null;
 
 module.exports.id = module_id;
 module.exports.comment = module_comment;
+module.exports.targetDatabaseVersion = module_target_database_version;
 
 async function createRole(rolename, description, capabilityList) {
   let role = await Role.findOne({ where: { name: rolename } });
@@ -81,6 +83,26 @@ function cleanup() {
   console.log(module_id + ": Cleaning");
 }
 
+async function isApplied() {
+  try {
+    const rootRoleName = Config.rootRoleName || "Root Role";
+    const defaultRoleName = Config.defaultRoleName || "Default Role";
+
+    const rootRole = await Role.findOne({ where: { name: rootRoleName } });
+    const defaultRole = await Role.findOne({ where: { name: defaultRoleName } });
+    const rootUser = await User.findOne({ where: { alias: "root" } });
+
+    if (!rootRole || !defaultRole || !rootUser) {
+      return { status: 0, applied: false };
+    }
+
+    const rootHasRole = await rootUser.hasRole(rootRole);
+    return { status: 0, applied: rootHasRole };
+  } catch (err) {
+    return { status: -1, message: err };
+  }
+}
+
 async function apply(update) {
   if (!_queryInterface)
     return {
@@ -138,6 +160,7 @@ function dryRun() {
 
 module.exports.init = init;
 module.exports.cleanup = cleanup;
+module.exports.isApplied = isApplied;
 module.exports.apply = apply;
 module.exports.remove = remove;
 module.exports.dryRun = dryRun;

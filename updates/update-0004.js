@@ -1,5 +1,6 @@
 const module_id = "update-0004";
 const module_comment = "Add intial statuses";
+const module_target_database_version = 5;
 
 const Util = require("util");
 
@@ -12,6 +13,7 @@ let _queryInterface = null;
 
 module.exports.id = module_id;
 module.exports.comment = module_comment;
+module.exports.targetDatabaseVersion = module_target_database_version;
 
 const statusNames = [
   { id: 0, object: "all", name: "Pending" },
@@ -51,6 +53,16 @@ function cleanup() {
   console.log(module_id + ": Cleaning");
 }
 
+async function isApplied() {
+  try {
+    const statusIds = statusNames.map((s) => s.id);
+    const foundStatusCount = await Status.count({ where: { id: statusIds } });
+    return { status: 0, applied: foundStatusCount === statusIds.length };
+  } catch (err) {
+    return { status: -1, message: err };
+  }
+}
+
 async function apply(update) {
   if (!_queryInterface)
     return {
@@ -86,6 +98,7 @@ function dryRun() {
 
 module.exports.init = init;
 module.exports.cleanup = cleanup;
+module.exports.isApplied = isApplied;
 module.exports.apply = apply;
 module.exports.remove = remove;
 module.exports.dryRun = dryRun;

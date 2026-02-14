@@ -1,5 +1,6 @@
 const module_id = "update-0005";
 const module_comment = "Add SocketInfo table";
+const module_target_database_version = 6;
 
 const SocketInfo = require("../model/socketinfo");
 
@@ -7,6 +8,7 @@ let _queryInterface = null;
 
 module.exports.id = module_id;
 module.exports.comment = module_comment;
+module.exports.targetDatabaseVersion = module_target_database_version;
 
 function init(queryInterface) {
   if (!queryInterface) {
@@ -19,6 +21,19 @@ function init(queryInterface) {
 
 function cleanup() {
   console.log("Cleaning module [" + module_id + "]");
+}
+
+async function isApplied(queryInterface) {
+  if (!queryInterface) {
+    return { status: -1, message: "No query interface supplied" };
+  }
+
+  try {
+    await queryInterface.describeTable("socketinfo");
+    return { status: 0, applied: true };
+  } catch (err) {
+    return { status: 0, applied: false };
+  }
 }
 
 async function apply(update) {
@@ -55,6 +70,7 @@ function dryRun() {
 
 module.exports.init = init;
 module.exports.cleanup = cleanup;
+module.exports.isApplied = isApplied;
 module.exports.apply = apply;
 module.exports.remove = remove;
 module.exports.dryRun = dryRun;

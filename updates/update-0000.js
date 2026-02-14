@@ -1,5 +1,6 @@
 const module_id = "update-0000";
 const module_comment = "Add Metadata table";
+const module_target_database_version = 1;
 
 const Metadata = require("../model/metadata");
 
@@ -10,6 +11,7 @@ let _allowSync = false;
 
 module.exports.id = module_id;
 module.exports.comment = module_comment;
+module.exports.targetDatabaseVersion = module_target_database_version;
 
 function init(queryInterface) {
   if (!queryInterface) {
@@ -23,6 +25,19 @@ function init(queryInterface) {
 
 function cleanup() {
   console.log("Cleaning module [" + module_id + "]");
+}
+
+async function isApplied(queryInterface) {
+  if (!queryInterface) {
+    return { status: -1, message: "No query interface supplied" };
+  }
+
+  try {
+    await queryInterface.describeTable("metadata");
+    return { status: 0, applied: true };
+  } catch (err) {
+    return { status: 0, applied: false };
+  }
 }
 
 async function apply(update) {
@@ -59,6 +74,7 @@ function dryRun() {
 
 module.exports.init = init;
 module.exports.cleanup = cleanup;
+module.exports.isApplied = isApplied;
 module.exports.apply = apply;
 module.exports.remove = remove;
 module.exports.dryRun = dryRun;

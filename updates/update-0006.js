@@ -1,5 +1,6 @@
 const module_id = "update-0006";
 const module_comment = "Add organization and workgroup tenancy fields";
+const module_target_database_version = 7;
 
 const Sequelize = require("sequelize");
 
@@ -13,6 +14,7 @@ let _queryInterface = null;
 
 module.exports.id = module_id;
 module.exports.comment = module_comment;
+module.exports.targetDatabaseVersion = module_target_database_version;
 
 function init(queryInterface) {
   if (!queryInterface) {
@@ -32,6 +34,64 @@ async function ensureColumn(tableName, columnName, definition) {
   const table = await _queryInterface.describeTable(tableName);
   if (!table[columnName]) {
     await _queryInterface.addColumn(tableName, columnName, definition);
+  }
+}
+
+async function hasColumn(queryInterface, tableName, columnName) {
+  try {
+    const table = await queryInterface.describeTable(tableName);
+    return !!table[columnName];
+  } catch (err) {
+    return false;
+  }
+}
+
+async function isApplied(queryInterface) {
+  if (!queryInterface) {
+    return { status: -1, message: "No query interface supplied" };
+  }
+
+  try {
+    const usersHasOrganizationId = await hasColumn(
+      queryInterface,
+      "users",
+      "organizationId"
+    );
+    const usersHasOrganizationAdmin = await hasColumn(
+      queryInterface,
+      "users",
+      "organizationAdmin"
+    );
+    const usersHasWorkgroupAdmin = await hasColumn(
+      queryInterface,
+      "users",
+      "workgroupAdmin"
+    );
+    const usersHasAdminGroupId = await hasColumn(
+      queryInterface,
+      "users",
+      "adminGroupId"
+    );
+    const groupsHasOrganizationId = await hasColumn(
+      queryInterface,
+      "groups",
+      "organizationId"
+    );
+    const defaultOrganization = await Organization.findByPk(DEFAULT_ORGANIZATION_ID);
+
+    return {
+      status: 0,
+      applied: !!(
+        usersHasOrganizationId &&
+        usersHasOrganizationAdmin &&
+        usersHasWorkgroupAdmin &&
+        usersHasAdminGroupId &&
+        groupsHasOrganizationId &&
+        defaultOrganization
+      ),
+    };
+  } catch (err) {
+    return { status: -1, message: err };
   }
 }
 
@@ -121,6 +181,7 @@ function dryRun() {
 
 module.exports.init = init;
 module.exports.cleanup = cleanup;
+module.exports.isApplied = isApplied;
 module.exports.apply = apply;
 module.exports.remove = remove;
 module.exports.dryRun = dryRun;

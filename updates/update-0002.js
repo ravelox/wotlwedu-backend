@@ -1,5 +1,6 @@
 const module_id = "update-0002";
 const module_comment = "Add default capabilities";
+const module_target_database_version = 3;
 
 const Util = require("util");
 
@@ -38,6 +39,7 @@ let defaultCaps = [];
 
 module.exports.id = module_id;
 module.exports.comment = module_comment;
+module.exports.targetDatabaseVersion = module_target_database_version;
 
 function init(queryInterface) {
   if (!queryInterface) {
@@ -53,6 +55,17 @@ function init(queryInterface) {
 
 function cleanup() {
   console.log(module_id + ": Cleaning");
+}
+
+async function isApplied() {
+  try {
+    const caps = genDefaultCaps();
+    const capIds = caps.map((c) => c.id);
+    const foundCaps = await Capability.count({ where: { id: capIds } });
+    return { status: 0, applied: foundCaps === capIds.length };
+  } catch (err) {
+    return { status: -1, message: err };
+  }
 }
 
 async function apply(update) {
@@ -95,6 +108,7 @@ function dryRun() {
 
 module.exports.init = init;
 module.exports.cleanup = cleanup;
+module.exports.isApplied = isApplied;
 module.exports.apply = apply;
 module.exports.remove = remove;
 module.exports.dryRun = dryRun;
