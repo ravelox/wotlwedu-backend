@@ -62,6 +62,10 @@ const User = database.define(
       type: Sequelize.STRING,
       defaultValue: null,
     },
+    adminWorkgroupId: {
+      type: Sequelize.STRING,
+      defaultValue: null,
+    },
     protected: {
       type: Sequelize.BOOLEAN,
       defaultValue: false,
@@ -119,6 +123,7 @@ const User = database.define(
       { fields: ["creator"] },
       { fields: ["organizationId"] },
       { fields: ["adminGroupId"] },
+      { fields: ["adminWorkgroupId"] },
       { fields: ["systemAdmin"] },
     ],
   }

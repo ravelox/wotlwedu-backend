@@ -1,20 +1,22 @@
-const Util = require("util");
-
 const Security = require("../util/security");
 const UUID = require("../util/mini-uuid");
 const StatusResponse = require("../util/statusresponse");
 const { copyObject } = require("../util/helpers");
 const { Op } = require("sequelize");
-const Sequelize = require("sequelize")
 
 const Config = require("../config/wotlwedu");
 
 const Group = require("../model/group");
 const User = require("../model/user");
 const Category = require("../model/category");
-const Organization = require("../model/organization");
 
-const Attributes = require("../model/attributes")
+const Attributes = require("../model/attributes");
+
+function canManageGroup(req, group) {
+  if (!req || !group) return false;
+  if (req.isAdmin === true) return true;
+  return group.creator === req.authUserId;
+}
 
 function generateIncludes(details) {
   const includes = [];
@@ -36,35 +38,21 @@ function generateIncludes(details) {
   }
   return includes;
 }
+
 module.exports.getSingleGroup = (req, res, next) => {
   const groupToFind = req.params.groupId;
   if (!groupToFind) return StatusResponse(res, 421, "No group ID provided");
 
-  let whereCondition = { id: groupToFind };
-  Security.applyOrganizationScope(req, whereCondition);
-  if (
-    !Security.getVerdict(req.verdicts, "view").isAdmin &&
-    req.isOrganizationAdmin !== true &&
-    req.isWorkgroupAdmin !== true
-  ) {
-    whereCondition.creator = req.authUserId;
-  }
-
-  const includes = generateIncludes(req.query.detail);
-
   const options = {};
-
-  options.where = whereCondition;
-  options.include = includes;
+  options.where = { id: groupToFind };
+  options.include = generateIncludes(req.query.detail);
   options.attributes = Attributes.Group;
 
   Group.findOne(options)
     .then((foundGroup) => {
       if (!foundGroup) return StatusResponse(res, 404, "Group not found");
-      if (req.isWorkgroupAdmin === true && !Security.canManageWorkgroup(req, foundGroup)) {
-        return StatusResponse(res, 403, "Cannot access another workgroup");
-      }
-
+      if (!canManageGroup(req, foundGroup))
+        return StatusResponse(res, 403, "Not authorized for this group");
       return StatusResponse(res, 200, "OK", { group: foundGroup });
     })
     .catch((err) => next(err));
@@ -79,55 +67,31 @@ module.exports.getAllGroup = (req, res, next) => {
   if (!itemsPerPage) itemsPerPage = +Config.defaultItemsPerPage;
 
   const options = {};
-
   options.limit = itemsPerPage;
   options.offset = (page - 1) * itemsPerPage;
-
-  // Sort order
   options.order = [["name"]];
 
   let whereCondition = {};
-
   if (userFilter) {
     whereCondition = {
       [Op.or]: [{ name: { [Op.like]: "%" + userFilter + "%" } }],
     };
   }
-
-  Security.applyOrganizationScope(req, whereCondition);
-  if (
-    !Security.getVerdict(req.verdicts, "view").isAdmin &&
-    req.isOrganizationAdmin !== true &&
-    req.isWorkgroupAdmin !== true
-  ) {
+  if (req.isAdmin !== true) {
     whereCondition.creator = req.authUserId;
   }
-  if (req.isWorkgroupAdmin === true && req.adminWorkgroupId) {
-    whereCondition.id = req.adminWorkgroupId;
-  }
-
-  const includes = generateIncludes(req.query.detail);
 
   options.where = whereCondition;
   options.attributes = Attributes.Group;
-  options.include = includes;
+  options.include = generateIncludes(req.query.detail);
   options.distinct = true;
 
   Group.findAndCountAll(options).then(({ count, rows }) => {
-    if (!rows) {
-      return StatusResponse(res, 200, "OK", {
-        total: 0,
-        page: 1,
-        itemsPerPage: itemsPerPage,
-        groups: [],
-      });
-    }
-
     return StatusResponse(res, 200, "OK", {
-      total: count,
+      total: rows ? count : 0,
       page: page,
       itemsPerPage: itemsPerPage,
-      groups: rows,
+      groups: rows || [],
     });
   });
 };
@@ -136,16 +100,11 @@ module.exports.postUpdateGroup = (req, res, next) => {
   const groupToFind = req.params.groupId;
   if (!groupToFind) return StatusResponse(res, 421, "No group ID provided");
 
-  let whereCondition = {};
-
-  whereCondition.id = groupToFind;
-
-  Security.applyOrganizationScope(req, whereCondition);
-  Group.findOne({ where: whereCondition })
+  Group.findByPk(groupToFind)
     .then((foundGroup) => {
       if (!foundGroup) return StatusResponse(res, 404, "Group not found");
-      if (!Security.canManageWorkgroup(req, foundGroup))
-        return StatusResponse(res, 403, "Not authorized for this workgroup");
+      if (!canManageGroup(req, foundGroup))
+        return StatusResponse(res, 403, "Not authorized for this group");
 
       if (req.body.name) foundGroup.name = req.body.name;
       if (req.body.description) foundGroup.description = req.body.description;
@@ -157,9 +116,8 @@ module.exports.postUpdateGroup = (req, res, next) => {
         .then((updatedGroup) => {
           if (!updatedGroup)
             return StatusResponse(res, 500, "Cannot update group");
-
           return StatusResponse(res, 200, "OK", {
-            group: copyObject(foundGroup, Attributes.Group),
+            group: copyObject(updatedGroup, Attributes.Group),
           });
         })
         .catch((err) => next(err));
@@ -168,79 +126,53 @@ module.exports.postUpdateGroup = (req, res, next) => {
 };
 
 module.exports.putAddGroup = (req, res, next) => {
-  if (req.isAdmin !== true && req.isOrganizationAdmin !== true) {
-    return StatusResponse(res, 403, "Only organization admins can add workgroups");
-  }
-  const organizationId =
-    req.body.organizationId || req.authOrganizationId || null;
-  if (!organizationId && req.isAdmin !== true) {
-    return StatusResponse(res, 421, "No organization context available");
-  }
-  // Check to see if this user has already created a group with this name
   Group.findOne({
     where: {
-      organizationId: organizationId,
+      creator: req.authUserId,
       name: req.body.name,
     },
   })
     .then((foundGroup) => {
-      if (foundGroup) throw new Error("Group already exists");
-      return Organization.findByPk(organizationId);
-    })
-    .then((foundOrganization) => {
-      if (!foundOrganization) return StatusResponse(res, 421, "Organization not found");
+      if (foundGroup) return StatusResponse(res, 421, "Group already exists");
 
-      // Populate the Group properties
       const groupToAdd = new Group();
-
       groupToAdd.id = UUID("group");
       groupToAdd.creator = req.authUserId;
-      groupToAdd.organizationId = organizationId;
       groupToAdd.name = req.body.name;
       groupToAdd.description = req.body.description;
       if (req.body.listType) groupToAdd.listType = req.body.listType;
       if (req.body.categoryId) groupToAdd.categoryId = req.body.categoryId;
 
-      // Save the Group to the database
       groupToAdd
         .save()
         .then((addedGroup) => {
           if (!addedGroup) return StatusResponse(res, 500, "Cannot add group");
-
           return StatusResponse(res, 200, "OK", {
             group: copyObject(addedGroup, Attributes.Group),
           });
         })
         .catch((err) => next(err));
     })
-    .catch((err) => {
-      if (err && err.message === "Group already exists") {
-        return StatusResponse(res, 421, "Group already exists");
-      }
-      next(err);
-    });
+    .catch((err) => next(err));
 };
 
 module.exports.putUserInGroup = (req, res, next) => {
   const groupToFind = req.params.groupId;
   const userToFind = req.params.userId;
   if (!groupToFind) return StatusResponse(res, 421, "No group ID provided");
-
   if (!userToFind) return StatusResponse(res, 421, "No user ID provided");
 
-  let whereCondition = { id: groupToFind };
-  Security.applyOrganizationScope(req, whereCondition);
-
-  Group.findOne({ where: whereCondition })
+  Group.findByPk(groupToFind)
     .then((foundGroup) => {
       if (!foundGroup) return StatusResponse(res, 404, "Group not found");
-      if (!Security.canManageWorkgroup(req, foundGroup))
-        return StatusResponse(res, 403, "Not authorized for this workgroup");
+      if (!canManageGroup(req, foundGroup))
+        return StatusResponse(res, 403, "Not authorized for this group");
 
-      const userWhere = { id: userToFind, organizationId: foundGroup.organizationId };
-      User.findOne({ where: userWhere })
+      User.findByPk(userToFind)
         .then((userFound) => {
           if (!userFound) return StatusResponse(res, 404, "User not found");
+          if (!Security.isInSameOrganization(req, userFound))
+            return StatusResponse(res, 403, "Cross-organization access denied");
 
           foundGroup
             .addUser(userFound, {
@@ -249,7 +181,6 @@ module.exports.putUserInGroup = (req, res, next) => {
             .then((addedUser) => {
               if (!addedUser)
                 return StatusResponse(res, 500, "Cannot add user to group");
-
               return StatusResponse(res, 200, "OK", {
                 user: copyObject(addedUser, Attributes.User),
               });
@@ -265,21 +196,19 @@ module.exports.deleteUserFromGroup = (req, res, next) => {
   const groupToFind = req.params.groupId;
   const userToFind = req.params.userId;
   if (!groupToFind) return StatusResponse(res, 421, "No group ID provided");
-
   if (!userToFind) return StatusResponse(res, 421, "No user ID provided");
 
-  let whereCondition = { id: groupToFind };
-  Security.applyOrganizationScope(req, whereCondition);
-
-  Group.findOne({ where: whereCondition })
+  Group.findByPk(groupToFind)
     .then((foundGroup) => {
       if (!foundGroup) return StatusResponse(res, 404, "Group not found");
-      if (!Security.canManageWorkgroup(req, foundGroup))
-        return StatusResponse(res, 403, "Not authorized for this workgroup");
+      if (!canManageGroup(req, foundGroup))
+        return StatusResponse(res, 403, "Not authorized for this group");
 
-      User.findOne({ where: { id: userToFind, organizationId: foundGroup.organizationId } })
+      User.findByPk(userToFind)
         .then((userFound) => {
           if (!userFound) return StatusResponse(res, 404, "User not found");
+          if (!Security.isInSameOrganization(req, userFound))
+            return StatusResponse(res, 403, "Cross-organization access denied");
 
           foundGroup
             .removeUser(userFound)
@@ -290,7 +219,6 @@ module.exports.deleteUserFromGroup = (req, res, next) => {
                   500,
                   "Cannot delete user from group"
                 );
-
               return StatusResponse(res, 200, "OK");
             })
             .catch((err) => next(err));
@@ -304,14 +232,11 @@ module.exports.deleteGroup = (req, res, next) => {
   const groupToFind = req.params.groupId;
   if (!groupToFind) return StatusResponse(res, 421, "No group ID provided");
 
-  let whereCondition = { id: groupToFind };
-  Security.applyOrganizationScope(req, whereCondition);
-
-  Group.findOne({ where: whereCondition })
+  Group.findByPk(groupToFind)
     .then((foundGroup) => {
       if (!foundGroup) return StatusResponse(res, 404, "Group not found");
-      if (!Security.canManageWorkgroup(req, foundGroup))
-        return StatusResponse(res, 403, "Not authorized for this workgroup");
+      if (!canManageGroup(req, foundGroup))
+        return StatusResponse(res, 403, "Not authorized for this group");
 
       foundGroup
         .destroy()
@@ -325,25 +250,20 @@ module.exports.deleteGroup = (req, res, next) => {
     .catch((err) => next(err));
 };
 
-// Bulk functions
 module.exports.putBulkAddUserToRole = (req, res, next) => {
   const groupToFind = req.params.groupId;
   const userList = req.body.userList;
   if (!groupToFind) return StatusResponse(res, 421, "No group ID provided");
   if (!userList) return StatusResponse(res, 421, "No user list provided");
 
-  let whereCondition = { id: groupToFind };
-  Security.applyOrganizationScope(req, whereCondition);
-
-  Group.findOne({ where: whereCondition }).then(async (foundGroup) => {
+  Group.findByPk(groupToFind).then(async (foundGroup) => {
     if (!foundGroup) return StatusResponse(res, 404, "Group not found");
-    if (!Security.canManageWorkgroup(req, foundGroup))
-      return StatusResponse(res, 403, "Not authorized for this workgroup");
+    if (!canManageGroup(req, foundGroup))
+      return StatusResponse(res, 403, "Not authorized for this group");
 
-    // Work through the list of users
     const results = [];
     for (const userToFind of userList) {
-      await User.findOne({ where: { id: userToFind, organizationId: foundGroup.organizationId } })
+      await User.findByPk(userToFind)
         .then(async (userFound) => {
           if (!userFound) {
             results.push({
@@ -352,11 +272,18 @@ module.exports.putBulkAddUserToRole = (req, res, next) => {
               message: "User not found",
             });
           } else {
-            const throughOption = {
-              through: { id: UUID("groupmember"), creator: req.authUserId },
-            };
+            if (!Security.isInSameOrganization(req, userFound)) {
+              results.push({
+                id: userToFind,
+                status: 403,
+                message: "Cross-organization access denied",
+              });
+              return;
+            }
             await foundGroup
-              .addUser(userFound, throughOption)
+              .addUser(userFound, {
+                through: { id: UUID("groupmember"), creator: req.authUserId },
+              })
               .then((addedUser) => {
                 if (!addedUser) {
                   results.push({
@@ -365,11 +292,7 @@ module.exports.putBulkAddUserToRole = (req, res, next) => {
                     message: "Cannot add user to group",
                   });
                 } else {
-                  results.push({
-                    id: userToFind,
-                    status: 200,
-                    message: "OK",
-                  });
+                  results.push({ id: userToFind, status: 200, message: "OK" });
                 }
               })
               .catch((err) => next(err));
@@ -387,18 +310,15 @@ module.exports.deleteBulkUserFromGroup = (req, res, next) => {
   if (!groupToFind) return StatusResponse(res, 421, "No group ID provided");
   if (!userList) return StatusResponse(res, 421, "No user list provided");
 
-  let whereCondition = { id: groupToFind };
-  Security.applyOrganizationScope(req, whereCondition);
-
-  Group.findOne({ where: whereCondition })
+  Group.findByPk(groupToFind)
     .then(async (foundGroup) => {
       if (!foundGroup) return StatusResponse(res, 404, "Group not found");
-      if (!Security.canManageWorkgroup(req, foundGroup))
-        return StatusResponse(res, 403, "Not authorized for this workgroup");
+      if (!canManageGroup(req, foundGroup))
+        return StatusResponse(res, 403, "Not authorized for this group");
 
       const results = [];
       for (const userToFind of userList) {
-        await User.findOne({ where: { id: userToFind, organizationId: foundGroup.organizationId } })
+        await User.findByPk(userToFind)
           .then(async (userFound) => {
             if (!userFound) {
               results.push({
@@ -407,6 +327,14 @@ module.exports.deleteBulkUserFromGroup = (req, res, next) => {
                 message: "User not found",
               });
             } else {
+              if (!Security.isInSameOrganization(req, userFound)) {
+                results.push({
+                  id: userToFind,
+                  status: 403,
+                  message: "Cross-organization access denied",
+                });
+                return;
+              }
               await foundGroup
                 .removeUser(userFound)
                 .then((removedUser) => {
@@ -417,11 +345,7 @@ module.exports.deleteBulkUserFromGroup = (req, res, next) => {
                       message: "Cannot delete user from group",
                     });
                   } else {
-                    results.push({
-                      id: userToFind,
-                      status: 200,
-                      message: "OK",
-                    });
+                    results.push({ id: userToFind, status: 200, message: "OK" });
                   }
                 })
                 .catch((err) => next(err));

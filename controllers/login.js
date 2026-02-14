@@ -106,7 +106,8 @@ exports.postLogin = async (req, res, next) => {
               organizationId: foundUser.organizationId || null,
               organizationAdmin: foundUser.organizationAdmin === true,
               workgroupAdmin: foundUser.workgroupAdmin === true,
-              adminWorkgroupId: foundUser.adminGroupId || null,
+              adminWorkgroupId:
+                foundUser.adminWorkgroupId || foundUser.adminGroupId || null,
               authToken: tokens.authToken,
               refreshToken: tokens.refreshToken,
             });
@@ -153,7 +154,8 @@ exports.postRefreshLogin = async (req, res, next) => {
       organizationId: foundUser.organizationId || null,
       organizationAdmin: foundUser.organizationAdmin === true,
       workgroupAdmin: foundUser.workgroupAdmin === true,
-      adminWorkgroupId: foundUser.adminGroupId || null,
+      adminWorkgroupId:
+        foundUser.adminWorkgroupId || foundUser.adminGroupId || null,
       authToken: tokens.authToken,
       refreshToken: tokens.refreshToken,
     });
@@ -360,7 +362,8 @@ exports.verify2FA = (req, res, next) => {
         organizationId: foundUser.organizationId || null,
         organizationAdmin: foundUser.organizationAdmin === true,
         workgroupAdmin: foundUser.workgroupAdmin === true,
-        adminWorkgroupId: foundUser.adminGroupId || null,
+        adminWorkgroupId:
+          foundUser.adminWorkgroupId || foundUser.adminGroupId || null,
         authToken: tokens.authToken,
         refreshToken: tokens.refreshToken,
       });

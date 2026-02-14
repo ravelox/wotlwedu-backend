@@ -17,7 +17,7 @@ const {
 
 const User = require("../model/user");
 const Friend = require("../model/friend");
-const Group = require("../model/group");
+const Workgroup = require("../model/workgroup");
 const Image = require("../model/image");
 const Organization = require("../model/organization");
 const Notify = require("../util/notification");
@@ -200,20 +200,24 @@ exports.putAddUser = async (req, res, next) => {
       }
       userToAdd.workgroupAdmin = req.body.workgroupAdmin;
     }
-    if (req.body.adminGroupId) userToAdd.adminGroupId = req.body.adminGroupId;
+    if (req.body.adminWorkgroupId) userToAdd.adminWorkgroupId = req.body.adminWorkgroupId;
+    // Backward compat input
+    if (!userToAdd.adminWorkgroupId && req.body.adminGroupId) {
+      userToAdd.adminWorkgroupId = req.body.adminGroupId;
+    }
 
     const foundOrganization = await Organization.findByPk(userToAdd.organizationId);
     if (!foundOrganization) return StatusResponse(res, 421, "Organization not found");
 
     if (userToAdd.workgroupAdmin === true) {
-      if (!userToAdd.adminGroupId) {
-        return StatusResponse(res, 421, "Workgroup admin requires adminGroupId");
+      if (!userToAdd.adminWorkgroupId) {
+        return StatusResponse(res, 421, "Workgroup admin requires adminWorkgroupId");
       }
-      const adminGroup = await Group.findOne({
-        where: { id: userToAdd.adminGroupId, organizationId: userToAdd.organizationId },
+      const adminWorkgroup = await Workgroup.findOne({
+        where: { id: userToAdd.adminWorkgroupId, organizationId: userToAdd.organizationId },
       });
-      if (!adminGroup) {
-        return StatusResponse(res, 421, "Invalid workgroup for workgroup admin");
+      if (!adminWorkgroup) {
+        return StatusResponse(res, 421, "Invalid adminWorkgroupId for workgroup admin");
       }
     }
 
@@ -400,22 +404,28 @@ exports.postUpdateUser = (req, res, next) => {
         foundUser.workgroupAdmin = req.body.workgroupAdmin;
       }
 
-      if (req.body.adminGroupId || req.body.adminGroupId === null) {
+      if (req.body.adminWorkgroupId || req.body.adminWorkgroupId === null) {
         if (!req.isAdmin && req.isOrganizationAdmin !== true) {
-          return StatusResponse(res, 403, "Not authorized to update adminGroupId");
+          return StatusResponse(res, 403, "Not authorized to update adminWorkgroupId");
         }
-        foundUser.adminGroupId = req.body.adminGroupId;
+        foundUser.adminWorkgroupId = req.body.adminWorkgroupId;
+      } else if (req.body.adminGroupId || req.body.adminGroupId === null) {
+        // Backward compatible field name
+        if (!req.isAdmin && req.isOrganizationAdmin !== true) {
+          return StatusResponse(res, 403, "Not authorized to update adminWorkgroupId");
+        }
+        foundUser.adminWorkgroupId = req.body.adminGroupId;
       }
 
       if (foundUser.workgroupAdmin === true) {
-        if (!foundUser.adminGroupId) {
-          return StatusResponse(res, 421, "Workgroup admin requires adminGroupId");
+        if (!foundUser.adminWorkgroupId) {
+          return StatusResponse(res, 421, "Workgroup admin requires adminWorkgroupId");
         }
-        const foundAdminGroup = await Group.findOne({
-          where: { id: foundUser.adminGroupId, organizationId: foundUser.organizationId },
+        const foundAdminWorkgroup = await Workgroup.findOne({
+          where: { id: foundUser.adminWorkgroupId, organizationId: foundUser.organizationId },
         });
-        if (!foundAdminGroup) {
-          return StatusResponse(res, 421, "Invalid workgroup for workgroup admin");
+        if (!foundAdminWorkgroup) {
+          return StatusResponse(res, 421, "Invalid adminWorkgroupId for workgroup admin");
         }
       }
 
