@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.0.12 - 2026-02-14
+- Support workgroup-scoped user listing via `GET /user?workgroupId=...` (used by the browser console when a workgroup scope is selected).
+
 ## 0.0.11 - 2026-02-14
 - Make DB update modules safer/idempotent: avoid destructive `sync({ force: true })` and guard role/capability/user-role assignments against duplicates.
 - Update README to reflect the actual DB update runner behavior (metadata-per-update-id + optional physical checks), not `database.version` gating.
