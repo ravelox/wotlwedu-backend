@@ -131,3 +131,10 @@ All AI endpoints are authenticated and use deterministic, self-hosted heuristics
 - Auth middleware and capability checks: `util/security.js`
 - Housekeeping jobs run periodically from `app.js`
 - Codebase overview: `docs/codebase_overview.md`
+
+## Database version contract (update authors)
+- `metadata` must contain `name = database.version` with a numeric string value.
+- Each `updates/update-*.js` file must export `targetDatabaseVersion` as an integer.
+- Update execution is gated by version: an update runs only when `database.version < targetDatabaseVersion`.
+- After a successful update, the updater records the module as applied and sets `database.version` to that update's `targetDatabaseVersion`.
+- New update modules should increment the version by exactly one from the previous highest update.
