@@ -7,6 +7,7 @@ const { Op } = require("sequelize");
 const Config = require("../config/wotlwedu");
 
 const Workgroup = require("../model/workgroup");
+const WorkgroupMember = require("../model/workgroupmember");
 const User = require("../model/user");
 const Category = require("../model/category");
 const Organization = require("../model/organization");
@@ -120,7 +121,9 @@ module.exports.getAllWorkgroup = (req, res, next) => {
   options.attributes = Attributes.Workgroup;
   options.distinct = true;
 
-  Workgroup.findAndCountAll(options)
+  const runQuery = () => Workgroup.findAndCountAll(options);
+
+  runQuery()
     .then(({ count, rows }) => {
       return StatusResponse(res, 200, "OK", {
         total: rows ? count : 0,
@@ -129,7 +132,31 @@ module.exports.getAllWorkgroup = (req, res, next) => {
         workgroups: rows || [],
       });
     })
-    .catch((err) => next(err));
+    .catch(async (err) => {
+      // Self-heal for partially initialised databases (e.g. updates not run yet):
+      // if the workgroups table is missing, try to create it and retry once.
+      const missingTable =
+        err &&
+        (err.code === "ER_NO_SUCH_TABLE" ||
+          err.name === "SequelizeDatabaseError") &&
+        String(err.sql || "").includes("`workgroups`");
+
+      if (!missingTable) return next(err);
+
+      try {
+        await Workgroup.sync();
+        await WorkgroupMember.sync();
+        const { count, rows } = await runQuery();
+        return StatusResponse(res, 200, "OK", {
+          total: rows ? count : 0,
+          page: page,
+          itemsPerPage: itemsPerPage,
+          workgroups: rows || [],
+        });
+      } catch (syncErr) {
+        return next(syncErr);
+      }
+    });
 };
 
 module.exports.postUpdateWorkgroup = (req, res, next) => {

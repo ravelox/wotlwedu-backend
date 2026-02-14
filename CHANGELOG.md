@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.0.9 - 2026-02-14
+- Workgroup endpoints self-heal by creating missing `workgroups` tables on first access (useful for partially initialized DBs).
+
 ## 0.0.8 - 2026-02-14
 - Make DB updates more resilient on partially migrated databases (re-apply when metadata exists but schema changes are missing).
 - Ensure startup fails fast if database updates fail (docker entrypoint checks `util-updatedb` exit code).

@@ -25,7 +25,7 @@ Core stack:
 - `Workgroup admin user`: can administer data for one workgroup (`adminWorkgroupId`, legacy `adminGroupId`).
 
 ## Current version
-The backend currently ships as version **0.0.8** (see `package.json` and `CHANGELOG.md`).
+The backend currently ships as version **0.0.9** (see `package.json` and `CHANGELOG.md`).
 
 ## Prerequisites
 - Node.js and npm
