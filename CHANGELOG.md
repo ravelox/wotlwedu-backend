@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.11 - 2026-02-14
+- Make DB update modules safer/idempotent: avoid destructive `sync({ force: true })` and guard role/capability/user-role assignments against duplicates.
+- Update README to reflect the actual DB update runner behavior (metadata-per-update-id + optional physical checks), not `database.version` gating.
+
 ## 0.0.10 - 2026-02-14
 - Fix Sequelize Workgroup/WorkgroupMember association direction that could generate an invalid FK and prevent `workgroups` table creation.
 - Fix auth middleware boolean parsing for admin flags (`true/false`, `0/1`, `"true"/"false"`) when using `raw: true` with SQL dialects.

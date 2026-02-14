@@ -44,7 +44,9 @@ async function apply(update) {
     };
 
   try {
-    await SocketInfo.sync({force: true})
+    // Never use `force: true` in an update module. If the update is re-run (or a transient
+    // error causes the runner to "proceed to apply"), `force: true` would drop the table.
+    await SocketInfo.sync()
   } catch (err) {
     console.log( err )
     return { status: -1, message: err };

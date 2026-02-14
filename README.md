@@ -25,7 +25,7 @@ Core stack:
 - `Workgroup admin user`: can administer data for one workgroup (`adminWorkgroupId`, legacy `adminGroupId`).
 
 ## Current version
-The backend currently ships as version **0.0.10** (see `package.json` and `CHANGELOG.md`).
+The backend currently ships as version **0.0.11** (see `package.json` and `CHANGELOG.md`).
 
 ## Prerequisites
 - Node.js and npm
@@ -132,9 +132,18 @@ All AI endpoints are authenticated and use deterministic, self-hosted heuristics
 - Housekeeping jobs run periodically from `app.js`
 - Codebase overview: `docs/codebase_overview.md`
 
-## Database version contract (update authors)
-- `metadata` must contain `name = database.version` with a numeric string value.
-- Each `updates/update-*.js` file must export `targetDatabaseVersion` as an integer.
-- Update execution is gated by version: an update runs only when `database.version < targetDatabaseVersion`.
-- After a successful update, the updater records the module as applied and sets `database.version` to that update's `targetDatabaseVersion`.
-- New update modules should increment the version by exactly one from the previous highest update.
+## Database update contract (update authors)
+The database update runner is `util/dbupdate.js` (invoked by `model/util-updatedb.js`).
+
+How updates are discovered:
+- Update modules live in `updates/` and must match `update-\\d+.js`.
+- Each module must export an `id` (for example `update-0009`).
+
+How updates are applied:
+- Applied-state is tracked in the `metadata` table by update id: a row with `name = <update id>` and `value = "applied"`.
+- If the metadata row exists and the module's `isApplied()` reports the change is physically present, the update is skipped.
+- If metadata exists but `isApplied()` reports "not applied", the runner re-applies the update (updates are expected to be idempotent).
+- If `isApplied()` reports "applied" but metadata is missing, the runner backfills the metadata row.
+
+Notes:
+- Many update modules also export `targetDatabaseVersion`, but the current runner does not gate execution on `metadata.name = database.version` or update that value. `database.version` is currently written only by the database creation script (`model/util-createdb.js`) and should be treated as informational unless/until the updater is changed to enforce it.

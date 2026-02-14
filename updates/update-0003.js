@@ -36,12 +36,24 @@ async function createRole(rolename, description, capabilityList) {
   }
 
   for (const capname of capabilityList) {
-    console.log(module_id + ": Adding  " + capname + " to " + role.name);
     const capaToAdd = await Capability.findOne({ where: { name: capname } });
-    await role.addCapability(capaToAdd, {
-      through: { id: UUID("rolecap"), creator: "system" },
-    });
+    if (!capaToAdd) {
+      return {
+        status: -1,
+        message: "Capability not found: " + capname,
+      };
+    }
+
+    const hasCap = await role.hasCapability(capaToAdd);
+    if (!hasCap) {
+      console.log(module_id + ": Adding " + capname + " to " + role.name);
+      await role.addCapability(capaToAdd, {
+        through: { id: UUID("rolecap"), creator: "system" },
+      });
+    }
   }
+
+  return { status: 0, message: "OK", role: role };
 }
 
 async function addUserToRole(alias, rolename) {
@@ -51,17 +63,18 @@ async function addUserToRole(alias, rolename) {
   if (!role)
     return { status: -1, message: "Cannot find a role '" + rolename + "'" };
 
-  console.log( Util.inspect( User, {depth: null }))
-
   const foundUser = await User.findOne({ where: { alias: alias } });
   if (!foundUser)
     return { status: -1, message: "No user '" + alias + "' has been found" };
 
   try {
-    console.log(module_id + ": Adding '" + alias + "' to '" + rolename + "'");
-    await foundUser.addRole(role, {
-      through: { id: UUID("userrole"), creator: "system" },
-    });
+    const alreadyHasRole = await foundUser.hasRole(role);
+    if (!alreadyHasRole) {
+      console.log(module_id + ": Adding '" + alias + "' to '" + rolename + "'");
+      await foundUser.addRole(role, {
+        through: { id: UUID("userrole"), creator: "system" },
+      });
+    }
     return { status: 0, message: "OK" };
   } catch (err) {
     console.log(err);
@@ -118,23 +131,26 @@ async function apply(update) {
     "all.manage.admin",
   ]);
 
-  if (result && result.status && result.status !== 0) {
+  if (result && result.status !== 0) {
     console.log(module_id + ": Failed to create role '" + rootRoleName + "'");
+    return result;
   }
 
   result = await createRole(defaultRoleName, "Default Role for all users", [
     "all.manage.owner",
   ]);
-  if (result && result.status && result.status !== 0) {
+  if (result && result.status !== 0) {
     console.log(
       module_id + ": Failed to create role '" + defaultRoleName + "'"
     );
+    return result;
   }
   result = await addUserToRole("root", rootRoleName);
   if (result && result.status && result.status !== 0) {
     console.log(
       module_id + ": Failed to add 'root' user to role '" + rootRoleName + "'"
     );
+    return result;
   }
 
   return {
