@@ -141,3 +141,4 @@ How updates are applied:
 
 Notes:
 - Many update modules also export `targetDatabaseVersion`, but the current runner does not gate execution on `metadata.name = database.version` or update that value. `database.version` is currently written only by the database creation script (`model/util-createdb.js`) and should be treated as informational unless/until the updater is changed to enforce it.
+- Update execution forces the Sequelize adapter (`WOTLWEDU_FORCE_SEQUELIZE_FOR_UPDATES=true`) so migrations are independent of the runtime `WOTLWEDU_DB_TYPE` selection.
