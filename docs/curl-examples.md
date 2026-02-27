@@ -21,6 +21,8 @@ Notes:
 - Unless stated otherwise, endpoints require authentication (the server mounts most routers behind `Security.checkAuthentication` in `app.js`).
 - `StatusResponse` payloads look like: `{ "status": 200, "message": "OK", "data": { ... } }`.
 - **Workgroup scoping** (items/images/lists/elections): admins can target a workgroup by passing `workgroupId` in the JSON body (create/update) or query string (list). The organization is implied by the workgroup.
+- **Category ownership**: `categoryId` must reference a category created by the authenticated user.
+- **Collapsible category grouping**: collection endpoints for category-enabled resources support `?collapsible=true`, returning an additional grouped `menu` field.
 
 ---
 

@@ -25,7 +25,13 @@ Core stack:
 - `Workgroup admin user`: can administer data for one workgroup (`adminWorkgroupId`, legacy `adminGroupId`).
 
 ## Current version
-The backend currently ships as version **0.0.12** (see `package.json` and `CHANGELOG.md`).
+The backend currently ships as version **0.0.13** (see `package.json` and `CHANGELOG.md`).
+
+## Recent API behavior updates
+- Category IDs are now consistently included on category-enabled resources (`group`, `workgroup`, `image`, `item`, `list`, `election`).
+- Category assignment is user-scoped: a resource can only be assigned a category created by the authenticated user.
+- Category-enabled list endpoints support optional grouped payloads via `?collapsible=true`.
+- Workgroup/organization ID inputs now normalize common frontend placeholders (`""`, `"undefined"`, `"null"`) to reduce false `421` responses.
 
 ## Prerequisites
 - Node.js and npm

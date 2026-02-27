@@ -6,7 +6,10 @@ const Config = require("../config/wotlwedu");
 const Security = require("../util/security");
 const UUID = require("../util/mini-uuid");
 const StatusResponse = require("../util/statusresponse");
-const { copyObject, getStatusIdByName } = require("../util/helpers");
+const toBool = require("../util/tobool");
+const CategoryScope = require("../util/categoryscope");
+const { normalizeOptionalId } = require("../util/idnormalize");
+const { copyObject, getStatusIdByName, buildCategoryMenu } = require("../util/helpers");
 const Notify = require("../util/notification");
 
 const Election = require("../model/election");
@@ -22,7 +25,7 @@ const Workgroup = require("../model/workgroup");
 
 const Attributes = require("../model/attributes");
 
-function generateIncludes(details) {
+function generateIncludes(details, req) {
   const includes = [];
 
   includes.push({
@@ -72,6 +75,8 @@ function generateIncludes(details) {
       includes.push({
         model: Category,
         attributes: Attributes.Category,
+        where: { creator: req.authUserId },
+        required: false,
       });
     }
     if (splitDetail.includes("image")) {
@@ -115,7 +120,7 @@ module.exports.getSingleElection = (req, res, next) => {
   const whereCondition = {};
   whereCondition.id = electionToFind;
 
-  const includes = generateIncludes(req.query.detail);
+  const includes = generateIncludes(req.query.detail, req);
 
   const options = {};
 
@@ -154,7 +159,7 @@ module.exports.getAllElection = async (req, res, next) => {
 
   let whereCondition = {};
 
-  const requestedWorkgroupId = req.query.workgroupId || null;
+  const requestedWorkgroupId = normalizeOptionalId(req.query.workgroupId).value;
   if (requestedWorkgroupId) {
     const allowed = await Security.canAccessWorkgroup(req, requestedWorkgroupId);
     if (!allowed) return StatusResponse(res, 403, "Not authorized for this workgroup");
@@ -176,7 +181,7 @@ module.exports.getAllElection = async (req, res, next) => {
   }
 
   const detail = req.query.detail;
-  const includes = generateIncludes(req.query.detail);
+  const includes = generateIncludes(req.query.detail, req);
 
   options.where = whereCondition;
   options.include = includes;
@@ -193,12 +198,16 @@ module.exports.getAllElection = async (req, res, next) => {
       });
     }
 
-    return StatusResponse(res, 200, "OK", {
+    const payload = {
       total: count,
       page: page,
       itemsPerPage: itemsPerPage,
       elections: rows,
-    });
+    };
+    if (toBool(req.query.collapsible)) {
+      payload.menu = buildCategoryMenu(rows, "elections");
+    }
+    return StatusResponse(res, 200, "OK", payload);
   });
 };
 
@@ -227,12 +236,13 @@ module.exports.postUpdateElection = (req, res, next) => {
 
       // Determine what the workgroup would be after this update.
       let effectiveWorkgroupId = foundElection.workgroupId || null;
-      if (req.body.workgroupId) {
-        const allowedWg = await Security.canAccessWorkgroup(req, req.body.workgroupId);
+      const normalizedWorkgroup = normalizeOptionalId(req.body.workgroupId);
+      if (normalizedWorkgroup.value) {
+        const allowedWg = await Security.canAccessWorkgroup(req, normalizedWorkgroup.value);
         if (!allowedWg)
           return StatusResponse(res, 403, "Not authorized for this workgroup");
-        effectiveWorkgroupId = req.body.workgroupId;
-      } else if (req.body.workgroupId === null) {
+        effectiveWorkgroupId = normalizedWorkgroup.value;
+      } else if (normalizedWorkgroup.hasField && normalizedWorkgroup.value === null) {
         if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
           return StatusResponse(res, 403, "Only system admins can clear workgroupId");
         }
@@ -284,16 +294,29 @@ module.exports.postUpdateElection = (req, res, next) => {
         foundElection.electionType = req.body.electionType;
       if (req.body.groupId || req.body.groupId === null)
         foundElection.groupId = req.body.groupId;
-      if (req.body.categoryId || req.body.categoryId === null)
-        foundElection.categoryId = req.body.categoryId;
+      const categoryResolution = await CategoryScope.resolveOwnedCategoryId(
+        req,
+        req.body.categoryId
+      );
+      if (!categoryResolution.ok) {
+        return StatusResponse(
+          res,
+          categoryResolution.status,
+          categoryResolution.message
+        );
+      }
+      if (categoryResolution.hasValue) {
+        foundElection.categoryId = categoryResolution.value;
+      }
       if (req.body.statusId) foundElection.statusId = req.body.statusId;
       if (req.body.listId || req.body.listId === null)
         foundElection.listId = req.body.listId;
       if (req.body.imageId || req.body.imageId === null)
         foundElection.imageId = req.body.imageId;
       if (req.body.expiration) foundElection.expiration = req.body.expiration;
-      if (req.body.workgroupId || req.body.workgroupId === null)
-        foundElection.workgroupId = req.body.workgroupId;
+      if (normalizedWorkgroup.hasField) {
+        foundElection.workgroupId = normalizedWorkgroup.value;
+      }
 
       foundElection
         .save()
@@ -320,12 +343,13 @@ module.exports.putAddElection = async (req, res, next) => {
   electionToAdd.workgroupId = null;
 
   let targetOrgId = null;
-  if (req.body.workgroupId) {
-    const allowedWg = await Security.canAccessWorkgroup(req, req.body.workgroupId);
+  const normalizedWorkgroup = normalizeOptionalId(req.body.workgroupId);
+  if (normalizedWorkgroup.value) {
+    const allowedWg = await Security.canAccessWorkgroup(req, normalizedWorkgroup.value);
     if (!allowedWg) return StatusResponse(res, 403, "Not authorized for this workgroup");
-    targetOrgId = await getWorkgroupOrganizationId(req.body.workgroupId);
+    targetOrgId = await getWorkgroupOrganizationId(normalizedWorkgroup.value);
     if (!targetOrgId) return StatusResponse(res, 404, "Workgroup not found");
-    electionToAdd.workgroupId = req.body.workgroupId;
+    electionToAdd.workgroupId = normalizedWorkgroup.value;
   }
 
   if (req.body.listId) electionToAdd.listId = req.body.listId;
@@ -335,7 +359,20 @@ module.exports.putAddElection = async (req, res, next) => {
       req.body.expiration.slice(0, 19).replace("T", " ") + "Z";
   }
   if (req.body.groupId) electionToAdd.groupId = req.body.groupId;
-  if (req.body.categoryId) electionToAdd.categoryId = req.body.categoryId;
+  const categoryResolution = await CategoryScope.resolveOwnedCategoryId(
+    req,
+    req.body.categoryId
+  );
+  if (!categoryResolution.ok) {
+    return StatusResponse(
+      res,
+      categoryResolution.status,
+      categoryResolution.message
+    );
+  }
+  if (categoryResolution.hasValue) {
+    electionToAdd.categoryId = categoryResolution.value;
+  }
 
   const foundStatus = await Status.findOne({ where: { name: "Not Started" } });
   if (foundStatus) electionToAdd.statusId = foundStatus.id;

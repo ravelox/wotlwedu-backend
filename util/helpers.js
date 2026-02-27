@@ -57,6 +57,48 @@ module.exports.copyObject = function (obj, attr) {
   return returnObject;
 };
 
+// Group records by categoryId to support collapsible category menus in API responses.
+module.exports.buildCategoryMenu = function (records, childKey) {
+  const keyName = childKey || "items";
+  const menuMap = new Map();
+
+  for (const record of records || []) {
+    const plainRecord =
+      record && typeof record.get === "function" ? record.get({ plain: true }) : record;
+    const categoryId = plainRecord && plainRecord.categoryId ? plainRecord.categoryId : null;
+    const categoryName =
+      plainRecord &&
+      plainRecord.category &&
+      plainRecord.category.name
+        ? plainRecord.category.name
+        : categoryId || "Uncategorized";
+    const menuKey = categoryId || "__uncategorized__";
+
+    if (!menuMap.has(menuKey)) {
+      menuMap.set(menuKey, {
+        categoryId: categoryId,
+        categoryName: categoryName,
+        collapsed: true,
+        total: 0,
+        [keyName]: [],
+      });
+    }
+
+    const menuItem = menuMap.get(menuKey);
+    menuItem.total += 1;
+    menuItem[keyName].push(record);
+  }
+
+  const menu = Array.from(menuMap.values());
+  menu.sort((a, b) => {
+    if (a.categoryId === null && b.categoryId !== null) return 1;
+    if (a.categoryId !== null && b.categoryId === null) return -1;
+    return String(a.categoryName).localeCompare(String(b.categoryName));
+  });
+
+  return menu;
+};
+
 // Bulk update any column across all tables
 module.exports.bulkUpdate = function (fieldUpdateList, whereCondition) {
   fieldUpdateList.forEach((fieldUpdate) => {

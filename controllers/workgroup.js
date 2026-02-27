@@ -1,7 +1,10 @@
 const Security = require("../util/security");
 const UUID = require("../util/mini-uuid");
 const StatusResponse = require("../util/statusresponse");
-const { copyObject } = require("../util/helpers");
+const { copyObject, buildCategoryMenu } = require("../util/helpers");
+const toBool = require("../util/tobool");
+const CategoryScope = require("../util/categoryscope");
+const { normalizeOptionalId } = require("../util/idnormalize");
 const { Op } = require("sequelize");
 
 const Config = require("../config/wotlwedu");
@@ -14,7 +17,7 @@ const Organization = require("../model/organization");
 
 const Attributes = require("../model/attributes");
 
-function generateIncludes(details) {
+function generateIncludes(details, req) {
   const includes = [];
   if (details) {
     const splitDetail = details.split(",");
@@ -29,6 +32,8 @@ function generateIncludes(details) {
       includes.push({
         model: Category,
         attributes: Attributes.Category,
+        where: { creator: req.authUserId },
+        required: false,
       });
     }
   }
@@ -52,7 +57,7 @@ module.exports.getSingleWorkgroup = (req, res, next) => {
 
   const options = {};
   options.where = whereCondition;
-  options.include = generateIncludes(req.query.detail);
+  options.include = generateIncludes(req.query.detail, req);
   options.attributes = Attributes.Workgroup;
 
   Workgroup.findOne(options)
@@ -114,7 +119,7 @@ module.exports.getAllWorkgroup = (req, res, next) => {
 
   options.where = whereCondition;
   // If the caller requested details, add those includes in addition to any membership join.
-  const detailIncludes = generateIncludes(req.query.detail);
+  const detailIncludes = generateIncludes(req.query.detail, req);
   if (detailIncludes.length > 0) {
     options.include = (options.include || []).concat(detailIncludes);
   }
@@ -125,12 +130,16 @@ module.exports.getAllWorkgroup = (req, res, next) => {
 
   runQuery()
     .then(({ count, rows }) => {
-      return StatusResponse(res, 200, "OK", {
+      const payload = {
         total: rows ? count : 0,
         page: page,
         itemsPerPage: itemsPerPage,
         workgroups: rows || [],
-      });
+      };
+      if (toBool(req.query.collapsible)) {
+        payload.menu = buildCategoryMenu(rows || [], "workgroups");
+      }
+      return StatusResponse(res, 200, "OK", payload);
     })
     .catch(async (err) => {
       // Self-heal for partially initialised databases (e.g. updates not run yet):
@@ -147,12 +156,16 @@ module.exports.getAllWorkgroup = (req, res, next) => {
         await Workgroup.sync();
         await WorkgroupMember.sync();
         const { count, rows } = await runQuery();
-        return StatusResponse(res, 200, "OK", {
+        const payload = {
           total: rows ? count : 0,
           page: page,
           itemsPerPage: itemsPerPage,
           workgroups: rows || [],
-        });
+        };
+        if (toBool(req.query.collapsible)) {
+          payload.menu = buildCategoryMenu(rows || [], "workgroups");
+        }
+        return StatusResponse(res, 200, "OK", payload);
       } catch (syncErr) {
         return next(syncErr);
       }
@@ -168,7 +181,7 @@ module.exports.postUpdateWorkgroup = (req, res, next) => {
   Security.applyOrganizationScope(req, whereCondition);
 
   Workgroup.findOne({ where: whereCondition })
-    .then((foundWorkgroup) => {
+    .then(async (foundWorkgroup) => {
       if (!foundWorkgroup)
         return StatusResponse(res, 404, "Workgroup not found");
       if (!Security.canManageWorkgroup(req, foundWorkgroup))
@@ -177,7 +190,20 @@ module.exports.postUpdateWorkgroup = (req, res, next) => {
       if (req.body.name) foundWorkgroup.name = req.body.name;
       if (req.body.description) foundWorkgroup.description = req.body.description;
       if (req.body.listType) foundWorkgroup.listType = req.body.listType;
-      if (req.body.categoryId) foundWorkgroup.categoryId = req.body.categoryId;
+      const categoryResolution = await CategoryScope.resolveOwnedCategoryId(
+        req,
+        req.body.categoryId
+      );
+      if (!categoryResolution.ok) {
+        return StatusResponse(
+          res,
+          categoryResolution.status,
+          categoryResolution.message
+        );
+      }
+      if (categoryResolution.hasValue) {
+        foundWorkgroup.categoryId = categoryResolution.value;
+      }
 
       foundWorkgroup
         .save()
@@ -202,17 +228,20 @@ module.exports.putAddWorkgroup = (req, res, next) => {
     );
   }
 
-  const organizationId = req.body.organizationId || req.authOrganizationId || null;
+  const requestedOrganizationId = normalizeOptionalId(req.body.organizationId);
+  const organizationId = requestedOrganizationId.hasField
+    ? requestedOrganizationId.value
+    : req.authOrganizationId || null;
   if (!organizationId && req.isAdmin !== true) {
     return StatusResponse(res, 421, "No organization context available");
   }
 
   Workgroup.findOne({ where: { organizationId: organizationId, name: req.body.name } })
-    .then((foundWorkgroup) => {
+    .then(async (foundWorkgroup) => {
       if (foundWorkgroup) throw new Error("Workgroup already exists");
       return Organization.findByPk(organizationId);
     })
-    .then((foundOrganization) => {
+    .then(async (foundOrganization) => {
       if (!foundOrganization)
         return StatusResponse(res, 421, "Organization not found");
 
@@ -223,7 +252,20 @@ module.exports.putAddWorkgroup = (req, res, next) => {
       workgroupToAdd.name = req.body.name;
       workgroupToAdd.description = req.body.description;
       if (req.body.listType) workgroupToAdd.listType = req.body.listType;
-      if (req.body.categoryId) workgroupToAdd.categoryId = req.body.categoryId;
+      const categoryResolution = await CategoryScope.resolveOwnedCategoryId(
+        req,
+        req.body.categoryId
+      );
+      if (!categoryResolution.ok) {
+        return StatusResponse(
+          res,
+          categoryResolution.status,
+          categoryResolution.message
+        );
+      }
+      if (categoryResolution.hasValue) {
+        workgroupToAdd.categoryId = categoryResolution.value;
+      }
 
       workgroupToAdd
         .save()

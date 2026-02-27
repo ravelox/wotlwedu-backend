@@ -6,13 +6,16 @@ const Sequelize = require("sequelize")
 
 const Security = require("../util/security");
 const UUID = require("../util/mini-uuid");
+const toBool = require("../util/tobool");
+const CategoryScope = require("../util/categoryscope");
+const { normalizeOptionalId } = require("../util/idnormalize");
 
 const Helper = require("./helper");
 const Notify = require("../util/notification");
 
 const Config = require("../config/wotlwedu");
 const StatusResponse = require("../util/statusresponse");
-const { copyObject, getStatusIdByName } = require("../util/helpers");
+const { copyObject, getStatusIdByName, buildCategoryMenu } = require("../util/helpers");
 
 const Image = require("../model/image");
 const Category = require("../model/category");
@@ -23,12 +26,17 @@ const Workgroup = require("../model/workgroup");
 
 const Attributes = require("../model/attributes");
 
-function generateIncludes(details) {
+function generateIncludes(details, req) {
   let includes = [];
   if (details) {
     const splitDetail = details.split(",");
     if (splitDetail.includes("category")) {
-      includes.push({ model: Category, attributes: Attributes.Category });
+      includes.push({
+        model: Category,
+        attributes: Attributes.Category,
+        where: { creator: req.authUserId },
+        required: false,
+      });
     }
   }
   return includes;
@@ -57,7 +65,7 @@ module.exports.getImage = async (req, res, next) => {
     }
   }
 
-  const includes = generateIncludes(req.query.detail);
+  const includes = generateIncludes(req.query.detail, req);
 
   const modImageAttributes = Attributes.Image.slice();
   modImageAttributes.push([
@@ -90,7 +98,7 @@ module.exports.getImage = async (req, res, next) => {
 
 module.exports.getAllImage = async (req, res, next) => {
   let userFilter = req.query.filter;
-  const workgroupId = req.query.workgroupId || null;
+  const workgroupId = normalizeOptionalId(req.query.workgroupId).value;
   let page = +req.query.page;
   let itemsPerPage = +req.query.items;
   if (!page) page = 1;
@@ -124,7 +132,7 @@ module.exports.getAllImage = async (req, res, next) => {
     whereCondition.creator = req.authUserId;
   }
 
-  const includes = generateIncludes(req.query.detail);
+  const includes = generateIncludes(req.query.detail, req);
 
   const modImageAttributes = Attributes.Image.slice();
   modImageAttributes.push([
@@ -146,12 +154,16 @@ module.exports.getAllImage = async (req, res, next) => {
       });
     }
 
-    return StatusResponse(res, 200, "OK", {
+    const payload = {
       total: count,
       page: page,
       itemsPerPage: itemsPerPage,
       images: rows,
-    });
+    };
+    if (toBool(req.query.collapsible)) {
+      payload.menu = buildCategoryMenu(rows, "images");
+    }
+    return StatusResponse(res, 200, "OK", payload);
   });
 };
 
@@ -177,16 +189,30 @@ module.exports.postUpdateImage = (req, res, next) => {
       if (req.body.filename) foundImage.filename = req.body.filename;
       if (req.body.contentType) foundImage.contentType = req.body.contentType;
       if (req.body.statusId) foundImage.statusId = req.body.statusId;
-      if (req.body.categoryId || req.body.categoryId === null) foundImage.categoryId = req.body.categoryId;
+      const categoryResolution = await CategoryScope.resolveOwnedCategoryId(
+        req,
+        req.body.categoryId
+      );
+      if (!categoryResolution.ok) {
+        return StatusResponse(
+          res,
+          categoryResolution.status,
+          categoryResolution.message
+        );
+      }
+      if (categoryResolution.hasValue) {
+        foundImage.categoryId = categoryResolution.value;
+      }
 
-      if (req.body.workgroupId || req.body.workgroupId === null) {
-        if (req.body.workgroupId === null) {
+      const normalizedWorkgroup = normalizeOptionalId(req.body.workgroupId);
+      if (normalizedWorkgroup.hasField) {
+        if (normalizedWorkgroup.value === null) {
           if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
             return StatusResponse(res, 403, "Not authorized to clear workgroupId");
           }
           foundImage.workgroupId = null;
-        } else {
-          const targetWorkgroup = await Workgroup.findByPk(req.body.workgroupId, { raw: true });
+        } else if (normalizedWorkgroup.value) {
+          const targetWorkgroup = await Workgroup.findByPk(normalizedWorkgroup.value, { raw: true });
           if (!targetWorkgroup) return StatusResponse(res, 421, "Workgroup not found");
           const allowed = await Security.canAccessWorkgroup(req, targetWorkgroup);
           if (!allowed) return StatusResponse(res, 403, "Not authorized for this workgroup");
@@ -224,10 +250,24 @@ module.exports.putAddImage = async (req, res, next) => {
   if (req.body.filename) imageToAdd.filename = req.body.filename;
   if (req.body.contentType) imageToAdd.contentType = req.body.contentType;
   if (req.body.statusId) imageToAdd.statusId = req.body.statusId;
-  if (req.body.categoryId) imageToAdd.categoryId = req.body.categoryId;
+  const categoryResolution = await CategoryScope.resolveOwnedCategoryId(
+    req,
+    req.body.categoryId
+  );
+  if (!categoryResolution.ok) {
+    return StatusResponse(
+      res,
+      categoryResolution.status,
+      categoryResolution.message
+    );
+  }
+  if (categoryResolution.hasValue) {
+    imageToAdd.categoryId = categoryResolution.value;
+  }
 
-  if (req.body.workgroupId) {
-    const targetWorkgroup = await Workgroup.findByPk(req.body.workgroupId, { raw: true });
+  const normalizedWorkgroup = normalizeOptionalId(req.body.workgroupId);
+  if (normalizedWorkgroup.value) {
+    const targetWorkgroup = await Workgroup.findByPk(normalizedWorkgroup.value, { raw: true });
     if (!targetWorkgroup) return StatusResponse(res, 421, "Workgroup not found");
     const allowed = await Security.canAccessWorkgroup(req, targetWorkgroup);
     if (!allowed) return StatusResponse(res, 403, "Not authorized for this workgroup");

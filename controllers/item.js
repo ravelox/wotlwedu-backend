@@ -7,8 +7,10 @@ const Config = require("../config/wotlwedu");
 const Security = require("../util/security");
 const UUID = require("../util/mini-uuid");
 const StatusResponse = require("../util/statusresponse");
+const toBool = require("../util/tobool");
+const CategoryScope = require("../util/categoryscope");
 const Notify = require("../util/notification");
-const { copyObject, getStatusIdByName } = require("../util/helpers");
+const { copyObject, getStatusIdByName, buildCategoryMenu } = require("../util/helpers");
 
 const Item = require("../model/item");
 const Image = require("../model/image");
@@ -19,7 +21,7 @@ const Workgroup = require("../model/workgroup");
 
 const Attributes = require("../model/attributes")
 
-function generateIncludes(details) {
+function generateIncludes(details, req) {
   const includes = [];
   if (details) {
     const splitDetail = details.split(",");
@@ -33,7 +35,12 @@ function generateIncludes(details) {
       includes.push({ model: Image, attributes: modImageAttributes });
     }
     if (splitDetail.includes("category")) {
-      includes.push({ model: Category, attributes: Attributes.Category });
+      includes.push({
+        model: Category,
+        attributes: Attributes.Category,
+        where: { creator: req.authUserId },
+        required: false,
+      });
     }
   }
   return includes;
@@ -61,7 +68,7 @@ module.exports.getItem = async (req, res, next) => {
     }
   }
 
-  const includes = generateIncludes(req.query.detail);
+  const includes = generateIncludes(req.query.detail, req);
 
   options.where = whereCondition;
   options.attributes = Attributes.Item;
@@ -89,7 +96,13 @@ module.exports.getItem = async (req, res, next) => {
 
 module.exports.getAllItem = async (req, res, next) => {
   let userFilter = req.query.filter;
-  const workgroupId = req.query.workgroupId || null;
+  const rawWorkgroupId = req.query.workgroupId;
+  const workgroupId =
+    rawWorkgroupId &&
+    rawWorkgroupId !== "undefined" &&
+    rawWorkgroupId !== "null"
+      ? rawWorkgroupId
+      : null;
   let page = +req.query.page;
   let itemsPerPage = +req.query.items;
   if (!page) page = 1;
@@ -123,7 +136,7 @@ module.exports.getAllItem = async (req, res, next) => {
     whereCondition.creator = req.authUserId;
   }
 
-  const includes = generateIncludes(req.query.detail);
+  const includes = generateIncludes(req.query.detail, req);
 
   options.where = whereCondition;
   options.include = includes;
@@ -140,12 +153,16 @@ module.exports.getAllItem = async (req, res, next) => {
       });
     }
 
-    return StatusResponse(res, 200, "OK", {
+    const payload = {
       total: count,
       page: page,
       itemsPerPage: itemsPerPage,
       items: rows,
-    });
+    };
+    if (toBool(req.query.collapsible)) {
+      payload.menu = buildCategoryMenu(rows, "items");
+    }
+    return StatusResponse(res, 200, "OK", payload);
   });
 };
 
@@ -172,17 +189,37 @@ module.exports.postUpdateItem = async (req, res, next) => {
         foundItem.imageId = req.body.imageId;
       if (req.body.url) foundItem.url = req.body.url;
       if (req.body.location) foundItem.location = req.body.location;
-      if (req.body.categoryId) foundItem.categoryId = req.body.categoryId;
+      const categoryResolution = await CategoryScope.resolveOwnedCategoryId(
+        req,
+        req.body.categoryId
+      );
+      if (!categoryResolution.ok) {
+        return StatusResponse(
+          res,
+          categoryResolution.status,
+          categoryResolution.message
+        );
+      }
+      if (categoryResolution.hasValue) {
+        foundItem.categoryId = categoryResolution.value;
+      }
 
-      if (req.body.workgroupId || req.body.workgroupId === null) {
-        if (req.body.workgroupId === null) {
+      const rawWorkgroupId = req.body.workgroupId;
+      const hasWorkgroupIdField =
+        rawWorkgroupId !== undefined &&
+        rawWorkgroupId !== "undefined";
+      const requestedWorkgroupId =
+        rawWorkgroupId === "null" ? null : rawWorkgroupId;
+
+      if (hasWorkgroupIdField) {
+        if (requestedWorkgroupId === null) {
           // Only system admins can remove workgroup scoping.
           if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
             return StatusResponse(res, 403, "Not authorized to clear workgroupId");
           }
           foundItem.workgroupId = null;
-        } else {
-          const targetWorkgroup = await Workgroup.findByPk(req.body.workgroupId, { raw: true });
+        } else if (requestedWorkgroupId) {
+          const targetWorkgroup = await Workgroup.findByPk(requestedWorkgroupId, { raw: true });
           if (!targetWorkgroup) return StatusResponse(res, 421, "Workgroup not found");
           const allowed = await Security.canAccessWorkgroup(req, targetWorkgroup);
           if (!allowed) return StatusResponse(res, 403, "Not authorized for this workgroup");
@@ -223,10 +260,31 @@ module.exports.putAddItem = async (req, res, next) => {
   if (req.body.imageId) itemToAdd.imageId = req.body.imageId;
   if (req.body.url) itemToAdd.url = req.body.url;
   if (req.body.location) itemToAdd.location = req.body.location;
-  if (req.body.categoryId) itemToAdd.categoryId = req.body.categoryId;
+  const categoryResolution = await CategoryScope.resolveOwnedCategoryId(
+    req,
+    req.body.categoryId
+  );
+  if (!categoryResolution.ok) {
+    return StatusResponse(
+      res,
+      categoryResolution.status,
+      categoryResolution.message
+    );
+  }
+  if (categoryResolution.hasValue) {
+    itemToAdd.categoryId = categoryResolution.value;
+  }
 
-  if (req.body.workgroupId) {
-    const targetWorkgroup = await Workgroup.findByPk(req.body.workgroupId, { raw: true });
+  const rawWorkgroupId = req.body.workgroupId;
+  const requestWorkgroupId =
+    rawWorkgroupId &&
+    rawWorkgroupId !== "undefined" &&
+    rawWorkgroupId !== "null"
+      ? rawWorkgroupId
+      : null;
+
+  if (requestWorkgroupId) {
+    const targetWorkgroup = await Workgroup.findByPk(requestWorkgroupId, { raw: true });
     if (!targetWorkgroup) return StatusResponse(res, 421, "Workgroup not found");
     const allowed = await Security.canAccessWorkgroup(req, targetWorkgroup);
     if (!allowed) return StatusResponse(res, 403, "Not authorized for this workgroup");

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.13 - 2026-02-27
+- Add consistent `categoryId` projection/handling across category-enabled resources (`group`, `workgroup`, `image`, `item`, `list`, `election`).
+- Enforce per-user category ownership when assigning `categoryId` on create/update (with explicit null clearing support).
+- Add optional category-grouped response menus (`?collapsible=true`) for category-enabled collection endpoints.
+- Normalize workgroup/organization ID inputs (`""`, `"undefined"`, `"null"`) to avoid false `421` errors from frontend placeholder values.
+
 ## 0.0.12 - 2026-02-14
 - Support workgroup-scoped user listing via `GET /user?workgroupId=...` (used by the browser console when a workgroup scope is selected).
 

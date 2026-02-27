@@ -7,16 +7,17 @@ module.exports.Election = [
   "description",
   "electionType",
   "expiration",
+  "categoryId",
   "workgroupId",
   "creator"
 ];
 
-module.exports.Group = ["id", "name", "description", "creator"];
-module.exports.Workgroup = ["id", "name", "description", "organizationId", "creator"];
+module.exports.Group = ["id", "name", "description", "categoryId", "creator"];
+module.exports.Workgroup = ["id", "name", "description", "categoryId", "organizationId", "creator"];
 
-module.exports.List = ["id", "name", "description", "workgroupId", "creator"];
+module.exports.List = ["id", "name", "description", "categoryId", "workgroupId", "creator"];
 
-module.exports.Item = ["id", "name", "description", "url", "location", "workgroupId", "creator"];
+module.exports.Item = ["id", "name", "description", "url", "location", "categoryId", "workgroupId", "creator"];
 
 module.exports.StatsItem = ["id", "name"];
 
@@ -60,6 +61,7 @@ module.exports.Image = [
   "filename",
 // Concatenation of filename and URL base needs to be done in each controller 
   "statusId",
+  "categoryId",
   "workgroupId",
   "creator"
 ];

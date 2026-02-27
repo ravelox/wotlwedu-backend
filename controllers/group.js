@@ -1,7 +1,9 @@
 const Security = require("../util/security");
 const UUID = require("../util/mini-uuid");
 const StatusResponse = require("../util/statusresponse");
-const { copyObject } = require("../util/helpers");
+const { copyObject, buildCategoryMenu } = require("../util/helpers");
+const toBool = require("../util/tobool");
+const CategoryScope = require("../util/categoryscope");
 const { Op } = require("sequelize");
 
 const Config = require("../config/wotlwedu");
@@ -18,7 +20,7 @@ function canManageGroup(req, group) {
   return group.creator === req.authUserId;
 }
 
-function generateIncludes(details) {
+function generateIncludes(details, req) {
   const includes = [];
   if (details) {
     const splitDetail = details.split(",");
@@ -33,6 +35,8 @@ function generateIncludes(details) {
       includes.push({
         model: Category,
         attributes: Attributes.Category,
+        where: { creator: req.authUserId },
+        required: false,
       });
     }
   }
@@ -45,7 +49,7 @@ module.exports.getSingleGroup = (req, res, next) => {
 
   const options = {};
   options.where = { id: groupToFind };
-  options.include = generateIncludes(req.query.detail);
+  options.include = generateIncludes(req.query.detail, req);
   options.attributes = Attributes.Group;
 
   Group.findOne(options)
@@ -83,16 +87,20 @@ module.exports.getAllGroup = (req, res, next) => {
 
   options.where = whereCondition;
   options.attributes = Attributes.Group;
-  options.include = generateIncludes(req.query.detail);
+  options.include = generateIncludes(req.query.detail, req);
   options.distinct = true;
 
   Group.findAndCountAll(options).then(({ count, rows }) => {
-    return StatusResponse(res, 200, "OK", {
+    const payload = {
       total: rows ? count : 0,
       page: page,
       itemsPerPage: itemsPerPage,
       groups: rows || [],
-    });
+    };
+    if (toBool(req.query.collapsible)) {
+      payload.menu = buildCategoryMenu(rows || [], "groups");
+    }
+    return StatusResponse(res, 200, "OK", payload);
   });
 };
 
@@ -101,7 +109,7 @@ module.exports.postUpdateGroup = (req, res, next) => {
   if (!groupToFind) return StatusResponse(res, 421, "No group ID provided");
 
   Group.findByPk(groupToFind)
-    .then((foundGroup) => {
+    .then(async (foundGroup) => {
       if (!foundGroup) return StatusResponse(res, 404, "Group not found");
       if (!canManageGroup(req, foundGroup))
         return StatusResponse(res, 403, "Not authorized for this group");
@@ -109,7 +117,20 @@ module.exports.postUpdateGroup = (req, res, next) => {
       if (req.body.name) foundGroup.name = req.body.name;
       if (req.body.description) foundGroup.description = req.body.description;
       if (req.body.listType) foundGroup.listType = req.body.listType;
-      if (req.body.categoryId) foundGroup.categoryId = req.body.categoryId;
+      const categoryResolution = await CategoryScope.resolveOwnedCategoryId(
+        req,
+        req.body.categoryId
+      );
+      if (!categoryResolution.ok) {
+        return StatusResponse(
+          res,
+          categoryResolution.status,
+          categoryResolution.message
+        );
+      }
+      if (categoryResolution.hasValue) {
+        foundGroup.categoryId = categoryResolution.value;
+      }
 
       foundGroup
         .save()
@@ -132,7 +153,7 @@ module.exports.putAddGroup = (req, res, next) => {
       name: req.body.name,
     },
   })
-    .then((foundGroup) => {
+    .then(async (foundGroup) => {
       if (foundGroup) return StatusResponse(res, 421, "Group already exists");
 
       const groupToAdd = new Group();
@@ -141,7 +162,20 @@ module.exports.putAddGroup = (req, res, next) => {
       groupToAdd.name = req.body.name;
       groupToAdd.description = req.body.description;
       if (req.body.listType) groupToAdd.listType = req.body.listType;
-      if (req.body.categoryId) groupToAdd.categoryId = req.body.categoryId;
+      const categoryResolution = await CategoryScope.resolveOwnedCategoryId(
+        req,
+        req.body.categoryId
+      );
+      if (!categoryResolution.ok) {
+        return StatusResponse(
+          res,
+          categoryResolution.status,
+          categoryResolution.message
+        );
+      }
+      if (categoryResolution.hasValue) {
+        groupToAdd.categoryId = categoryResolution.value;
+      }
 
       groupToAdd
         .save()

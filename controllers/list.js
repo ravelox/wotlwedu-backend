@@ -7,7 +7,10 @@ const Config = require("../config/wotlwedu");
 const Security = require("../util/security");
 const UUID = require("../util/mini-uuid");
 const StatusResponse = require("../util/statusresponse");
-const { copyObject, getStatusIdByName } = require("../util/helpers");
+const toBool = require("../util/tobool");
+const CategoryScope = require("../util/categoryscope");
+const { normalizeOptionalId } = require("../util/idnormalize");
+const { copyObject, getStatusIdByName, buildCategoryMenu } = require("../util/helpers");
 const Notify = require("../util/notification");
 
 const List = require("../model/list");
@@ -22,12 +25,17 @@ const Workgroup = require("../model/workgroup");
 
 const Attributes = require("../model/attributes");
 
-function generateIncludes(details) {
+function generateIncludes(details, req) {
   let includes = [];
   if (details) {
     const splitDetails = details.split(",");
     if (splitDetails.includes("category")) {
-      includes.push({ model: Category, attributes: Attributes.Category });
+      includes.push({
+        model: Category,
+        attributes: Attributes.Category,
+        where: { creator: req.authUserId },
+        required: false,
+      });
     }
 
     if (splitDetails.includes("item")) {
@@ -84,7 +92,7 @@ module.exports.getSingleList = async (req, res, next) => {
     }
   }
 
-  const includes = generateIncludes(req.query.detail);
+  const includes = generateIncludes(req.query.detail, req);
 
   options.where = whereCondition;
   options.include = includes;
@@ -108,7 +116,7 @@ module.exports.getSingleList = async (req, res, next) => {
 
 module.exports.getAllList = async (req, res, next) => {
   let userFilter = req.query.filter;
-  const workgroupId = req.query.workgroupId || null;
+  const workgroupId = normalizeOptionalId(req.query.workgroupId).value;
   let page = +req.query.page;
   let itemsPerPage = +req.query.items;
   if (!page) page = 1;
@@ -142,7 +150,7 @@ module.exports.getAllList = async (req, res, next) => {
     whereCondition.creator = req.authUserId;
   }
 
-  const includes = generateIncludes(req.query.detail);
+  const includes = generateIncludes(req.query.detail, req);
 
   options.where = whereCondition;
   options.include = includes;
@@ -159,12 +167,16 @@ module.exports.getAllList = async (req, res, next) => {
       });
     }
 
-    return StatusResponse(res, 200, "OK", {
+    const payload = {
       total: count,
       page: page,
       itemsPerPage: itemsPerPage,
       lists: rows,
-    });
+    };
+    if (toBool(req.query.collapsible)) {
+      payload.menu = buildCategoryMenu(rows, "lists");
+    }
+    return StatusResponse(res, 200, "OK", payload);
   });
 };
 
@@ -182,16 +194,30 @@ module.exports.postUpdateList = (req, res, next) => {
 
       if (req.body.name) foundList.name = req.body.name;
       if (req.body.description) foundList.description = req.body.description;
-      if (req.body.categoryId || req.body.categoryId === null) foundList.categoryId = req.body.categoryId;
+      const categoryResolution = await CategoryScope.resolveOwnedCategoryId(
+        req,
+        req.body.categoryId
+      );
+      if (!categoryResolution.ok) {
+        return StatusResponse(
+          res,
+          categoryResolution.status,
+          categoryResolution.message
+        );
+      }
+      if (categoryResolution.hasValue) {
+        foundList.categoryId = categoryResolution.value;
+      }
 
-      if (req.body.workgroupId || req.body.workgroupId === null) {
-        if (req.body.workgroupId === null) {
+      const normalizedWorkgroup = normalizeOptionalId(req.body.workgroupId);
+      if (normalizedWorkgroup.hasField) {
+        if (normalizedWorkgroup.value === null) {
           if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
             return StatusResponse(res, 403, "Not authorized to clear workgroupId");
           }
           foundList.workgroupId = null;
-        } else {
-          const targetWorkgroup = await Workgroup.findByPk(req.body.workgroupId, { raw: true });
+        } else if (normalizedWorkgroup.value) {
+          const targetWorkgroup = await Workgroup.findByPk(normalizedWorkgroup.value, { raw: true });
           if (!targetWorkgroup) return StatusResponse(res, 421, "Workgroup not found");
           const wgAllowed = await Security.canAccessWorkgroup(req, targetWorkgroup);
           if (!wgAllowed) return StatusResponse(res, 403, "Not authorized for this workgroup");
@@ -218,7 +244,18 @@ module.exports.putAddList = async (req, res, next) => {
   const name = req.body.name;
   if (!name) return StatusResponse(res, 421, "No list name provided");
 
-  let workgroupId = req.body.workgroupId || null;
+  let workgroupId = normalizeOptionalId(req.body.workgroupId).value;
+  const categoryResolution = await CategoryScope.resolveOwnedCategoryId(
+    req,
+    req.body.categoryId
+  );
+  if (!categoryResolution.ok) {
+    return StatusResponse(
+      res,
+      categoryResolution.status,
+      categoryResolution.message
+    );
+  }
   if (workgroupId) {
     const targetWorkgroup = await Workgroup.findByPk(workgroupId, { raw: true });
     if (!targetWorkgroup) return StatusResponse(res, 421, "Workgroup not found");
@@ -238,7 +275,9 @@ module.exports.putAddList = async (req, res, next) => {
       ListToAdd.description = req.body.description;
       ListToAdd.id = UUID("list");
       ListToAdd.creator = req.authUserId;
-      if (req.body.categoryId) ListToAdd.categoryId = req.body.categoryId;
+      if (categoryResolution.hasValue) {
+        ListToAdd.categoryId = categoryResolution.value;
+      }
       if (workgroupId) ListToAdd.workgroupId = workgroupId;
 
       // Save the List to the database
