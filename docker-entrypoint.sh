@@ -65,13 +65,15 @@ else
     export OLDDIR=$(pwd)
     cd model
     node util-resetdb
-    node util-createdb
     cd ${OLDDIR}
     
 fi
 
 export OLDDIR=$(pwd)
 cd model
+# Always ensure the baseline schema exists before running incremental updates.
+# This handles the common case where the database exists but tables do not yet.
+node util-createdb || exit 1
 node util-updatedb || exit 1
 cd ${OLDDIR}
 

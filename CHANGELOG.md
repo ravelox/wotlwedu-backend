@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.14 - 2026-02-27
+- Protect `/organization` routes with capability checks (`view`, `add`, `edit`, `delete`) in the router layer.
+- Harden Docker startup flow by always running `model/util-createdb` before `model/util-updatedb` so baseline tables are created when DB exists but schema is missing.
+- Ignore macOS Finder metadata files via `.DS_Store` in `.gitignore`.
+
 ## 0.0.13 - 2026-02-27
 - Add consistent `categoryId` projection/handling across category-enabled resources (`group`, `workgroup`, `image`, `item`, `list`, `election`).
 - Enforce per-user category ownership when assigning `categoryId` on create/update (with explicit null clearing support).

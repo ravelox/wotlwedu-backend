@@ -32,6 +32,7 @@ The backend currently ships as version **0.0.13** (see `package.json` and `CHANG
 - Category assignment is user-scoped: a resource can only be assigned a category created by the authenticated user.
 - Category-enabled list endpoints support optional grouped payloads via `?collapsible=true`.
 - Workgroup/organization ID inputs now normalize common frontend placeholders (`""`, `"undefined"`, `"null"`) to reduce false `421` responses.
+- Organization route access is now guarded by capability middleware at the router level.
 
 ## Prerequisites
 - Node.js and npm
@@ -104,6 +105,7 @@ docker compose -f docker-compose.yaml up -d
 The compose stack includes:
 - `wotlwedudb` (MariaDB)
 - `wotlwedu-backend` (API)
+- Startup entrypoint always runs baseline DB creation (`model/util-createdb`) before incremental updates (`model/util-updatedb`).
 
 ## API docs
 Swagger UI assets are in `docs/` and served by the app at `/docs`.

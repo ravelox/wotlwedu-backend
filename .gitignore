@@ -3,3 +3,4 @@ package-lock.json
 public/images
 server.cert
 server.key
+.DS_Store
