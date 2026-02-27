@@ -6,6 +6,7 @@
 ## What is this repository?
 This repository contains the REST API backend for the wotlwedu ecosystem. It is used by clients such as:
 - `wotlwedu-minimal`
+- `wotlwedu-browser`
 - `wotlwedu-ios`
 
 Core stack:
@@ -112,6 +113,7 @@ Swagger UI assets are in `docs/` and served by the app at `/docs`.
 
 - OpenAPI spec: `docs/openapi.yaml`
 - Swagger UI launcher: `docs/index.html`
+- Current route modules are mounted in `app.js`; there is currently no `/ai` route mounted.
 
 Additional tenancy endpoints:
 - `GET /organization`
