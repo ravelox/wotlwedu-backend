@@ -68,7 +68,7 @@ module.exports.Image = [
 
 module.exports.Status = ["id", "object", "name"];
 
-module.exports.Category = ["id", "name", "description"];
+module.exports.Category = ["id", "name", "description", "creator"];
 
 module.exports.Role = ["id", "name", "description","protected"];
 module.exports.Capability = ["id", "name"];

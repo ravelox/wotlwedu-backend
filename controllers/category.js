@@ -40,6 +40,7 @@ module.exports.getSingleCategory = (req, res, next) => {
 
 module.exports.getAllCategory = (req, res, next) => {
   let userFilter = req.query.filter;
+  let ownerFilter = req.query.creator || req.query.userId;
   let page = +req.query.page;
   let itemsPerPage = +req.query.items;
   if (!page) page = 1;
@@ -64,6 +65,8 @@ module.exports.getAllCategory = (req, res, next) => {
 
   if (!Security.getVerdict(req.verdicts, "view").isAdmin) {
     whereCondition.creator = req.authUserId;
+  } else if (ownerFilter) {
+    whereCondition.creator = ownerFilter;
   }
 
   options.where = whereCondition;
@@ -108,6 +111,12 @@ module.exports.postUpdateCategory = (req, res, next) => {
       if (req.body.name) foundCategory.name = req.body.name;
       if (req.body.description)
         foundCategory.description = req.body.description;
+      if (
+        Security.getVerdict(req.verdicts, "edit").isAdmin &&
+        req.body.creator
+      ) {
+        foundCategory.creator = req.body.creator;
+      }
 
       foundCategory
         .save()
@@ -125,13 +134,15 @@ module.exports.postUpdateCategory = (req, res, next) => {
 
 module.exports.putAddCategory = (req, res, next) => {
   const categoryName = req.body.name;
+  const isAdmin = Security.getVerdict(req.verdicts, "add").isAdmin;
+  const categoryOwner = isAdmin && req.body.creator ? req.body.creator : req.authUserId;
 
   if (!categoryName)
     return StatusResponse(res, 421, "No category name provided");
 
   // Check to see if this user has already created a category with this name
   Category.findOne({
-    where: { creator: req.authUserId, name: categoryName },
+    where: { creator: categoryOwner, name: categoryName },
   })
     .then((foundCategory) => {
       if (foundCategory)
@@ -142,7 +153,7 @@ module.exports.putAddCategory = (req, res, next) => {
       CategoryToAdd.name = categoryName;
       CategoryToAdd.description = req.body.description;
       CategoryToAdd.id = UUID("category");
-      CategoryToAdd.creator = req.authUserId;
+      CategoryToAdd.creator = categoryOwner;
 
       // Save the Category to the database
       CategoryToAdd.save()
