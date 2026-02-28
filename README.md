@@ -26,7 +26,7 @@ Core stack:
 - `Workgroup admin user`: can administer data for one workgroup (`adminWorkgroupId`, legacy `adminGroupId`).
 
 ## Current version
-The backend currently ships as version **0.0.16** (see `package.json` and `CHANGELOG.md`).
+The backend changes in this repo are documented as **0.0.17** in `CHANGELOG.md`.
 
 ## Recent API behavior updates
 - Category IDs are now consistently included on category-enabled resources (`group`, `workgroup`, `image`, `item`, `list`, `election`).
@@ -34,6 +34,9 @@ The backend currently ships as version **0.0.16** (see `package.json` and `CHANG
 - Category-enabled list endpoints support optional grouped payloads via `?collapsible=true`.
 - Workgroup/organization ID inputs now normalize common frontend placeholders (`""`, `"undefined"`, `"null"`) to reduce false `421` responses.
 - Organization route access is now guarded by capability middleware at the router level.
+- Notification listing is paged and sorted newest-first (`GET /notification?page=&items=`).
+- Notification unread counts now use a direct count query (`GET /notification/unreadcount`).
+- Socket.IO notification events now carry structured payloads so clients can update local inbox/badge state without full refetches.
 
 ## Prerequisites
 - Node.js and npm

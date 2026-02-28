@@ -69,6 +69,7 @@ Authentication and capability authorization are implemented in [`util/security.j
 ## Real-time features and housekeeping
 
 Socket.IO support is in [`util/wotlwedu-socketio.js`](../util/wotlwedu-socketio.js) and is used for notifications/refresh events with per-user socket registration.
+Notification events now carry structured payloads so clients can apply inbox and unread-count deltas locally instead of always refetching.
 
 Periodic housekeeping is handled by [`util/housekeeping.js`](../util/housekeeping.js), invoked on an interval from `app.js`.
 

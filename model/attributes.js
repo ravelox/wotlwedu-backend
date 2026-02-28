@@ -73,7 +73,7 @@ module.exports.Category = ["id", "name", "description"];
 module.exports.Role = ["id", "name", "description","protected"];
 module.exports.Capability = ["id", "name"];
 
-module.exports.Notification = ["id", "type", "text", "objectId"];
+module.exports.Notification = ["id", "type", "text", "objectId", "createdAt"];
 module.exports.NotificationUser = [
   "id",
   "firstName",

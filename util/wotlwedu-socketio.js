@@ -56,12 +56,11 @@ async function getSocket(userId) {
   return [];
 }
 
-module.exports.notifyUser = async (userId,event) => {
+module.exports.notifyUser = async (userId, event, payload) => {
   if (!_io) return;
   const sockets = await getSocket(userId);
-  console.log(sockets);
   for (let s of sockets) {
-    _io.to(s.socketId).emit(event);
+    _io.to(s.socketId).emit(event, payload);
   }
 };
 

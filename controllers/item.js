@@ -18,6 +18,7 @@ const Category = require("../model/category");
 const Friend = require("../model/friend");
 const Notification = require("../model/notification");
 const Workgroup = require("../model/workgroup");
+const database = require("../util/database");
 
 const Attributes = require("../model/attributes")
 
@@ -385,31 +386,59 @@ module.exports.getAcceptItem = (req, res, next) => {
   if (!notificationId)
     return StatusResponse(res, 421, "No notification Id provided");
 
-  Notification.findByPk(notificationId).then(async (foundNotification) => {
-    if (!foundNotification)
-      return StatusResponse(res, 404, "Notification not found");
+  database
+    .transaction(async (transaction) => {
+      const foundNotification = await Notification.findByPk(notificationId, {
+        transaction: transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
 
-    if (foundNotification.userId !== req.authUserId)
-      return StatusResponse(
-        res,
-        421,
-        "Notification is not for the current user"
-      );
+      if (!foundNotification)
+        return StatusResponse(res, 404, "Notification not found");
 
-    const itemShareNotification = await getStatusIdByName("Share Item");
-    if (foundNotification.type !== itemShareNotification)
-      return StatusResponse(res, 421, "Notification is not an item share");
+      if (foundNotification.userId !== req.authUserId)
+        return StatusResponse(
+          res,
+          421,
+          "Notification is not for the current user"
+        );
 
-    const itemToShare = foundNotification.objectId;
+      const itemShareNotification = await getStatusIdByName("Share Item");
+      if (foundNotification.type !== itemShareNotification)
+        return StatusResponse(res, 421, "Notification is not an item share");
 
-    Helper.copyItem(itemToShare, req.authUserId)
-      .then((copiedItem) => {
-        if (!copiedItem) return StatusResponse(res, 500, "Unable to copy item");
+      const friendStatus = await getStatusIdByName("Friend");
+      const activeFriendship = await Friend.findOne({
+        where: {
+          userId: foundNotification.senderId,
+          friendId: req.authUserId,
+          statusId: friendStatus,
+        },
+        transaction: transaction,
+      });
 
-        foundNotification.destroy().then(() => {
-          return StatusResponse(res, 200, "OK");
-        });
-      })
-      .catch((err) => next(err));
-  });
+      if (!activeFriendship)
+        return StatusResponse(res, 421, "Share is no longer valid");
+
+      const itemToShare = foundNotification.objectId;
+      const copiedItem = await Helper.copyItem(itemToShare, req.authUserId, {
+        transaction: transaction,
+      });
+
+      if (!copiedItem)
+        return StatusResponse(res, 500, "Unable to copy item");
+
+      await foundNotification.destroy({ transaction: transaction });
+      return { ok: true, userId: req.authUserId, notificationId: notificationId };
+    })
+    .then(async (result) => {
+      if (!result || result.ok !== true) return result;
+
+      await Notify.emitNotificationEvent(result.userId, "deleted", {
+        notificationId: result.notificationId,
+        notification: null,
+      });
+      return StatusResponse(res, 200, "OK");
+    })
+    .catch((err) => next(err));
 };

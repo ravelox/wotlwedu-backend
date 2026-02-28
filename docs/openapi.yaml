@@ -276,7 +276,27 @@ paths:
               additionalProperties: true
     get:
       summary: GET /notification/
-      parameters: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: items
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: statusId
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: type
+        in: query
+        required: false
+        schema:
+          type: integer
       responses:
         '200':
           description: Successful response

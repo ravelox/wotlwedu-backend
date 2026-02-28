@@ -69,14 +69,15 @@ module.exports.getStatusId = (req, res, next) => {
     .catch((err) => next(err));
 };
 
-module.exports.copyImage = (origImageId, newOwnerId) => {
+module.exports.copyImage = (origImageId, newOwnerId, options = {}) => {
   const imageDir = Config.imageDir;
+  const transaction = options.transaction;
 
   return new Promise((resolve, reject) => {
     if (!origImageId || !newOwnerId)
       reject(new Error("Need image ID and owner"));
 
-    Image.findByPk(origImageId, { raw: true }).then((foundImage) => {
+    Image.findByPk(origImageId, { raw: true, transaction: transaction }).then((foundImage) => {
       if (!foundImage) return reject(new Error("No image found"));
 
       const newImageId = UUID("image");
@@ -105,7 +106,7 @@ module.exports.copyImage = (origImageId, newOwnerId) => {
       newImage.categoryId = null;
 
       newImage
-        .save()
+        .save({ transaction: transaction })
         .then((imageCreated) => {
           if (!imageCreated)
             return reject(new Error("Cannot save new image record"));
@@ -116,16 +117,19 @@ module.exports.copyImage = (origImageId, newOwnerId) => {
   });
 };
 
-module.exports.copyItem = (origItemId, newOwnerId) => {
+module.exports.copyItem = (origItemId, newOwnerId, options = {}) => {
+  const transaction = options.transaction;
   return new Promise((resolve, reject) => {
     if (!origItemId || !newOwnerId) reject(new Error("Need item ID and owner"));
 
-    Item.findByPk(origItemId, { raw: true }).then(async (foundItem) => {
+    Item.findByPk(origItemId, { raw: true, transaction: transaction }).then(async (foundItem) => {
       if (!foundItem) reject(new Error("No item found"));
       let newImageId = null;
       // If there is an image attached, copy it and get the new Id
       if (foundItem.imageId) {
-        const newImage = await this.copyImage(foundItem.imageId, newOwnerId);
+        const newImage = await this.copyImage(foundItem.imageId, newOwnerId, {
+          transaction: transaction,
+        });
         delete foundItem.imageId;
         if (newImage) foundItem.imageId = newImage.id;
       }
@@ -143,7 +147,7 @@ module.exports.copyItem = (origItemId, newOwnerId) => {
       newItem.categoryId = null;
 
       newItem
-        .save()
+        .save({ transaction: transaction })
         .then((itemCreated) => {
           if (!itemCreated) reject(new Error("Cannot save new item record"));
           resolve(itemCreated);
@@ -153,11 +157,12 @@ module.exports.copyItem = (origItemId, newOwnerId) => {
   });
 };
 
-module.exports.copyList = (origListId, newOwnerId) => {
+module.exports.copyList = (origListId, newOwnerId, options = {}) => {
+  const transaction = options.transaction;
   return new Promise((resolve, reject) => {
     if (!origListId || !newOwnerId) reject(new Error("Need item ID and owner"));
 
-    List.findByPk(origListId, { raw: true }).then(async (foundList) => {
+    List.findByPk(origListId, { raw: true, transaction: transaction }).then(async (foundList) => {
       if (!foundList) reject(new Error("No list found"));
 
       delete foundList.id;
@@ -172,24 +177,26 @@ module.exports.copyList = (origListId, newOwnerId) => {
       // Empty the category field
       newList.categoryId = null;
 
-      newList.save().then((listCreated) => {
+      newList.save({ transaction: transaction }).then((listCreated) => {
         if (!listCreated) reject(new Error("Cannot save new item record"));
 
         // Now that the list is created, we can start copying the items from the original
-        ListItem.findAll({ where: { listId: origListId } }).then(
+        ListItem.findAll({ where: { listId: origListId }, transaction: transaction }).then(
           async (results) => {
             if (results) {
               for (let listitem of results) {
-                await Item.findByPk(listitem.itemId).then(async (itemFound) => {
+                await Item.findByPk(listitem.itemId, { transaction: transaction }).then(async (itemFound) => {
                   if (itemFound) {
                     const newItem = await this.copyItem(
                       itemFound.id,
-                      newOwnerId
+                      newOwnerId,
+                      { transaction: transaction }
                     );
 
                     await newList
                       .addItem(newItem, {
                         through: { id: UUID("listitem"), creator: newOwnerId },
+                        transaction: transaction,
                       })
                       .then((addedItem) => {
                         if (!addedItem) reject("Cannot copy new item to list");

@@ -1,239 +1,250 @@
-const Util = require("util");
-
 const Security = require("../util/security");
 const UUID = require("../util/mini-uuid");
 const StatusResponse = require("../util/statusresponse");
 const { copyObject, getStatusIdByName } = require("../util/helpers");
-const Sequelize = require("sequelize");
+
+const Config = require("../config/wotlwedu");
+const Notify = require("../util/notification");
 
 const Notification = require("../model/notification");
 const User = require("../model/user");
 const Status = require("../model/status");
-const { stat } = require("fs");
 
-const Attributes = require("../model/attributes")
+const Attributes = require("../model/attributes");
 
-module.exports.getSingleNotification = (req, res, next) => {
-  const notificationToFind = req.params.notificationId;
-  if (!notificationToFind)
-    return StatusResponse(res, 421, "No notification ID provided");
+function buildIncludes() {
+  const includes = [];
 
-  const options = {};
-  const whereCondition = {};
-
-  whereCondition.id = notificationToFind;
-  if (!Security.getVerdict(req.verdicts, "view").isAdmin) {
-    whereCondition.userId = req.authUserId;
+  if (Notification.associations.user) {
+    includes.push({ model: User, attributes: Attributes.NotificationUser, as: "user" });
   }
-  
-  const includes = [];
-  includes.push({ model: User, attributes: Attributes.NotificationUser });
-  includes.push({ model: User, attributes: Attributes.NotificationSender, as: "sender" });
-  includes.push({
-    model: Status,
-    attributes: Attributes.Status,
-  });
+  if (Notification.associations.sender) {
+    includes.push({ model: User, attributes: Attributes.NotificationSender, as: "sender" });
+  }
+  if (Notification.associations.status) {
+    includes.push({ model: Status, attributes: Attributes.Status });
+  }
 
-  options.where = whereCondition;
-  options.attributes = Attributes.Notification;
-  options.include = includes;
+  return includes;
+}
 
-  Notification.findOne(options)
-    .then((foundNotification) => {
-      if (!foundNotification)
-        return StatusResponse(res, 404, "Notification not found");
+function buildNotificationSummary(notification) {
+  return copyObject(notification, Attributes.Notification);
+}
 
-      return StatusResponse(res, 200, "OK", { notification: foundNotification });
-    })
-    .catch((err) => next(err));
-};
+module.exports.getSingleNotification = async (req, res, next) => {
+  try {
+    const notificationToFind = req.params.notificationId;
+    if (!notificationToFind)
+      return StatusResponse(res, 421, "No notification ID provided");
 
-module.exports.getAllNotification = (req, res, next) => {
-  const options = {};
-  const whereCondition = {};
-
-  whereCondition.userId = req.authUserId;
-
-  const includes = [];
-  includes.push({ model: User, attributes: Attributes.NotificationUser });
-  includes.push({ model: User, attributes: Attributes.NotificationSender, as: "sender" });
-  includes.push({ model: Status, attributes: Attributes.Status });
-
-  options.where = whereCondition;
-  options.attributes = Attributes.Notification;
-  options.include = includes;
-  options.distinct = true;
-
-  Notification.findAll(options).then((foundNotifications) => {
-    if (!foundNotifications) {
-      return StatusResponse(res, 200, "OK", {
-        notifications: [],
-      });
+    const whereCondition = { id: notificationToFind };
+    if (!Security.getVerdict(req.verdicts, "view").isAdmin) {
+      whereCondition.userId = req.authUserId;
     }
 
-    return StatusResponse(res, 200, "OK", {
-      notifications: foundNotifications,
+    const foundNotification = await Notification.findOne({
+      where: whereCondition,
+      attributes: Attributes.Notification,
+      include: buildIncludes(),
     });
-  });
+
+    if (!foundNotification)
+      return StatusResponse(res, 404, "Notification not found");
+
+    return StatusResponse(res, 200, "OK", { notification: foundNotification });
+  } catch (err) {
+    return next(err);
+  }
 };
 
-module.exports.getUnreadNotificationCount = async (req,res,next) => {
-  const options = {};
-  const whereCondition = {};
+module.exports.getAllNotification = async (req, res, next) => {
+  try {
+    let page = +req.query.page;
+    let itemsPerPage = +req.query.items;
 
-  const unreadStatus = await getStatusIdByName("Unread");
+    if (!page || page < 1) page = 1;
+    if (!itemsPerPage || itemsPerPage < 1)
+      itemsPerPage = +Config.defaultItemsPerPage;
 
-  whereCondition.userId = req.authUserId;
-  whereCondition.statusId = unreadStatus;
-  
-  options.where = whereCondition;
-  options.attributes = Attributes.Notification;
-  options.distinct = true;
+    const whereCondition = { userId: req.authUserId };
+    if (req.query.statusId) whereCondition.statusId = +req.query.statusId;
+    if (req.query.type) whereCondition.type = +req.query.type;
 
-  Notification.findAll(options).then((foundNotifications) => {
-    if (!foundNotifications) {
-      return StatusResponse(res, 200, "OK", {
-        unread: 0,
-      });
+    const count = await Notification.count({
+      where: whereCondition,
+    });
+
+    const rows = await Notification.findAll({
+      where: whereCondition,
+      attributes: Attributes.Notification,
+      include: buildIncludes(),
+      order: [["createdAt", "DESC"]],
+      limit: itemsPerPage,
+      offset: (page - 1) * itemsPerPage,
+    });
+
+    return StatusResponse(res, 200, "OK", {
+      notifications: rows || [],
+      page: page,
+      total: count || 0,
+      itemsPerPage: itemsPerPage,
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+module.exports.getUnreadNotificationCount = async (req, res, next) => {
+  try {
+    const unreadStatus = await getStatusIdByName("Unread");
+    const unread = await Notification.count({
+      where: {
+        userId: req.authUserId,
+        statusId: unreadStatus,
+      },
+    });
+
+    return StatusResponse(res, 200, "OK", { unread: unread || 0 });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+module.exports.postUpdateNotification = async (req, res, next) => {
+  try {
+    const notificationToFind = req.params.notificationId;
+    if (!notificationToFind)
+      return StatusResponse(res, 421, "No notification ID provided");
+
+    const whereCondition = { id: notificationToFind };
+    if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
+      whereCondition.userId = req.authUserId;
     }
 
-    return StatusResponse(res, 200, "OK", {
-      unread: foundNotifications.length,
+    const foundNotification = await Notification.findOne({ where: whereCondition });
+    if (!foundNotification)
+      return StatusResponse(res, 404, "Notification not found");
+
+    if (req.body.userId) foundNotification.userId = req.body.userId;
+    if (req.body.senderId) foundNotification.senderId = req.body.senderId;
+    if (req.body.statusId) foundNotification.statusId = req.body.statusId;
+    if (req.body.type) foundNotification.type = req.body.type;
+    if (req.body.text) foundNotification.text = req.body.text;
+    if (req.body.objectId !== undefined) foundNotification.objectId = req.body.objectId;
+
+    const updatedNotification = await foundNotification.save();
+    if (!updatedNotification)
+      return StatusResponse(res, 500, "Unable to update notification");
+
+    await Notify.emitNotificationEvent(updatedNotification.userId, "updated", {
+      notificationId: updatedNotification.id,
     });
-  });
-};
 
-module.exports.postUpdateNotification = (req, res, next) => {
-  const notificationToFind = req.params.notificationId;
-  if (!notificationToFind)
-    return StatusResponse(res, 421, "No notification ID provided");
-
-  let whereCondition = {};
-
-  whereCondition.id = notificationToFind;
-
-  if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
-    whereCondition.userId = req.authUserId;
+    return StatusResponse(res, 200, "OK", {
+      notification: buildNotificationSummary(updatedNotification),
+    });
+  } catch (err) {
+    return next(err);
   }
-  Notification.findOne({ where: whereCondition })
-    .then((foundNotification) => {
-      if (!foundNotification)
-        return StatusResponse(res, 404, "Notification not found");
-
-      if (req.body.userId) foundNotification.userId = req.body.userId;
-      if (req.body.senderId) foundNotification.senderId = req.body.senderId;
-      if (req.body.statusId) foundNotification.statusId = req.body.statusId;
-      if (req.body.type) foundNotification.type = req.body.type;
-      if (req.body.text) foundNotification.text = req.body.text;
-
-      foundNotification
-        .save()
-        .then((updatedNotification) => {
-          if (!updatedNotification)
-            return StatusResponse(res, 500, "Unable to update notification");
-          return StatusResponse(res, 200, "OK", {
-            category: copyObject(updatedNotification, Attributes.Notification),
-          });
-        })
-        .catch((err) => next(err));
-    })
-    .catch((err) => next(err));
 };
 
-module.exports.putAddNotification = (req, res, next) => {
-  const addUserId = req.body.userId;
-  const addSenderId = req.body.senderId;
-  const addStatus = req.body.statusId;
-  const addType = req.body.type;
-  const addText = req.body.text;
+module.exports.putAddNotification = async (req, res, next) => {
+  try {
+    const addUserId = req.body.userId;
+    const addSenderId = req.body.senderId;
+    const addStatus = req.body.statusId;
+    const addType = req.body.type;
+    const addText = req.body.text;
+    const addObjectId = req.body.objectId;
 
-  if (!addUserId || !addSenderId || !addStatus || !addType || !addText)
-    return StatusResponse(res, 421, "Must provide all details");
+    if (!addUserId || !addSenderId || !addStatus || !addType || !addText)
+      return StatusResponse(res, 421, "Must provide all details");
 
-  // Populate the Category properties
-  const notificationToAdd = new Notification();
-  notificationToAdd.userId = addUserId;
-  notificationToAdd.senderId = addSenderId;
-  notificationToAdd.id = UUID("notif");
-  notificationToAdd.statusId = addStatus;
-  notificationToAdd.type = addType;
-  notificationToAdd.text = addText;
-  notificationToAdd.creator = req.authUserId;
+    const notificationToAdd = new Notification();
+    notificationToAdd.userId = addUserId;
+    notificationToAdd.senderId = addSenderId;
+    notificationToAdd.id = UUID("notif");
+    notificationToAdd.statusId = addStatus;
+    notificationToAdd.type = addType;
+    notificationToAdd.text = addText;
+    notificationToAdd.objectId = addObjectId || null;
+    notificationToAdd.creator = req.authUserId;
 
-  // Save the Category to the database
-  notificationToAdd
-    .save()
-    .then((addedNotification) => {
-      if (!addedNotification)
-        return StatusResponse(res, 500, "Cannot add Notification");
+    const addedNotification = await notificationToAdd.save();
+    if (!addedNotification)
+      return StatusResponse(res, 500, "Cannot add notification");
 
-      return StatusResponse(res, 200, "OK", {
-        category: copyObject(addedNotification, Attributes.Notification),
-      });
-    })
-    .catch((err) => next(err));
-};
+    await Notify.emitNotificationEvent(addedNotification.userId, "created", {
+      notificationId: addedNotification.id,
+    });
 
-module.exports.deleteNotification = (req, res, next) => {
-  const notificationToFind = req.params.notificationId;
-  if (!notificationToFind)
-    return StatusResponse(res, 421, "No notification ID provided");
-
-  let whereCondition = { id: notificationToFind };
-
-  // The creator column is always null so allow the logged in
-  // user to be able to delete notifications which were sent to them
-  if (!Security.getVerdict(req.verdicts, "delete").isAdmin) {
-    whereCondition.userId = req.authUserId;
+    return StatusResponse(res, 200, "OK", {
+      notification: buildNotificationSummary(addedNotification),
+    });
+  } catch (err) {
+    return next(err);
   }
-
-  Notification.findOne({ where: whereCondition })
-    .then((foundNotification) => {
-      if (!foundNotification)
-        return StatusResponse(res, 404, "Notification not found");
-
-      foundNotification
-        .destroy()
-        .then((deletedNotification) => {
-          if (!deletedNotification)
-            return StatusResponse(res, 500, "Cannot delete notification");
-          return StatusResponse(res, 200, "OK");
-        })
-        .catch((err) => next(err));
-    })
-    .catch((err) => next(err));
 };
 
-module.exports.putSetStatus = (req, res, next) => {
-  const notificationToFind = req.params.notificationId;
-  const statusId = req.params.statusId;
-  const options = {};
+module.exports.deleteNotification = async (req, res, next) => {
+  try {
+    const notificationToFind = req.params.notificationId;
+    if (!notificationToFind)
+      return StatusResponse(res, 421, "No notification ID provided");
 
-  if (!notificationToFind || !statusId)
-    return StatusResponse(res, 421, "Need a notification Id and a status Id");
+    const whereCondition = { id: notificationToFind };
+    if (!Security.getVerdict(req.verdicts, "delete").isAdmin) {
+      whereCondition.userId = req.authUserId;
+    }
 
-  let whereCondition = {};
+    const foundNotification = await Notification.findOne({ where: whereCondition });
+    if (!foundNotification)
+      return StatusResponse(res, 404, "Notification not found");
 
-  whereCondition.id = notificationToFind;
-
-  if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
-    whereCondition.userId = req.authUserId;
+    const deletedUserId = foundNotification.userId;
+    const deletedNotificationId = foundNotification.id;
+    await foundNotification.destroy();
+    await Notify.emitNotificationEvent(deletedUserId, "deleted", {
+      notificationId: deletedNotificationId,
+      notification: null,
+    });
+    return StatusResponse(res, 200, "OK");
+  } catch (err) {
+    return next(err);
   }
+};
 
-  options.where = whereCondition;
+module.exports.putSetStatus = async (req, res, next) => {
+  try {
+    const notificationToFind = req.params.notificationId;
+    const statusId = req.params.statusId;
 
-  Notification.findOne(options).then((foundNotif) => {
-    if (!foundNotif) return StatusResponse(res, 404, "Notification not found");
+    if (!notificationToFind || !statusId)
+      return StatusResponse(res, 421, "Need a notification Id and a status Id");
+
+    const whereCondition = { id: notificationToFind };
+    if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
+      whereCondition.userId = req.authUserId;
+    }
+
+    const foundNotif = await Notification.findOne({ where: whereCondition });
+    if (!foundNotif)
+      return StatusResponse(res, 404, "Notification not found");
 
     foundNotif.statusId = statusId;
+    const updatedNotif = await foundNotif.save();
+    if (!updatedNotif)
+      return StatusResponse(res, 500, "Cannot update notification status");
 
-    foundNotif.save().then((updatedNotif) => {
-      if (!updatedNotif)
-        return StatusResponse(res, 500, "Cannot update notification status");
-      return StatusResponse(res, 200, "OK", {
-        id: foundNotif.id,
-        options: options,
-      });
+    await Notify.emitNotificationEvent(updatedNotif.userId, "updated", {
+      notificationId: updatedNotif.id,
     });
-  });
+
+    return StatusResponse(res, 200, "OK", {
+      notification: buildNotificationSummary(updatedNotif),
+    });
+  } catch (err) {
+    return next(err);
+  }
 };

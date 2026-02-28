@@ -1,8 +1,12 @@
 # Changelog
 
-## 0.0.16 - 2026-02-28
+## 0.0.17 - 2026-02-28
 - Add optional Helm ingress support to `k8s/`.
 - Add optional per-environment Helm service/ingress overrides via `environment` and `environments.<name>.*` values.
+- Make notification listing paginated and newest-first, and make unread counts use a database count instead of loading all unread rows.
+- Clean up notification API response payloads to return `notification` consistently for create/update/status operations.
+- Make item/list/image share acceptance re-check friendship and execute the copy/delete flow through a transaction-aware code path.
+- Emit structured notification socket payloads (`kind`, `notificationId`, `unreadCount`, optional `notification`) for client-side delta updates instead of only firing a bare invalidation signal.
 
 ## 0.0.15 - 2026-02-27
 - Make the update runner adapter-independent from runtime `WOTLWEDU_DB_TYPE` by forcing Sequelize for update execution (`model/util-updatedb.js` + `util/database.js`).

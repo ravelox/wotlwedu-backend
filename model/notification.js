@@ -50,7 +50,13 @@ const Notification = database.define(
     },
   },
   {
-    indexes: [{ fields: ["creator"] }, { fields: ["userId"] }, {fields: ["objectId"]}],
+    indexes: [
+      { fields: ["creator"] },
+      { fields: ["userId"] },
+      { fields: ["objectId"] },
+      { fields: ["userId", "statusId"] },
+      { fields: ["userId", "createdAt"] },
+    ],
   }
 );
 

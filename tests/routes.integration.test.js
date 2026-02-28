@@ -56,10 +56,12 @@ function buildApp() {
 
   const itemRoutes = require("../routes/item");
   const listRoutes = require("../routes/list");
+  const notificationRoutes = require("../routes/notification");
 
   // Mirror app.js protected routes used in tests
   baseApp.use("/item", Security.checkAuthentication, itemRoutes);
   baseApp.use("/list", Security.checkAuthentication, listRoutes);
+  baseApp.use("/notification", Security.checkAuthentication, notificationRoutes);
 
   // Ping route
   baseApp.use(
@@ -125,6 +127,8 @@ module.exports = (addTest) => {
   let server;
   let app;
   let createdItemId;
+  let Notification;
+  let Status;
 
   addTest("setup test database", async () => {
     Associations.setup();
@@ -142,6 +146,24 @@ module.exports = (addTest) => {
       active: true,
       admin: true,
     });
+    await User.create({
+      id: "user_sender",
+      firstName: "Sender",
+      lastName: "User",
+      alias: "sender",
+      email: "sender@example.com",
+      creator: "user_test",
+      active: true,
+      admin: false,
+    });
+
+    Status = require("../model/status");
+    Notification = require("../model/notification");
+
+    await Status.bulkCreate([
+      { id: 100, object: "notification", name: "Unread" },
+      { id: 101, object: "notification", name: "Read" },
+    ]);
   });
 
   addTest("start test server", async () => {
@@ -194,6 +216,44 @@ module.exports = (addTest) => {
   addTest("delete item via DELETE /item/:id", async () => {
     const res = await request(server, "DELETE", `/item/${createdItemId}`);
     assert.strictEqual(res.status, 200);
+  });
+
+  addTest("notification list includes pagination metadata and newest-first ordering", async () => {
+    await Notification.create({
+      id: "notif_old",
+      userId: "user_test",
+      senderId: "user_sender",
+      type: 103,
+      text: "Older notification",
+      statusId: 100,
+      createdAt: new Date("2026-02-27T10:00:00Z"),
+      updatedAt: new Date("2026-02-27T10:00:00Z"),
+    });
+    await Notification.create({
+      id: "notif_new",
+      userId: "user_test",
+      senderId: "user_sender",
+      type: 103,
+      text: "Newer notification",
+      statusId: 100,
+      createdAt: new Date("2026-02-28T10:00:00Z"),
+      updatedAt: new Date("2026-02-28T10:00:00Z"),
+    });
+
+    const res = await request(server, "GET", "/notification?page=1&items=1");
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.data.page, 1);
+    assert.strictEqual(res.body.data.itemsPerPage, 1);
+    assert.strictEqual(res.body.data.total, 2);
+    assert.ok(Array.isArray(res.body.data.notifications));
+    assert.strictEqual(res.body.data.notifications.length, 1);
+    assert.strictEqual(res.body.data.notifications[0].id, "notif_new");
+  });
+
+  addTest("notification unread count returns count payload", async () => {
+    const res = await request(server, "GET", "/notification/unreadcount");
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.data.unread, 2);
   });
 
   addTest("teardown server", async () => {

@@ -1149,11 +1149,15 @@ curl -sS "$API/cast/$VOTE_ID/decision" \
 curl -sS "$API/notification?page=1&items=50" -H "Authorization: Bearer $TOKEN"
 ```
 
+Response data includes `notifications`, `page`, `total`, and `itemsPerPage`, ordered by newest first.
+
 ### `GET /notification/unreadcount`
 
 ```sh
 curl -sS "$API/notification/unreadcount" -H "Authorization: Bearer $TOKEN"
 ```
+
+Response data includes `unread`.
 
 ### `GET /notification/:notificationId`
 
@@ -1169,7 +1173,7 @@ curl -sS "$API/notification" \
   -X POST \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"recipient":"user_123","statusId":"status_000","objectId":"item_000","message":"Example"}'
+  -d '{"userId":"user_123","senderId":"user_456","statusId":100,"type":109,"objectId":"item_000","text":"Example"}'
 ```
 
 ### `PUT /notification/:notificationId` (update notification)
@@ -1180,14 +1184,14 @@ curl -sS "$API/notification/$NOTIF_ID" \
   -X PUT \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"comment":"Updated"}'
+  -d '{"text":"Updated","objectId":"item_001"}'
 ```
 
 ### `PUT /notification/status/:notificationId/:statusId` (set status)
 
 ```sh
 NOTIF_ID="notif_000"
-STATUS_ID="status_000"
+STATUS_ID="101"
 curl -sS "$API/notification/status/$NOTIF_ID/$STATUS_ID" -X PUT -H "Authorization: Bearer $TOKEN"
 ```
 
