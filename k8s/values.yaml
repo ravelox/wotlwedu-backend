@@ -1,4 +1,5 @@
 replicaCount: 1
+environment: ""
 
 image:
   repository: wotlwedu-backend
@@ -9,6 +10,21 @@ service:
   type: ClusterIP
   port: 80
   targetPort: 9876
+
+ingress:
+  enabled: false
+  className: ""
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  hosts:
+    - host: api.wotlwedu.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: wotlwedu-backend-tls
+      hosts:
+        - api.wotlwedu.com
 
 imagePullSecrets: []
 nameOverride: ""
@@ -62,3 +78,22 @@ serviceAccount:
   create: false
   annotations: {}
   name: ""
+
+environments: {}
+# Example:
+# environments:
+#   dev:
+#     service:
+#       type: NodePort
+#       port: 30876
+#     ingress:
+#       enabled: true
+#       hosts:
+#         - host: api-dev.wotlwedu.com
+#           paths:
+#             - path: /
+#               pathType: Prefix
+#       tls:
+#         - secretName: wotlwedu-backend-dev-tls
+#           hosts:
+#             - api-dev.wotlwedu.com

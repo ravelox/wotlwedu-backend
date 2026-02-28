@@ -26,7 +26,7 @@ Core stack:
 - `Workgroup admin user`: can administer data for one workgroup (`adminWorkgroupId`, legacy `adminGroupId`).
 
 ## Current version
-The backend currently ships as version **0.0.13** (see `package.json` and `CHANGELOG.md`).
+The backend currently ships as version **0.0.16** (see `package.json` and `CHANGELOG.md`).
 
 ## Recent API behavior updates
 - Category IDs are now consistently included on category-enabled resources (`group`, `workgroup`, `image`, `item`, `list`, `election`).
@@ -107,6 +107,13 @@ The compose stack includes:
 - `wotlwedudb` (MariaDB)
 - `wotlwedu-backend` (API)
 - Startup entrypoint always runs baseline DB creation (`model/util-createdb`) before incremental updates (`model/util-updatedb`).
+
+## Helm
+A Helm chart is available under `k8s/`.
+
+Notes:
+- The backend chart now includes optional ingress support.
+- Set `environment` and `environments.<name>.service` / `environments.<name>.ingress` in Helm values to apply optional per-environment service and ingress overrides.
 
 ## API docs
 Swagger UI assets are in `docs/` and served by the app at `/docs`.

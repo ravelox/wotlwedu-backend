@@ -1,0 +1,53 @@
+{{- $service := deepCopy .Values.service -}}
+{{- $ingress := deepCopy .Values.ingress -}}
+{{- $environment := default "" .Values.environment -}}
+{{- if and $environment (hasKey .Values.environments $environment) -}}
+  {{- $envConfig := index .Values.environments $environment -}}
+  {{- if hasKey $envConfig "service" -}}
+    {{- $service = mergeOverwrite $service $envConfig.service -}}
+  {{- end -}}
+  {{- if hasKey $envConfig "ingress" -}}
+    {{- $ingress = mergeOverwrite $ingress $envConfig.ingress -}}
+  {{- end -}}
+{{- end -}}
+{{- if $ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "wotlwedu-backend.fullname" . }}
+  labels:
+    {{- include "wotlwedu-backend.labels" . | nindent 4 }}
+  {{- with $ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if $ingress.className }}
+  ingressClassName: {{ $ingress.className }}
+  {{- end }}
+  {{- if $ingress.tls }}
+  tls:
+    {{- range $ingress.tls }}
+    - secretName: {{ .secretName }}
+      hosts:
+        {{- range .hosts }}
+        - {{ . }}
+        {{- end }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range $ingress.hosts }}
+    - host: {{ .host }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "wotlwedu-backend.fullname" $ }}
+                port:
+                  number: {{ $service.port }}
+          {{- end }}
+    {{- end }}
+{{- end }}

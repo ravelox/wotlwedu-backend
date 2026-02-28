@@ -1,3 +1,11 @@
+{{- $service := deepCopy .Values.service -}}
+{{- $environment := default "" .Values.environment -}}
+{{- if and $environment (hasKey .Values.environments $environment) -}}
+  {{- $envConfig := index .Values.environments $environment -}}
+  {{- if hasKey $envConfig "service" -}}
+    {{- $service = mergeOverwrite $service $envConfig.service -}}
+  {{- end -}}
+{{- end -}}
 apiVersion: v1
 kind: Service
 metadata:
@@ -5,11 +13,11 @@ metadata:
   labels:
     {{- include "wotlwedu-backend.labels" . | nindent 4 }}
 spec:
-  type: {{ .Values.service.type }}
+  type: {{ $service.type }}
   selector:
     {{- include "wotlwedu-backend.selectorLabels" . | nindent 4 }}
   ports:
-    - port: {{ .Values.service.port }}
-      targetPort: {{ .Values.service.targetPort }}
+    - port: {{ $service.port }}
+      targetPort: {{ $service.targetPort }}
       protocol: TCP
       name: http

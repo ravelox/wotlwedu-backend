@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.16 - 2026-02-28
+- Add optional Helm ingress support to `k8s/`.
+- Add optional per-environment Helm service/ingress overrides via `environment` and `environments.<name>.*` values.
+
 ## 0.0.15 - 2026-02-27
 - Make the update runner adapter-independent from runtime `WOTLWEDU_DB_TYPE` by forcing Sequelize for update execution (`model/util-updatedb.js` + `util/database.js`).
 - This keeps update modules portable across configured runtime adapters while preserving existing Sequelize-based update implementations.
