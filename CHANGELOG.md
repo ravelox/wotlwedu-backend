@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.0.18 - 2026-02-28
+- Normalize `item.workgroupId` inputs through the shared ID normalizer on list/create/update paths so placeholder values like `" undefined "` and `" null "` do not trigger inconsistent item-scoping behavior.
+
 ## 0.0.17 - 2026-02-28
 - Add optional Helm ingress support to `k8s/`.
 - Add optional per-environment Helm service/ingress overrides via `environment` and `environments.<name>.*` values.

@@ -204,6 +204,29 @@ module.exports = (addTest) => {
     assert.ok(res.body.data.items.length >= 1);
   });
 
+  addTest("list items ignores placeholder workgroup and paging values", async () => {
+    const res = await request(
+      server,
+      "GET",
+      "/item?workgroupId=%20undefined%20&page=undefined&items=0"
+    );
+    assert.strictEqual(res.status, 200);
+    assert.ok(Array.isArray(res.body.data.items));
+    assert.strictEqual(res.body.data.page, 1);
+    assert.ok(res.body.data.itemsPerPage >= 1);
+  });
+
+  addTest("create item ignores placeholder workgroupId in payload", async () => {
+    const res = await request(server, "POST", "/item", {
+      name: "Placeholder Workgroup Item",
+      description: "Item description",
+      url: "http://example.com/placeholder",
+      workgroupId: " null ",
+    });
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.data.item.workgroupId ?? null, null);
+  });
+
   addTest("update item via PUT /item/:id", async () => {
     const res = await request(server, "PUT", `/item/${createdItemId}`, {
       name: "Updated Item",

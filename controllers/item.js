@@ -9,6 +9,7 @@ const UUID = require("../util/mini-uuid");
 const StatusResponse = require("../util/statusresponse");
 const toBool = require("../util/tobool");
 const CategoryScope = require("../util/categoryscope");
+const { normalizeOptionalId } = require("../util/idnormalize");
 const Notify = require("../util/notification");
 const { copyObject, getStatusIdByName, buildCategoryMenu } = require("../util/helpers");
 
@@ -97,13 +98,7 @@ module.exports.getItem = async (req, res, next) => {
 
 module.exports.getAllItem = async (req, res, next) => {
   let userFilter = req.query.filter;
-  const rawWorkgroupId = req.query.workgroupId;
-  const workgroupId =
-    rawWorkgroupId &&
-    rawWorkgroupId !== "undefined" &&
-    rawWorkgroupId !== "null"
-      ? rawWorkgroupId
-      : null;
+  const workgroupId = normalizeOptionalId(req.query.workgroupId).value;
   let page = +req.query.page;
   let itemsPerPage = +req.query.items;
   if (!page) page = 1;
@@ -205,22 +200,17 @@ module.exports.postUpdateItem = async (req, res, next) => {
         foundItem.categoryId = categoryResolution.value;
       }
 
-      const rawWorkgroupId = req.body.workgroupId;
-      const hasWorkgroupIdField =
-        rawWorkgroupId !== undefined &&
-        rawWorkgroupId !== "undefined";
-      const requestedWorkgroupId =
-        rawWorkgroupId === "null" ? null : rawWorkgroupId;
+      const normalizedWorkgroup = normalizeOptionalId(req.body.workgroupId);
 
-      if (hasWorkgroupIdField) {
-        if (requestedWorkgroupId === null) {
+      if (normalizedWorkgroup.hasField) {
+        if (normalizedWorkgroup.value === null) {
           // Only system admins can remove workgroup scoping.
           if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
             return StatusResponse(res, 403, "Not authorized to clear workgroupId");
           }
           foundItem.workgroupId = null;
-        } else if (requestedWorkgroupId) {
-          const targetWorkgroup = await Workgroup.findByPk(requestedWorkgroupId, { raw: true });
+        } else if (normalizedWorkgroup.value) {
+          const targetWorkgroup = await Workgroup.findByPk(normalizedWorkgroup.value, { raw: true });
           if (!targetWorkgroup) return StatusResponse(res, 421, "Workgroup not found");
           const allowed = await Security.canAccessWorkgroup(req, targetWorkgroup);
           if (!allowed) return StatusResponse(res, 403, "Not authorized for this workgroup");
@@ -276,13 +266,7 @@ module.exports.putAddItem = async (req, res, next) => {
     itemToAdd.categoryId = categoryResolution.value;
   }
 
-  const rawWorkgroupId = req.body.workgroupId;
-  const requestWorkgroupId =
-    rawWorkgroupId &&
-    rawWorkgroupId !== "undefined" &&
-    rawWorkgroupId !== "null"
-      ? rawWorkgroupId
-      : null;
+  const requestWorkgroupId = normalizeOptionalId(req.body.workgroupId).value;
 
   if (requestWorkgroupId) {
     const targetWorkgroup = await Workgroup.findByPk(requestWorkgroupId, { raw: true });
