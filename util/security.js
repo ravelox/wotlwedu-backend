@@ -7,6 +7,7 @@ const Config = require("../config/wotlwedu");
 const StatusResponse = require("./statusresponse");
 
 const User = require("../model/user");
+const TestToken = require("../model/testtoken");
 const Capability = require("../model/capability");
 const Workgroup = require("../model/workgroup");
 const WorkgroupMember = require("../model/workgroupmember");
@@ -158,6 +159,36 @@ module.exports.checkAuthentication = async (req, res, next) => {
     }
 
     if (!foundUser.active) return StatusResponse(res, 403, "Account disabled");
+
+    if (decoded.kind === "test") {
+      if (!decoded.jti) {
+        return StatusResponse(res, 401, "Not authenticated", {
+          message: "Missing test token ID",
+        });
+      }
+
+      const foundTestToken = await TestToken.findByPk(decoded.jti, { raw: true });
+      if (!foundTestToken) {
+        return StatusResponse(res, 401, "Not authenticated", {
+          message: "Unknown test token",
+        });
+      }
+      if (foundTestToken.userId !== decoded.user) {
+        return StatusResponse(res, 401, "Not authenticated", {
+          message: "Test token user mismatch",
+        });
+      }
+      if (foundTestToken.revokedAt) {
+        return StatusResponse(res, 401, "Not authenticated", {
+          message: "Test token revoked",
+        });
+      }
+      if (new Date(foundTestToken.expiresAt).getTime() < Date.now()) {
+        return StatusResponse(res, 401, "Not authenticated", {
+          message: "Test token expired",
+        });
+      }
+    }
 
     //Save the user ID in the req object
     req.authUserId = decoded.user;

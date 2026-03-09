@@ -28,6 +28,7 @@ const Vote = require("./vote");
 const Metadata = require("./metadata");
 const Preference = require("./preference");
 const SocketInfo = require("./socketinfo")
+const TestToken = require("./testtoken")
 
 async function initialiseDatabaseMetadata() {
   await Metadata.sync();

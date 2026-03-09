@@ -103,6 +103,24 @@ curl -sS "$API/login/2fa" -H "Authorization: Bearer $TOKEN"
 curl -sS "$API/login/gentoken" -H "Authorization: Bearer $TOKEN"
 ```
 
+### `POST /login/testtoken` (system-admin testing token mint; requires auth)
+
+```sh
+curl -sS "$API/login/testtoken" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"userId":"user_000","expiresInMinutes":120}'
+```
+
+### `POST /login/testtoken/revoke` (revoke a previously minted test token; requires auth)
+
+```sh
+curl -sS "$API/login/testtoken/revoke" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"tokenId":"wotlwedu_000"}'
+```
+
 ### `POST /login/verify2fa` (verify 2FA)
 
 This route is mounted with `Security.bypassCheck` and can be called without an Authorization header.

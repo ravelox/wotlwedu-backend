@@ -11,6 +11,8 @@ router.post("/verify2fa", Security.bypassCheck, Security.checkAuthentication, lo
 /* Must be authenticated to enable 2FA */
 router.post("/2fa", Security.checkAuthentication, loginController.enable2FA);
 router.post("/gentoken", Security.checkAuthentication, loginController.getGenerate2FAVerification);
+router.post("/testtoken", Security.checkAuthentication, loginController.postGenerateTestBearer);
+router.post("/testtoken/revoke", Security.checkAuthentication, loginController.postRevokeTestBearer);
 
 router.post("/refresh", loginController.postRefreshLogin);
 router.post("/resetreq", loginController.postRequestPasswordReset);

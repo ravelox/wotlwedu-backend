@@ -26,7 +26,7 @@ Core stack:
 - `Workgroup admin user`: can administer data for one workgroup (`adminWorkgroupId`, legacy `adminGroupId`).
 
 ## Current version
-The backend changes in this repo are documented as **0.0.17** in `CHANGELOG.md`.
+The backend changes in this repo are documented as **0.0.20** in `CHANGELOG.md`.
 
 ## Recent API behavior updates
 - Category IDs are now consistently included on category-enabled resources (`group`, `workgroup`, `image`, `item`, `list`, `election`).
@@ -76,6 +76,18 @@ npm run dev
 Tests:
 ```bash
 npm test
+```
+
+Live notification test (push one real notification through the running API so an active UI session can receive it):
+```bash
+export WOTLWEDU_LIVE_API="http://localhost:9876"
+export WOTLWEDU_LIVE_TOKEN="REPLACE_WITH_BEARER_TOKEN"
+export WOTLWEDU_LIVE_NOTIFICATION_USER_ID="user_123"
+export WOTLWEDU_LIVE_NOTIFICATION_SENDER_ID="user_123"   # optional; defaults to recipient
+export WOTLWEDU_LIVE_NOTIFICATION_STATUS_ID="100"        # optional; default Unread
+export WOTLWEDU_LIVE_NOTIFICATION_TYPE="109"             # optional
+export WOTLWEDU_LIVE_NOTIFICATION_TEXT="Live test ping"  # optional
+npm run test:live-notification
 ```
 
 ## Environment configuration

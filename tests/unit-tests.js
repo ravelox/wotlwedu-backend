@@ -4,6 +4,7 @@ const miniUuid = require("../util/mini-uuid");
 const statusResponse = require("../util/statusresponse");
 const Helpers = require("../util/helpers");
 const Security = require("../util/security");
+const LoginController = require("../controllers/login");
 
 module.exports = (addTest) => {
   addTest("mini-uuid applies prefix and produces unique values", () => {
@@ -61,5 +62,17 @@ module.exports = (addTest) => {
     assert.strictEqual(toBool("false"), false);
     assert.strictEqual(toBool(" TRUE "), true);
     assert.strictEqual(toBool(" FALSE "), false);
+  });
+
+  addTest("login test-token duration validator enforces integer minute bounds", () => {
+    const parse = LoginController._parseTokenDurationMinutes;
+    assert.strictEqual(parse(1), 1);
+    assert.strictEqual(parse("30"), 30);
+    assert.strictEqual(parse(43200), 43200);
+    assert.strictEqual(parse(0), null);
+    assert.strictEqual(parse(-1), null);
+    assert.strictEqual(parse(43201), null);
+    assert.strictEqual(parse("abc"), null);
+    assert.strictEqual(parse(3.5), null);
   });
 };

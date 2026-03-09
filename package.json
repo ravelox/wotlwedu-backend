@@ -1,12 +1,13 @@
 {
   "name": "wotlwedu-backend",
-  "version": "0.0.18",
+  "version": "0.0.20",
   "description": "Puts important decisions to a vote",
   "main": "app.js",
   "scripts": {
     "dev": "nodemon app.js",
     "start": "node app.js",
-    "test": "node tests/run-tests.js"
+    "test": "node tests/run-tests.js",
+    "test:live-notification": "WOTLWEDU_LIVE_NOTIFICATION=1 node tests/run-tests.js"
   },
   "author": "Dave Kelly",
   "license": "ISC",

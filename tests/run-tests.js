@@ -7,6 +7,7 @@ function addTest(name, fn) {
 // Register test suites
 require("./unit-tests")(addTest);
 require("./routes.integration.test")(addTest);
+require("./live-notification.test")(addTest);
 
 (async () => {
   let failed = false;

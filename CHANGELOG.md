@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.0.20 - 2026-03-09
+- Add opt-in live notification test tooling (`tests/live-notification.test.js` and `npm run test:live-notification`) so notifications can be triggered against a running backend while validating updates in a live UI session.
+- Add system-admin test-token minting (`POST /login/testtoken`) with custom `expiresInMinutes`, plus persisted token records and revocation (`POST /login/testtoken/revoke`).
+- Enforce test-token revocation/expiry checks in authentication middleware using persisted `testtokens` records.
+
+## 0.0.19 - 2026-03-09
+- Add `POST /login/testtoken` for system-admin-only minting of short-lived testing bearer tokens for a target active user.
+- Support user-specified token duration via `expiresInMinutes` (integer, 1..43200 minutes).
+- Add `POST /login/testtoken/revoke` and persistent test-token tracking (`testtokens`) so issued testing tokens can be revoked before expiry.
+- Enforce revocation checks during authentication for tokens minted with `kind: "test"`.
+
 ## 0.0.18 - 2026-02-28
 - Normalize `item.workgroupId` inputs through the shared ID normalizer on list/create/update paths so placeholder values like `" undefined "` and `" null "` do not trigger inconsistent item-scoping behavior.
 

@@ -13,6 +13,7 @@ const Mailer = require("../util/mailer");
 const Helpers = require("../util/helpers");
 
 const User = require("../model/user");
+const TestToken = require("../model/testtoken");
 
 async function generateJWTAndSave(foundUser) {
   if (!foundUser) return null;
@@ -44,6 +45,17 @@ async function generateJWTAndSave(foundUser) {
 
   return { authToken: newAuthToken, refreshToken: newRefreshToken };
 }
+
+function parseTokenDurationMinutes(input) {
+  const parsed = Number(input);
+  if (!Number.isFinite(parsed)) return null;
+  if (!Number.isInteger(parsed)) return null;
+  if (parsed < 1) return null;
+  if (parsed > 60 * 24 * 30) return null; // Max 30 days for testing tokens
+  return parsed;
+}
+
+exports._parseTokenDurationMinutes = parseTokenDurationMinutes;
 
 exports.postLogin = async (req, res, next) => {
   const email = req.body.email;
@@ -369,4 +381,124 @@ exports.verify2FA = (req, res, next) => {
       });
     });
   });
+};
+
+exports.postGenerateTestBearer = async (req, res, next) => {
+  try {
+    if (req.isSystemAdmin !== true) {
+      return StatusResponse(res, 403, "System admin required");
+    }
+
+    const userId = req.body.userId;
+    const durationMinutes = parseTokenDurationMinutes(req.body.expiresInMinutes);
+
+    if (!userId) {
+      return StatusResponse(res, 421, "No target user ID provided");
+    }
+    if (!durationMinutes) {
+      return StatusResponse(
+        res,
+        421,
+        "expiresInMinutes must be an integer between 1 and 43200"
+      );
+    }
+
+    const targetUser = await User.findByPk(userId, {
+      attributes: [
+        "id",
+        "firstName",
+        "lastName",
+        "email",
+        "alias",
+        "active",
+        "admin",
+        "systemAdmin",
+        "organizationId",
+        "organizationAdmin",
+        "workgroupAdmin",
+        "adminWorkgroupId",
+        "adminGroupId",
+      ],
+    });
+
+    if (!targetUser) return StatusResponse(res, 404, "Target user not found");
+    if (!targetUser.active) return StatusResponse(res, 421, "Target user is inactive");
+
+    const expiresInSeconds = durationMinutes * 60;
+    const tokenId = UUID("wotlwedu");
+    const expiresAt = new Date(Date.now() + expiresInSeconds * 1000);
+
+    const authToken = JWT.sign(
+      { user: targetUser.id, kind: "test", jti: tokenId },
+      Config.jwtSecret,
+      {
+        expiresIn: expiresInSeconds,
+      }
+    );
+
+    await TestToken.create({
+      id: tokenId,
+      userId: targetUser.id,
+      creatorId: req.authUserId,
+      expiresAt: expiresAt,
+      revokedAt: null,
+    });
+
+    return StatusResponse(res, 200, "OK", {
+      tokenId: tokenId,
+      kind: "test",
+      userId: targetUser.id,
+      firstName: targetUser.firstName,
+      lastName: targetUser.lastName,
+      email: targetUser.email,
+      alias: targetUser.alias,
+      admin: targetUser.admin,
+      systemAdmin: targetUser.systemAdmin === true || targetUser.admin === true,
+      organizationId: targetUser.organizationId || null,
+      organizationAdmin: targetUser.organizationAdmin === true,
+      workgroupAdmin: targetUser.workgroupAdmin === true,
+      adminWorkgroupId:
+        targetUser.adminWorkgroupId || targetUser.adminGroupId || null,
+      authToken: authToken,
+      expiresInMinutes: durationMinutes,
+      expiresAt: expiresAt.toISOString(),
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+exports.postRevokeTestBearer = async (req, res, next) => {
+  try {
+    const tokenId = req.body.tokenId;
+    if (!tokenId) {
+      return StatusResponse(res, 421, "No token ID provided");
+    }
+
+    const foundToken = await TestToken.findByPk(tokenId);
+    if (!foundToken) {
+      return StatusResponse(res, 404, "Test token not found");
+    }
+
+    if (req.isSystemAdmin !== true && foundToken.userId !== req.authUserId) {
+      return StatusResponse(res, 403, "Not authorized to revoke this token");
+    }
+
+    if (foundToken.revokedAt) {
+      return StatusResponse(res, 200, "OK", {
+        tokenId: foundToken.id,
+        revokedAt: foundToken.revokedAt,
+      });
+    }
+
+    foundToken.revokedAt = new Date();
+    await foundToken.save();
+
+    return StatusResponse(res, 200, "OK", {
+      tokenId: foundToken.id,
+      revokedAt: foundToken.revokedAt,
+    });
+  } catch (err) {
+    return next(err);
+  }
 };
