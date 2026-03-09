@@ -48,6 +48,9 @@ env:
   appPort: 9876
   appListen: 0.0.0.0
   sslEnabled: false
+  apiUrl: "http://localhost:9876/"
+  frontendUrl: "http://localhost:5173"
+  corsOrigins: "http://localhost:4200,http://localhost:5173,http://localhost:4173,http://localhost:9876"
   housekeepingInterval: 300
   dbLogging: false
   dbSync: true

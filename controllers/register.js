@@ -1,5 +1,6 @@
 const Util = require("util");
 const { Op } = require("sequelize");
+const bcrypt = require("bcryptjs");
 
 const Config = require("../config/wotlwedu");
 const UUID = require("../util/mini-uuid");
@@ -42,7 +43,15 @@ exports.postRegisterUser = (req, res, next) => {
       if (req.body.alias) userToRegister.alias = req.body.alias;
       if (req.body.firstName) userToRegister.firstName = req.body.firstName;
       if (req.body.lastName) userToRegister.lastName = req.body.lastName;
-      if (req.body.auth) userToRegister.auth = req.body.auth;
+      const plainPassword =
+        typeof req.body.password === "string"
+          ? req.body.password
+          : typeof req.body.auth === "string"
+          ? req.body.auth
+          : "";
+      if (!plainPassword || plainPassword.length < 8) {
+        return StatusResponse(res, 421, "Password must be at least 8 characters");
+      }
 
       // Newly-registered users are marked inactive
       // until they confirm their account
@@ -78,6 +87,10 @@ exports.postRegisterUser = (req, res, next) => {
               creator: "system",
             });
           }
+          return true;
+        })
+        .then(async () => {
+          userToRegister.auth = await bcrypt.hash(plainPassword, 12);
           return userToRegister.save();
         })
         .then((result) => {
@@ -85,7 +98,7 @@ exports.postRegisterUser = (req, res, next) => {
           Mailer.sendEmailConfirmMessage(
             userToRegister.email,
             userToRegister.registerToken,
-            req.headers.origin || Config.baseFrontendUrl
+            Config.baseFrontendUrl
           )
             .catch((err) => {
               return StatusResponse(
@@ -110,7 +123,6 @@ exports.postRegisterUser = (req, res, next) => {
                     .addRole(foundRole, { through: { id: UUID("userrole") } })
                     .then(() => {
                       return StatusResponse(res, 200, "OK", {
-                        registerToken: userToRegister.registerToken,
                         organizationId: userToRegister.organizationId,
                       });
                     })
@@ -166,7 +178,7 @@ exports.getConfirmRegistration = (req, res, next) => {
 
           Mailer.sendEmailChangeCompleteMessage(
             foundUser.email,
-            req.headers.origin || Config.baseFrontendUrl
+            Config.baseFrontendUrl
           )
             .then((success) => {
               return StatusResponse(res, 200, "OK", {

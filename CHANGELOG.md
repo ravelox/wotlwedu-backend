@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.21 - 2026-03-09
+- Harden authentication endpoints with rate limiting on login/register/password-reset and test-token issuance/revocation flows.
+- Add configurable CORS allowlist and trusted frontend URL handling for safer local and deployed environment configuration.
+- Tighten reset and registration token handling/validation paths used by login and user controllers.
+
 ## 0.0.20 - 2026-03-09
 - Add opt-in live notification test tooling (`tests/live-notification.test.js` and `npm run test:live-notification`) so notifications can be triggered against a running backend while validating updates in a live UI session.
 - Add system-admin test-token minting (`POST /login/testtoken`) with custom `expiresInMinutes`, plus persisted token records and revocation (`POST /login/testtoken/revoke`).

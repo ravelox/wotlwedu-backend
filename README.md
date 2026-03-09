@@ -26,7 +26,7 @@ Core stack:
 - `Workgroup admin user`: can administer data for one workgroup (`adminWorkgroupId`, legacy `adminGroupId`).
 
 ## Current version
-The backend changes in this repo are documented as **0.0.20** in `CHANGELOG.md`.
+The backend changes in this repo are documented as **0.0.21** in `CHANGELOG.md`.
 
 ## Recent API behavior updates
 - Category IDs are now consistently included on category-enabled resources (`group`, `workgroup`, `image`, `item`, `list`, `election`).
@@ -98,6 +98,8 @@ Commonly used settings:
 - DB: `WOTLWEDU_DB_HOST`, `WOTLWEDU_DB_USER`, `WOTLWEDU_DB_NAME`, `WOTLWEDU_DB_PASSWORD`, `WOTLWEDU_DB_TYPE`
 - Auth: `WOTLWEDU_JWT_SECRET`
 - TLS: `WOTLWEDU_SSL`, `WOTLWEDU_SSL_KEY`, `WOTLWEDU_SSL_CERT`
+- CORS: `WOTLWEDU_CORS_ORIGINS` (comma-separated allowed origins)
+- Auth rate limits: `WOTLWEDU_RATE_LOGIN_MAX`, `WOTLWEDU_RATE_RESET_MAX`, `WOTLWEDU_RATE_VERIFY2FA_MAX`, `WOTLWEDU_RATE_WINDOW_MS`
 - URLs: `WOTLWEDU_API_URL`, `WOTLWEDU_FRONTEND_URL`, `WOTLWEDU_IMAGE_URL`
 - Images: `WOTLWEDU_IMAGE_DIR`
 
@@ -118,6 +120,8 @@ Run with compose:
 docker compose -f docker-compose.yaml up -d
 ```
 
+Local compose defaults run the API over HTTP (`WOTLWEDU_SSL=false`) and include localhost CORS origins for UI/browser development.
+
 The compose stack includes:
 - `wotlwedudb` (MariaDB)
 - `wotlwedu-backend` (API)
@@ -128,6 +132,7 @@ A Helm chart is available under `k8s/`.
 
 Notes:
 - The backend chart now includes optional ingress support.
+- Helm values default to HTTP-friendly local settings (`env.sslEnabled=false`, `env.apiUrl=http://localhost:9876/`).
 - Set `environment` and `environments.<name>.service` / `environments.<name>.ingress` in Helm values to apply optional per-environment service and ingress overrides.
 
 ## API docs

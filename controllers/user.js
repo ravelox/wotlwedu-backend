@@ -481,7 +481,7 @@ exports.postUpdateUser = (req, res, next) => {
               foundUser.email,
               foundUser.changeToEmail,
               foundUser.registerToken,
-              req.headers.origin || Config.baseFrontendUrl
+              Config.baseFrontendUrl
             )
               .then(() => {
                 return StatusResponse(res, 200, "User updated", {

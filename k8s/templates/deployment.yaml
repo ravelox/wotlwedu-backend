@@ -42,6 +42,12 @@ spec:
               value: "{{ .Values.env.appListen }}"
             - name: WOTLWEDU_SSL
               value: "{{ ternary "true" "false" .Values.env.sslEnabled }}"
+            - name: WOTLWEDU_API_URL
+              value: "{{ .Values.env.apiUrl }}"
+            - name: WOTLWEDU_FRONTEND_URL
+              value: "{{ .Values.env.frontendUrl }}"
+            - name: WOTLWEDU_CORS_ORIGINS
+              value: "{{ .Values.env.corsOrigins }}"
             - name: WOTLWEDU_DB_HOST
               value: "{{ .Values.database.host }}"
             - name: WOTLWEDU_DB_NAME

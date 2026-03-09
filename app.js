@@ -107,8 +107,18 @@ app.post(
   )
 );
 
-//Add CORS headers
-app.use(cors({ origin: true }));
+// Add CORS headers
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      if (!Config.corsOrigin || Config.corsOrigin.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("CORS origin not allowed"), false);
+    },
+  })
+);
 
 // Set static directory
 app.use(express.static(path.join(__dirname, "public")));

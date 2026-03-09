@@ -181,7 +181,10 @@ exports.postRequestPasswordReset = (req, res, next) => {
 
   User.findOne({ where: { email: emailToFind } })
     .then((foundUser) => {
-      if (!foundUser) return StatusResponse(res, 404, "User not found");
+      if (!foundUser) {
+        // Do not disclose whether the account exists.
+        return StatusResponse(res, 200, "OK");
+      }
 
       foundUser.resetToken = UUID("wotlwedu");
       foundUser.resetTokenExpire = Date.now() + 3600000;
@@ -193,12 +196,10 @@ exports.postRequestPasswordReset = (req, res, next) => {
           foundUser.email,
           foundUser.id,
           foundUser.resetToken,
-          req.headers.origin || Config.baseFrontendUrl
+          Config.baseFrontendUrl
         )
-          .then((success) => {
-            return StatusResponse(res, 200, "OK", {
-              resetToken: foundUser.resetToken,
-            });
+          .then(() => {
+            return StatusResponse(res, 200, "OK");
           })
           .catch((err) => {
             return StatusResponse(
@@ -224,6 +225,10 @@ exports.putResetUserPassword = (req, res, next) => {
   if (!resetToken) return StatusResponse(res, 421, "No reset token provided");
   if (!newPassword) return StatusResponse(res, 421, "No password provided");
 
+  if (typeof newPassword !== "string" || newPassword.length < 8) {
+    return StatusResponse(res, 421, "Password must be at least 8 characters");
+  }
+
   User.findOne({
     where: {
       id: userToFind,
@@ -231,13 +236,13 @@ exports.putResetUserPassword = (req, res, next) => {
       resetTokenExpire: { [Op.gte]: Date.now() },
     },
   })
-    .then((foundUser) => {
+    .then(async (foundUser) => {
       if (!foundUser) return StatusResponse(res, 404, "User not found");
 
       foundUser.resetToken = null;
       foundUser.resetTokenExpire = null;
       foundUser.active = 1;
-      foundUser.auth = newPassword;
+      foundUser.auth = await bcrypt.hash(newPassword, 12);
 
       foundUser
         .save()
@@ -293,7 +298,6 @@ exports.enable2FA = (req, res, next) => {
               secret: secret,
               QRCode: url,
               verificationToken: foundUser.token2fa,
-              foundUser: foundUser,
             });
           });
         })
