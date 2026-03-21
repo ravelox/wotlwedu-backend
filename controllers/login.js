@@ -1,6 +1,7 @@
 const Util = require("util");
 const bcrypt = require("bcryptjs");
 const JWT = require("jsonwebtoken");
+const { OAuth2Client } = require("google-auth-library");
 const { Op } = require("sequelize");
 const OTPAuth = require("otpauth");
 const QRCode = require("qrcode");
@@ -11,9 +12,17 @@ const UUID = require("../util/mini-uuid");
 const StatusResponse = require("../util/statusresponse");
 const Mailer = require("../util/mailer");
 const Helpers = require("../util/helpers");
+const database = require("../util/database");
 
+const Organization = require("../model/organization");
+const OrganizationInvite = require("../model/organizationinvite");
+const Role = require("../model/role");
+const SocialIdentity = require("../model/socialidentity");
 const User = require("../model/user");
+const UserRole = require("../model/userrole");
 const TestToken = require("../model/testtoken");
+
+let googleOAuthClient = null;
 
 async function generateJWTAndSave(foundUser) {
   if (!foundUser) return null;
@@ -56,6 +65,268 @@ function parseTokenDurationMinutes(input) {
 }
 
 exports._parseTokenDurationMinutes = parseTokenDurationMinutes;
+
+function normalizeEmail(email) {
+  if (!email || typeof email !== "string") return "";
+  return email.trim().toLowerCase();
+}
+
+function normalizeProvider(provider) {
+  if (!provider || typeof provider !== "string") return "";
+  return provider.trim().toLowerCase();
+}
+
+function buildProvisionedOrganizationName(firstName, lastName) {
+  const firstInitial = (firstName || "").trim().charAt(0).toUpperCase();
+  const lastInitial = (lastName || "").trim().charAt(0).toUpperCase();
+  return `${firstInitial} ${lastInitial}'s Organization`;
+}
+
+function getGoogleOAuthClient() {
+  if (!Config.googleClientId) return null;
+  if (!googleOAuthClient) {
+    googleOAuthClient = new OAuth2Client(Config.googleClientId);
+  }
+  return googleOAuthClient;
+}
+
+function splitDisplayName(displayName) {
+  const value = (displayName || "").toString().trim();
+  if (!value) return { firstName: "", lastName: "" };
+
+  const parts = value.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) {
+    return { firstName: parts[0], lastName: "User" };
+  }
+
+  return {
+    firstName: parts[0],
+    lastName: parts.slice(1).join(" "),
+  };
+}
+
+async function generateUniqueAlias(baseAlias, transaction) {
+  const fallback = "user";
+  const normalized = (baseAlias || fallback)
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, ".");
+  const safeBase = normalized.replace(/^\.+|\.+$/g, "") || fallback;
+
+  let candidate = safeBase;
+  let counter = 1;
+
+  while (true) {
+    const existing = await User.findOne({
+      where: { alias: candidate },
+      transaction,
+    });
+    if (!existing) return candidate;
+    counter += 1;
+    candidate = `${safeBase}.${counter}`;
+  }
+}
+
+async function addDefaultRoleToUser(user, transaction) {
+  const defaultRoleName = Config.defaultRoleName || "Default Role";
+  const foundRole = await Role.findOne({
+    where: { name: defaultRoleName },
+    transaction,
+  });
+
+  if (!foundRole) throw new Error("No default role is available");
+
+  const existingRole = await UserRole.findOne({
+    where: { userId: user.id, roleId: foundRole.id },
+    transaction,
+  });
+  if (existingRole) return;
+
+  await UserRole.create(
+    {
+      id: UUID("userrole"),
+      userId: user.id,
+      roleId: foundRole.id,
+      creator: user.creator || user.id,
+    },
+    { transaction }
+  );
+}
+
+async function findPendingOrganizationInvite(email, transaction) {
+  if (!email) return null;
+
+  const invites = await OrganizationInvite.findAll({
+    where: { email: email, acceptedAt: null },
+    order: [["createdAt", "DESC"]],
+    transaction,
+  });
+
+  for (const invite of invites) {
+    if (invite.expiresAt && new Date(invite.expiresAt).getTime() < Date.now()) {
+      continue;
+    }
+    const organization = await Organization.findByPk(invite.organizationId, { transaction });
+    if (organization && organization.active !== false) {
+      return { invite, organization };
+    }
+  }
+
+  return null;
+}
+
+async function findOrProvisionSocialUser(payload) {
+  const provider = normalizeProvider(payload.provider);
+  const subject = (payload.subject || "").toString().trim();
+  const email = normalizeEmail(payload.email);
+  const firstName = (payload.firstName || "").toString().trim();
+  const lastName = (payload.lastName || "").toString().trim();
+  const requestedAlias = (payload.alias || "").toString().trim();
+
+  if (!provider || !subject || !email || !firstName || !lastName) {
+    throw new Error("Must provide provider, subject, email, firstName, and lastName");
+  }
+
+  return await database.transaction(async (transaction) => {
+    let user = null;
+    let provisionedOrganizationId = null;
+    let consumedInviteId = null;
+    let isNewUser = false;
+
+    const existingIdentity = await SocialIdentity.findOne({
+      where: { provider, subject },
+      transaction,
+    });
+
+    if (existingIdentity) {
+      user = await User.findByPk(existingIdentity.userId, { transaction });
+      if (!user) throw new Error("Linked user not found for social identity");
+      if (existingIdentity.email !== email) {
+        existingIdentity.email = email;
+        await existingIdentity.save({ transaction });
+      }
+    } else {
+      user = await User.findOne({
+        where: { email },
+        transaction,
+      });
+
+      if (user) {
+        await SocialIdentity.create(
+          {
+            id: UUID("social"),
+            userId: user.id,
+            provider,
+            subject,
+            email,
+            creator: user.creator || user.id,
+          },
+          { transaction }
+        );
+      } else {
+        isNewUser = true;
+        const userId = UUID("user");
+        const invited = await findPendingOrganizationInvite(email, transaction);
+
+        let organizationId;
+        let organizationAdmin = false;
+        if (invited) {
+          organizationId = invited.organization.id;
+          consumedInviteId = invited.invite.id;
+          invited.invite.acceptedAt = new Date();
+          invited.invite.acceptedByUserId = userId;
+          await invited.invite.save({ transaction });
+        } else {
+          const provisionedOrganization = await Organization.create(
+            {
+              id: UUID("org"),
+              name: buildProvisionedOrganizationName(firstName, lastName),
+              description: "Auto-provisioned from first social sign-in",
+              active: true,
+              creator: userId,
+            },
+            { transaction }
+          );
+          organizationId = provisionedOrganization.id;
+          provisionedOrganizationId = provisionedOrganization.id;
+          organizationAdmin = true;
+        }
+
+        const alias = await generateUniqueAlias(
+          requestedAlias || email.split("@")[0] || `${firstName}.${lastName}`,
+          transaction
+        );
+
+        user = await User.create(
+          {
+            id: userId,
+            firstName,
+            lastName,
+            alias,
+            email,
+            organizationId,
+            creator: userId,
+            active: true,
+            verified: true,
+            organizationAdmin,
+            auth: null,
+          },
+          { transaction }
+        );
+
+        await SocialIdentity.create(
+          {
+            id: UUID("social"),
+            userId: user.id,
+            provider,
+            subject,
+            email,
+            creator: user.id,
+          },
+          { transaction }
+        );
+        await addDefaultRoleToUser(user, transaction);
+      }
+    }
+
+    if (!user.active) throw new Error("Account disabled");
+
+    return { user, isNewUser, provisionedOrganizationId, consumedInviteId };
+  });
+}
+
+async function verifyGoogleIdToken(idToken) {
+  const client = getGoogleOAuthClient();
+  if (!client) throw new Error("Google sign-in is not configured");
+  if (!idToken || typeof idToken !== "string") {
+    throw new Error("No Google ID token provided");
+  }
+
+  const ticket = await client.verifyIdToken({
+    idToken,
+    audience: Config.googleClientId,
+  });
+  const payload = ticket.getPayload();
+  if (!payload) throw new Error("Invalid Google ID token");
+  if (payload.email_verified !== true) {
+    throw new Error("Google account email is not verified");
+  }
+  if (!payload.sub || !payload.email) {
+    throw new Error("Google token missing required identity claims");
+  }
+
+  const derivedName = splitDisplayName(payload.name);
+
+  return {
+    provider: "google",
+    subject: payload.sub,
+    email: payload.email,
+    firstName: payload.given_name || derivedName.firstName,
+    lastName: payload.family_name || derivedName.lastName,
+    alias: payload.email.split("@")[0],
+  };
+}
 
 exports.postLogin = async (req, res, next) => {
   const email = req.body.email;
@@ -131,6 +402,91 @@ exports.postLogin = async (req, res, next) => {
     })
     .catch((err) => next(err));
 };
+
+exports.postSocialLogin = async (req, res, next) => {
+  try {
+    const result = await findOrProvisionSocialUser(req.body || {});
+    const tokens = await generateJWTAndSave(result.user);
+
+    return StatusResponse(res, 200, "OK", {
+      userId: result.user.id,
+      firstName: result.user.firstName,
+      lastName: result.user.lastName,
+      email: result.user.email,
+      alias: result.user.alias,
+      admin: result.user.admin,
+      systemAdmin: result.user.systemAdmin === true || result.user.admin === true,
+      organizationId: result.user.organizationId || null,
+      organizationAdmin: result.user.organizationAdmin === true,
+      workgroupAdmin: result.user.workgroupAdmin === true,
+      adminWorkgroupId: result.user.adminWorkgroupId || result.user.adminGroupId || null,
+      authToken: tokens.authToken,
+      refreshToken: tokens.refreshToken,
+      isNewUser: result.isNewUser,
+      provisionedOrganizationId: result.provisionedOrganizationId,
+      consumedInviteId: result.consumedInviteId,
+    });
+  } catch (err) {
+    if (err && err.message === "Account disabled") {
+      return StatusResponse(res, 403, "Account disabled");
+    }
+    if (
+      err &&
+      [
+        "Must provide provider, subject, email, firstName, and lastName",
+        "No default role is available",
+      ].includes(err.message)
+    ) {
+      return StatusResponse(res, 421, err.message);
+    }
+    next(err);
+  }
+};
+
+exports.postGoogleLogin = async (req, res, next) => {
+  try {
+    const googleProfile = await verifyGoogleIdToken(req.body?.idToken);
+    const result = await findOrProvisionSocialUser(googleProfile);
+    const tokens = await generateJWTAndSave(result.user);
+
+    return StatusResponse(res, 200, "OK", {
+      userId: result.user.id,
+      firstName: result.user.firstName,
+      lastName: result.user.lastName,
+      email: result.user.email,
+      alias: result.user.alias,
+      admin: result.user.admin,
+      systemAdmin: result.user.systemAdmin === true || result.user.admin === true,
+      organizationId: result.user.organizationId || null,
+      organizationAdmin: result.user.organizationAdmin === true,
+      workgroupAdmin: result.user.workgroupAdmin === true,
+      adminWorkgroupId: result.user.adminWorkgroupId || result.user.adminGroupId || null,
+      authToken: tokens.authToken,
+      refreshToken: tokens.refreshToken,
+      isNewUser: result.isNewUser,
+      provisionedOrganizationId: result.provisionedOrganizationId,
+      consumedInviteId: result.consumedInviteId,
+    });
+  } catch (err) {
+    if (
+      err &&
+      [
+        "Google sign-in is not configured",
+        "No Google ID token provided",
+        "Invalid Google ID token",
+        "Google account email is not verified",
+        "Google token missing required identity claims",
+        "No default role is available",
+      ].includes(err.message)
+    ) {
+      return StatusResponse(res, 421, err.message);
+    }
+    next(err);
+  }
+};
+
+exports._buildProvisionedOrganizationName = buildProvisionedOrganizationName;
+exports._splitDisplayName = splitDisplayName;
 
 exports.postRefreshLogin = async (req, res, next) => {
   const refreshToken = req.body.refreshToken;

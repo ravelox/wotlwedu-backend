@@ -26,7 +26,7 @@ Core stack:
 - `Workgroup admin user`: can administer data for one workgroup (`adminWorkgroupId`, legacy `adminGroupId`).
 
 ## Current version
-The backend changes in this repo are documented as **0.0.21** in `CHANGELOG.md`.
+The backend changes in this repo are documented as **0.0.22** in `CHANGELOG.md`.
 
 ## Recent API behavior updates
 - Category IDs are now consistently included on category-enabled resources (`group`, `workgroup`, `image`, `item`, `list`, `election`).
@@ -37,6 +37,10 @@ The backend changes in this repo are documented as **0.0.21** in `CHANGELOG.md`.
 - Notification listing is paged and sorted newest-first (`GET /notification?page=&items=`).
 - Notification unread counts now use a direct count query (`GET /notification/unreadcount`).
 - Socket.IO notification events now carry structured payloads so clients can update local inbox/badge state without full refetches.
+- Add `POST /login/google` for verified Google ID-token sign-in.
+- Add `POST /login/social` for JIT social sign-in provisioning using provider identity + email.
+- Add organization email invitations via `POST /organization/:organizationId/invite`.
+- First-time social sign-in now consumes a pending organization invite by email or auto-provisions a new organization named `<FirstInitial> <LastInitial>'s Organization`.
 
 ## Prerequisites
 - Node.js and npm
@@ -96,7 +100,7 @@ Runtime options are defined in `config/wotlwedu.js` and can be overridden with e
 Commonly used settings:
 - App listener: `WOTLWEDU_APP_LISTEN`, `WOTLWEDU_APP_PORT`
 - DB: `WOTLWEDU_DB_HOST`, `WOTLWEDU_DB_USER`, `WOTLWEDU_DB_NAME`, `WOTLWEDU_DB_PASSWORD`, `WOTLWEDU_DB_TYPE`
-- Auth: `WOTLWEDU_JWT_SECRET`
+- Auth: `WOTLWEDU_JWT_SECRET`, `WOTLWEDU_GOOGLE_CLIENT_ID`
 - TLS: `WOTLWEDU_SSL`, `WOTLWEDU_SSL_KEY`, `WOTLWEDU_SSL_CERT`
 - CORS: `WOTLWEDU_CORS_ORIGINS` (comma-separated allowed origins)
 - Auth rate limits: `WOTLWEDU_RATE_LOGIN_MAX`, `WOTLWEDU_RATE_RESET_MAX`, `WOTLWEDU_RATE_VERIFY2FA_MAX`, `WOTLWEDU_RATE_WINDOW_MS`
@@ -146,6 +150,7 @@ Additional tenancy endpoints:
 - `GET /organization`
 - `GET /organization/:organizationId`
 - `POST /organization`
+- `POST /organization/:organizationId/invite`
 - `PUT /organization/:organizationId`
 - `DELETE /organization/:organizationId`
 

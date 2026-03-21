@@ -191,3 +191,47 @@ Wotlwedu admin team`;
     resolve("OK");
   });
 };
+
+module.exports.sendOrganizationInviteMessage = (
+  emailAddress,
+  organizationName,
+  inviteToken,
+  frontendUrl
+) => {
+  return new Promise((resolve, reject) => {
+    const inviteUrl =
+      frontendUrl +
+      `/login?invite=` +
+      encodeURIComponent(inviteToken);
+    const textBody =
+      `Hi there,
+
+You have been invited to join ` +
+      organizationName +
+      ` on Wotlwedu.
+
+If you already use a social sign-in provider with this email address, sign in with that provider and Wotlwedu will place you in the invited organization automatically.
+
+You can start here:
+
+` +
+      inviteUrl +
+      `
+
+If you did not expect this invitation, you can ignore this email.
+
+Best regards,
+
+Wotlwedu admin team`;
+
+    const messageDetails = {
+      to: emailAddress,
+      subject: "Wotlwedu organization invitation",
+      text: textBody,
+    };
+    sendEmail(messageDetails).catch((err) => {
+      reject(new Error("Failed to send organization invite email: " + err));
+    });
+    resolve("OK");
+  });
+};

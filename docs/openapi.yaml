@@ -4,6 +4,83 @@ info:
   version: 1.0.0
 
 paths:
+  /login/google:
+    post:
+      summary: POST /login/google
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - idToken
+              properties:
+                idToken:
+                  type: string
+  /login/social:
+    post:
+      summary: POST /login/social
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - provider
+              - subject
+              - email
+              - firstName
+              - lastName
+              properties:
+                provider:
+                  type: string
+                subject:
+                  type: string
+                email:
+                  type: string
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                alias:
+                  type: string
+  /organization/:organizationId/invite:
+    post:
+      summary: POST /organization/:organizationId/invite
+      parameters:
+      - name: organizationId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - email
+              properties:
+                email:
+                  type: string
+                expiresAt:
+                  type: string
   /image/:imageId/notif/:notificationId:
     get:
       summary: GET /image/:imageId/notif/:notificationId

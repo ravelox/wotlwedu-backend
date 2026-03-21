@@ -12,8 +12,10 @@ const List = require("./list");
 const ListItem = require("./listitem");
 const Notification = require("./notification");
 const Organization = require("./organization");
+const OrganizationInvite = require("./organizationinvite");
 const Role = require("./role");
 const RoleCapability = require("./rolecapability");
+const SocialIdentity = require("./socialidentity");
 const Status = require("./status");
 const User = require("./user");
 const UserRole = require("./userrole");
@@ -93,11 +95,34 @@ module.exports.setup = function () {
   User.hasMany(UserRole);
   User.hasMany(Vote);
   User.hasMany(Notification);
+  User.hasMany(OrganizationInvite, { foreignKey: "invitedByUserId", sourceKey: "id" });
+  User.hasMany(SocialIdentity, { foreignKey: "userId", sourceKey: "id" });
   User.hasOne(Image, { foreignKey: "id", sourceKey: "imageId" });
   User.hasOne(Organization, { foreignKey: "id", sourceKey: "organizationId" });
 
   Organization.hasMany(User, { foreignKey: "organizationId", sourceKey: "id" });
   Organization.hasMany(Workgroup, { foreignKey: "organizationId", sourceKey: "id" });
+  Organization.hasMany(OrganizationInvite, {
+    foreignKey: "organizationId",
+    sourceKey: "id",
+  });
+
+  OrganizationInvite.hasOne(Organization, {
+    foreignKey: "id",
+    sourceKey: "organizationId",
+  });
+  OrganizationInvite.hasOne(User, {
+    foreignKey: "id",
+    sourceKey: "invitedByUserId",
+    as: "invitedBy",
+  });
+  OrganizationInvite.hasOne(User, {
+    foreignKey: "id",
+    sourceKey: "acceptedByUserId",
+    as: "acceptedBy",
+  });
+
+  SocialIdentity.hasOne(User, { foreignKey: "id", sourceKey: "userId" });
 
   Image.hasMany(Item);
   Image.hasOne(Category, { foreignKey: "id", sourceKey: "categoryId" });

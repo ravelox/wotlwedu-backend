@@ -34,6 +34,8 @@ router.post(
   Security.checkAuthentication,
   loginController.verify2FA
 );
+router.post("/google", loginRateLimit, loginController.postGoogleLogin);
+router.post("/social", loginRateLimit, loginController.postSocialLogin);
 
 /* Must be authenticated to enable 2FA */
 router.post("/2fa", Security.checkAuthentication, loginController.enable2FA);

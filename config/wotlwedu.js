@@ -19,6 +19,7 @@ module.exports.db_force_sync = toBool(process.env.WOTLWEDU_DB_SYNC || true);
 module.exports.jwtSecret = process.env.WOTLWEDU_JWT_SECRET;
 module.exports.jwtExpiry = process.env.WOTLWEDU_JWT_EXPIRY || "1h";
 module.exports.jwtRefreshExpiry = process.env.WOTLWEDU_JWT_REFRESH_EXPIRY || "2h";
+module.exports.googleClientId = process.env.WOTLWEDU_GOOGLE_CLIENT_ID || "";
 
 module.exports.defaultItemsPerPage = 10;
 

@@ -2,9 +2,13 @@ const { Op } = require("sequelize");
 
 const UUID = require("../util/mini-uuid");
 const StatusResponse = require("../util/statusresponse");
+const Mailer = require("../util/mailer");
 
 const Organization = require("../model/organization");
+const OrganizationInvite = require("../model/organizationinvite");
+const User = require("../model/user");
 const Attributes = require("../model/attributes");
+const Config = require("../config/wotlwedu");
 
 function assertOrgAdmin(req, organizationId = null) {
   if (req.isAdmin === true) return true;
@@ -159,6 +163,81 @@ module.exports.deleteOrganization = async (req, res, next) => {
     const deleted = await foundOrganization.destroy();
     if (!deleted) return StatusResponse(res, 500, "Cannot delete organization");
     return StatusResponse(res, 200, "OK");
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports.putInviteToOrganization = async (req, res, next) => {
+  try {
+    const organizationId = req.params.organizationId;
+    const email = (req.body.email || "").trim().toLowerCase();
+
+    if (!organizationId) return StatusResponse(res, 421, "No organization ID provided");
+    if (!assertOrgAdmin(req, organizationId))
+      return StatusResponse(res, 403, "Not authorized for this organization");
+    if (!email) return StatusResponse(res, 421, "No email provided");
+
+    const foundOrganization = await Organization.findByPk(organizationId);
+    if (!foundOrganization) return StatusResponse(res, 404, "Organization not found");
+    if (foundOrganization.active === false)
+      return StatusResponse(res, 421, "Organization is inactive");
+
+    const foundUser = await User.findOne({ where: { email } });
+    if (foundUser) {
+      if (foundUser.organizationId === organizationId) {
+        return StatusResponse(res, 421, "User already belongs to this organization");
+      }
+      return StatusResponse(res, 421, "User already belongs to another organization");
+    }
+
+    let invite = await OrganizationInvite.findOne({
+      where: {
+        organizationId,
+        email,
+        acceptedAt: null,
+        [Op.or]: [{ expiresAt: null }, { expiresAt: { [Op.gte]: new Date() } }],
+      },
+      order: [["createdAt", "DESC"]],
+    });
+
+    const expiresAt = req.body.expiresAt || null;
+    if (invite) {
+      invite.token = UUID("orginvite");
+      invite.invitedByUserId = req.authUserId;
+      invite.expiresAt = expiresAt;
+      invite.creator = req.authUserId;
+      await invite.save();
+    } else {
+      invite = await OrganizationInvite.create({
+        id: UUID("orginvite"),
+        organizationId,
+        email,
+        token: UUID("orginvite"),
+        invitedByUserId: req.authUserId,
+        expiresAt,
+        creator: req.authUserId,
+      });
+    }
+
+    await Mailer.sendOrganizationInviteMessage(
+      email,
+      foundOrganization.name,
+      invite.token,
+      Config.baseFrontendUrl
+    );
+
+    return StatusResponse(res, 200, "OK", {
+      invite: {
+        id: invite.id,
+        organizationId: invite.organizationId,
+        email: invite.email,
+        token: invite.token,
+        invitedByUserId: invite.invitedByUserId,
+        acceptedAt: invite.acceptedAt,
+        expiresAt: invite.expiresAt,
+      },
+    });
   } catch (err) {
     next(err);
   }

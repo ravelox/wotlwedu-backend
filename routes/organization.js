@@ -25,6 +25,11 @@ router.put(
   Security.checkCapability("organization", ["edit"]),
   organizationController.postUpdateOrganization
 );
+router.post(
+  "/:organizationId/invite",
+  Security.checkCapability("organization", ["edit"]),
+  organizationController.putInviteToOrganization
+);
 router.delete(
   "/:organizationId",
   Security.checkCapability("organization", ["delete"]),

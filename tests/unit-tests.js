@@ -75,4 +75,25 @@ module.exports = (addTest) => {
     assert.strictEqual(parse("abc"), null);
     assert.strictEqual(parse(3.5), null);
   });
+
+  addTest("login display-name splitter derives first and last names safely", () => {
+    const split = LoginController._splitDisplayName;
+    assert.deepStrictEqual(split("Jane Doe"), {
+      firstName: "Jane",
+      lastName: "Doe",
+    });
+    assert.deepStrictEqual(split("Prince"), {
+      firstName: "Prince",
+      lastName: "User",
+    });
+    assert.deepStrictEqual(split(""), {
+      firstName: "",
+      lastName: "",
+    });
+  });
+
+  addTest("login org-name builder uses initials", () => {
+    const build = LoginController._buildProvisionedOrganizationName;
+    assert.strictEqual(build("John", "Smith"), "J S's Organization");
+  });
 };

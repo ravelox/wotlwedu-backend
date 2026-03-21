@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.22 - 2026-03-19
+- Add verified Google web sign-in via `POST /login/google` using Google ID token validation against `WOTLWEDU_GOOGLE_CLIENT_ID`.
+- Add `POST /login/social` for JIT social sign-in based on provider identity, linking repeat logins through persisted `socialidentities`.
+- Add `organizationinvites` for email-based org invitation and `POST /organization/:organizationId/invite` for org admins/system admins.
+- On first social sign-in, consume a pending invitation by matching email; otherwise auto-provision a new organization named `<FirstInitial> <LastInitial>'s Organization`.
+- Auto-provisioned social users are activated immediately, verified, assigned the default role, and made `organizationAdmin` for their new tenant.
+
 ## 0.0.21 - 2026-03-09
 - Harden authentication endpoints with rate limiting on login/register/password-reset and test-token issuance/revocation flows.
 - Add configurable CORS allowlist and trusted frontend URL handling for safer local and deployed environment configuration.

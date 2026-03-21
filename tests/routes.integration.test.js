@@ -13,6 +13,11 @@ process.env.WOTLWEDU_DB_SYNC = "true";
 
 const database = require("../util/database");
 const Associations = require("../model/associations");
+const Mailer = require("../util/mailer");
+const Organization = require("../model/organization");
+const OrganizationInvite = require("../model/organizationinvite");
+const Role = require("../model/role");
+const SocialIdentity = require("../model/socialidentity");
 const User = require("../model/user");
 const Security = require("../util/security");
 
@@ -35,6 +40,8 @@ Security.checkAuthentication = (req, res, next) => {
   req.authName = "Test User";
   req.verdicts = [];
   req.isAdmin = true;
+  req.isOrganizationAdmin = true;
+  req.authOrganizationId = "org_test";
   next();
 };
 Security.checkCapability = (_objectToCheck, opList) => {
@@ -55,13 +62,17 @@ function buildApp() {
   baseApp.use(bodyParser.json());
 
   const itemRoutes = require("../routes/item");
+  const loginRoutes = require("../routes/login");
   const listRoutes = require("../routes/list");
   const notificationRoutes = require("../routes/notification");
+  const organizationRoutes = require("../routes/organization");
 
   // Mirror app.js protected routes used in tests
+  baseApp.use("/login", loginRoutes);
   baseApp.use("/item", Security.checkAuthentication, itemRoutes);
   baseApp.use("/list", Security.checkAuthentication, listRoutes);
   baseApp.use("/notification", Security.checkAuthentication, notificationRoutes);
+  baseApp.use("/organization", Security.checkAuthentication, organizationRoutes);
 
   // Ping route
   baseApp.use(
@@ -130,18 +141,33 @@ module.exports = (addTest) => {
   let Notification;
   let Status;
 
+  Mailer.sendOrganizationInviteMessage = async () => "OK";
+
   addTest("setup test database", async () => {
     Associations.setup();
     if (resolvedDialect === "sqlite" && typeof database.query === "function") {
       await database.query("PRAGMA foreign_keys = OFF;");
     }
     await database.sync({ force: true });
+    await Organization.create({
+      id: "org_test",
+      name: "Test Organization",
+      active: true,
+      creator: "user_test",
+    });
+    await Role.create({
+      id: "role_default",
+      name: "Default Role",
+      description: "Default role",
+      protected: false,
+    });
     await User.create({
       id: "user_test",
       firstName: "Test",
       lastName: "User",
       alias: "tester",
       email: "test@example.com",
+      organizationId: "org_test",
       creator: "user_test",
       active: true,
       admin: true,
@@ -152,6 +178,7 @@ module.exports = (addTest) => {
       lastName: "User",
       alias: "sender",
       email: "sender@example.com",
+      organizationId: "org_test",
       creator: "user_test",
       active: true,
       admin: false,
@@ -277,6 +304,73 @@ module.exports = (addTest) => {
     const res = await request(server, "GET", "/notification/unreadcount");
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.body.data.unread, 2);
+  });
+
+  addTest("organization invite creates pending invite by email", async () => {
+    const res = await request(server, "POST", "/organization/org_test/invite", {
+      email: "social.invited@example.com",
+    });
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.data.invite.organizationId, "org_test");
+    assert.strictEqual(res.body.data.invite.email, "social.invited@example.com");
+  });
+
+  addTest("social login consumes pending org invite for first-time user", async () => {
+    const res = await request(server, "POST", "/login/social", {
+      provider: "google",
+      subject: "google-subject-1",
+      email: "social.invited@example.com",
+      firstName: "Jane",
+      lastName: "Doe",
+    });
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.data.organizationId, "org_test");
+    assert.strictEqual(res.body.data.organizationAdmin, false);
+    assert.strictEqual(res.body.data.isNewUser, true);
+    assert.ok(res.body.data.consumedInviteId);
+    assert.strictEqual(res.body.data.provisionedOrganizationId, null);
+
+    const invite = await OrganizationInvite.findByPk(res.body.data.consumedInviteId);
+    assert.ok(invite.acceptedAt);
+    assert.strictEqual(invite.acceptedByUserId, res.body.data.userId);
+
+    const social = await SocialIdentity.findOne({
+      where: { provider: "google", subject: "google-subject-1" },
+    });
+    assert.ok(social);
+    assert.strictEqual(social.userId, res.body.data.userId);
+  });
+
+  addTest("social login provisions organization for first-time uninvited user", async () => {
+    const res = await request(server, "POST", "/login/social", {
+      provider: "apple",
+      subject: "apple-subject-1",
+      email: "social.new@example.com",
+      firstName: "John",
+      lastName: "Smith",
+    });
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.data.isNewUser, true);
+    assert.ok(res.body.data.provisionedOrganizationId);
+    assert.strictEqual(res.body.data.organizationId, res.body.data.provisionedOrganizationId);
+    assert.strictEqual(res.body.data.organizationAdmin, true);
+
+    const org = await Organization.findByPk(res.body.data.organizationId);
+    assert.ok(org);
+    assert.strictEqual(org.name, "J S's Organization");
+  });
+
+  addTest("social login reuses linked social identity on repeat sign-in", async () => {
+    const res = await request(server, "POST", "/login/social", {
+      provider: "apple",
+      subject: "apple-subject-1",
+      email: "social.new@example.com",
+      firstName: "John",
+      lastName: "Smith",
+    });
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.data.isNewUser, false);
+    assert.ok(res.body.data.organizationId);
   });
 
   addTest("teardown server", async () => {
