@@ -26,6 +26,18 @@ const verify2faRateLimit = createRateLimiter({
   keyMode: "ip+body",
   message: "Too many 2FA verification attempts",
 });
+const socialLinkRateLimit = createRateLimiter({
+  max: Config.authRateLimitSocialLinkMax,
+  windowMs: Config.authRateLimitWindowMs,
+  keyMode: "ip+body",
+  message: "Too many social link confirmation attempts",
+});
+const inviteLookupRateLimit = createRateLimiter({
+  max: Config.authRateLimitInviteLookupMax,
+  windowMs: Config.authRateLimitWindowMs,
+  keyMode: "ip",
+  message: "Too many invite lookup attempts",
+});
 
 router.post(
   "/verify2fa",
@@ -34,11 +46,11 @@ router.post(
   Security.checkAuthentication,
   loginController.verify2FA
 );
-router.get("/invite/:token", loginController.getInviteStatus);
+router.get("/invite/:token", inviteLookupRateLimit, loginController.getInviteStatus);
 router.post("/google", loginRateLimit, loginController.postGoogleLogin);
-router.post("/google/link", loginRateLimit, loginController.postConfirmSocialLink);
+router.post("/google/link", socialLinkRateLimit, loginController.postConfirmSocialLink);
 router.post("/social", loginRateLimit, loginController.postSocialLogin);
-router.post("/social/link", loginRateLimit, loginController.postConfirmSocialLink);
+router.post("/social/link", socialLinkRateLimit, loginController.postConfirmSocialLink);
 
 /* Must be authenticated to enable 2FA */
 router.post("/2fa", Security.checkAuthentication, loginController.enable2FA);

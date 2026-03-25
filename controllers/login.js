@@ -13,6 +13,7 @@ const StatusResponse = require("../util/statusresponse");
 const Mailer = require("../util/mailer");
 const Helpers = require("../util/helpers");
 const database = require("../util/database");
+const AuthAudit = require("../util/auth-audit");
 
 const Organization = require("../model/organization");
 const OrganizationInvite = require("../model/organizationinvite");
@@ -24,6 +25,38 @@ const TestToken = require("../model/testtoken");
 
 let googleOAuthClient = null;
 const SOCIAL_LINK_TOKEN_EXPIRY = "10m";
+
+function getRequestUserAgent(req) {
+  return (req?.get?.("User-Agent") || "").toString().trim() || null;
+}
+
+function sanitizeAuditMetadata(metadata) {
+  if (!metadata || typeof metadata !== "object") return metadata || null;
+  const copy = { ...metadata };
+  if (copy.linkToken) delete copy.linkToken;
+  if (copy.idToken) delete copy.idToken;
+  if (copy.subject) delete copy.subject;
+  return copy;
+}
+
+async function writeAuthAudit(req, eventType, outcome, details = {}, options = {}) {
+  return AuthAudit.log(
+    {
+      eventType,
+      outcome,
+      actorUserId: details.actorUserId,
+      targetUserId: details.targetUserId,
+      organizationId: details.organizationId,
+      inviteId: details.inviteId,
+      provider: normalizeProvider(details.provider),
+      email: normalizeEmail(details.email),
+      message: details.message || null,
+      metadata: sanitizeAuditMetadata(details.metadata),
+      userAgent: getRequestUserAgent(req),
+    },
+    { req, transaction: options.transaction }
+  );
+}
 
 async function generateJWTAndSave(foundUser) {
   if (!foundUser) return null;
@@ -218,7 +251,7 @@ function decodeSocialLinkToken(token) {
   return decoded;
 }
 
-async function findOrProvisionSocialUser(payload) {
+async function findOrProvisionSocialUser(payload, auditContext = {}) {
   const provider = normalizeProvider(payload.provider);
   const subject = (payload.subject || "").toString().trim();
   const email = normalizeEmail(payload.email);
@@ -247,10 +280,39 @@ async function findOrProvisionSocialUser(payload) {
     if (existingIdentity) {
       user = await User.findByPk(existingIdentity.userId, { transaction });
       if (!user) throw new Error("Linked user not found for social identity");
+      if (!user.active) {
+        await writeAuthAudit(
+          auditContext.req,
+          "social_sign_in",
+          "blocked",
+          {
+            targetUserId: existingIdentity.userId,
+            provider,
+            email,
+            message: "Social identity linked to disabled account",
+            metadata: { reason: "linked_account_disabled" },
+          }
+        );
+        throw new Error("Account disabled");
+      }
       if (existingIdentity.email !== email) {
         existingIdentity.email = email;
         await existingIdentity.save({ transaction });
       }
+      await writeAuthAudit(
+        auditContext.req,
+        "social_sign_in",
+        "success",
+        {
+          targetUserId: user.id,
+          organizationId: user.organizationId,
+          provider,
+          email,
+          message: "Signed in with linked social identity",
+          metadata: { path: "existing_identity" },
+        },
+        { transaction }
+      );
     } else {
       user = await User.findOne({
         where: { email },
@@ -258,7 +320,22 @@ async function findOrProvisionSocialUser(payload) {
       });
 
       if (user) {
-        if (!user.active) throw new Error("Account disabled");
+        if (!user.active) {
+          await writeAuthAudit(
+            auditContext.req,
+            "social_sign_in",
+            "blocked",
+            {
+              targetUserId: user.id,
+              organizationId: user.organizationId,
+              provider,
+              email,
+              message: "Existing account is disabled",
+              metadata: { reason: "matched_account_disabled" },
+            }
+          );
+          throw new Error("Account disabled");
+        }
 
         const existingProviderIdentity = await SocialIdentity.findOne({
           where: { userId: user.id, provider },
@@ -266,7 +343,37 @@ async function findOrProvisionSocialUser(payload) {
         });
 
         if (existingProviderIdentity) {
+          await writeAuthAudit(
+            auditContext.req,
+            "social_sign_in",
+            "blocked",
+            {
+              targetUserId: user.id,
+              organizationId: user.organizationId,
+              provider,
+              email,
+              message: "Account already linked to a different provider subject",
+              metadata: { reason: "provider_already_linked" },
+            }
+          );
           throw new Error(`Account already linked to a different ${provider} sign-in`);
+        }
+
+        if (!user.auth) {
+          await writeAuthAudit(
+            auditContext.req,
+            "social_sign_in",
+            "blocked",
+            {
+              targetUserId: user.id,
+              organizationId: user.organizationId,
+              provider,
+              email,
+              message: "Existing account has no password-based login to confirm linking",
+              metadata: { reason: "non_password_account_match" },
+            }
+          );
+          throw new Error("Existing account requires manual support review");
         }
 
         linkRequired = true;
@@ -277,6 +384,20 @@ async function findOrProvisionSocialUser(payload) {
           userId: user.id,
           inviteToken,
         });
+        await writeAuthAudit(
+          auditContext.req,
+          "social_link_confirmation",
+          "pending",
+          {
+            targetUserId: user.id,
+            organizationId: user.organizationId,
+            provider,
+            email,
+            message: "Confirmed provider auth; waiting for explicit account link confirmation",
+            metadata: { reason: "existing_password_account" },
+          },
+          { transaction }
+        );
       } else {
         isNewUser = true;
         const userId = UUID("user");
@@ -286,6 +407,19 @@ async function findOrProvisionSocialUser(payload) {
         let organizationAdmin = false;
         if (invited) {
           if (normalizeEmail(invited.invite.email) !== email) {
+            await writeAuthAudit(
+              auditContext.req,
+              "social_sign_in",
+              "blocked",
+              {
+                organizationId: invited.organization.id,
+                inviteId: invited.invite.id,
+                provider,
+                email,
+                message: "Invite email did not match verified provider email",
+                metadata: { reason: "invite_email_mismatch" },
+              }
+            );
             throw new Error("Invite email does not match Google account");
           }
           organizationId = invited.organization.id;
@@ -293,6 +427,20 @@ async function findOrProvisionSocialUser(payload) {
           invited.invite.acceptedAt = new Date();
           invited.invite.acceptedByUserId = userId;
           await invited.invite.save({ transaction });
+          await writeAuthAudit(
+            auditContext.req,
+            "organization_invite_accept",
+            "success",
+            {
+              targetUserId: userId,
+              organizationId,
+              inviteId: invited.invite.id,
+              provider,
+              email,
+              message: "Invite accepted during first social sign-in",
+            },
+            { transaction }
+          );
         } else {
           const provisionedOrganization = await Organization.create(
             {
@@ -343,6 +491,27 @@ async function findOrProvisionSocialUser(payload) {
           { transaction }
         );
         await addDefaultRoleToUser(user, transaction);
+        await writeAuthAudit(
+          auditContext.req,
+          "social_sign_in",
+          "success",
+          {
+            targetUserId: user.id,
+            organizationId: user.organizationId,
+            inviteId: consumedInviteId,
+            provider,
+            email,
+            message: invited
+              ? "Provisioned new user from social sign-in and accepted invite"
+              : "Provisioned new user and organization from social sign-in",
+            metadata: {
+              isNewUser: true,
+              provisionedOrganizationId,
+              consumedInviteId,
+            },
+          },
+          { transaction }
+        );
       }
     }
 
@@ -359,7 +528,7 @@ async function findOrProvisionSocialUser(payload) {
   });
 }
 
-async function confirmSocialLink(linkToken) {
+async function confirmSocialLink(linkToken, auditContext = {}) {
   const decoded = decodeSocialLinkToken(linkToken);
 
   return await database.transaction(async (transaction) => {
@@ -375,6 +544,9 @@ async function confirmSocialLink(linkToken) {
     const user = await User.findByPk(userId, { transaction });
     if (!user) throw new Error("User not found");
     if (!user.active) throw new Error("Account disabled");
+    if (!user.auth) {
+      throw new Error("Existing account requires manual support review");
+    }
 
     const existingIdentity = await SocialIdentity.findOne({
       where: { provider, subject },
@@ -403,9 +575,36 @@ async function confirmSocialLink(linkToken) {
         },
         { transaction }
       );
+      await writeAuthAudit(
+        auditContext.req,
+        "social_link_confirmation",
+        "success",
+        {
+          targetUserId: user.id,
+          organizationId: user.organizationId,
+          provider,
+          email,
+          message: "Linked verified social identity to existing password account",
+        },
+        { transaction }
+      );
     } else if (existingIdentity.email !== email) {
       existingIdentity.email = email;
       await existingIdentity.save({ transaction });
+      await writeAuthAudit(
+        auditContext.req,
+        "social_link_confirmation",
+        "success",
+        {
+          targetUserId: user.id,
+          organizationId: user.organizationId,
+          provider,
+          email,
+          message: "Refreshed linked social identity email",
+          metadata: { refreshedIdentity: true },
+        },
+        { transaction }
+      );
     }
 
     return { user, linkedProvider: provider };
@@ -450,7 +649,20 @@ exports.getInviteStatus = async (req, res, next) => {
     if (!inviteToken) return StatusResponse(res, 421, "No invite token provided");
 
     const resolved = await resolveInviteByToken(inviteToken, null);
-    if (!resolved) return StatusResponse(res, 404, "Invite not found");
+    if (!resolved) {
+      await writeAuthAudit(req, "organization_invite_lookup", "blocked", {
+        message: "Invite token not found or not active",
+        metadata: { reason: "invite_not_found" },
+      });
+      return StatusResponse(res, 404, "Invite not found");
+    }
+
+    await writeAuthAudit(req, "organization_invite_lookup", "success", {
+      organizationId: resolved.organization.id,
+      inviteId: resolved.invite.id,
+      email: resolved.invite.email,
+      message: "Invite lookup succeeded",
+    });
 
     return StatusResponse(res, 200, "OK", {
       invite: {
@@ -467,83 +679,114 @@ exports.getInviteStatus = async (req, res, next) => {
 };
 
 exports.postLogin = async (req, res, next) => {
-  const email = req.body.email;
-  const password = req.body.password;
+  try {
+    const email = req.body.email;
+    const password = req.body.password;
 
-  if (!email || !password) {
-    return StatusResponse(res, 403, "Invalid credentials");
+    if (!email || !password) {
+      await writeAuthAudit(req, "password_sign_in", "blocked", {
+        email,
+        message: "Missing credentials",
+        metadata: { reason: "missing_credentials" },
+      });
+      return StatusResponse(res, 403, "Invalid credentials");
+    }
+
+    const foundUser = await User.findOne({ where: { email: email } });
+    if (!foundUser) {
+      await writeAuthAudit(req, "password_sign_in", "blocked", {
+        email,
+        message: "Unknown account",
+        metadata: { reason: "user_not_found" },
+      });
+      return StatusResponse(res, 403, "Invalid credentials");
+    }
+
+    if (!foundUser.active) {
+      await writeAuthAudit(req, "password_sign_in", "blocked", {
+        targetUserId: foundUser.id,
+        organizationId: foundUser.organizationId,
+        email,
+        message: "Account disabled",
+        metadata: { reason: "account_disabled" },
+      });
+      return StatusResponse(res, 403, "Account disabled");
+    }
+
+    if (!foundUser.auth || foundUser.auth === "") {
+      await writeAuthAudit(req, "password_sign_in", "blocked", {
+        targetUserId: foundUser.id,
+        organizationId: foundUser.organizationId,
+        email,
+        message: "Password login unavailable",
+        metadata: { reason: "missing_password_hash" },
+      });
+      return StatusResponse(res, 403, "Invalid credentials");
+    }
+
+    const passwordMatch = await bcrypt.compare(password, foundUser.auth);
+    if (!passwordMatch) {
+      await writeAuthAudit(req, "password_sign_in", "blocked", {
+        targetUserId: foundUser.id,
+        organizationId: foundUser.organizationId,
+        email,
+        message: "Invalid password",
+        metadata: { reason: "password_mismatch" },
+      });
+      return StatusResponse(res, 403, "Invalid credentials");
+    }
+
+    if (foundUser.enable2fa) {
+      foundUser.token2fa = UUID("wotlwedu");
+      const userUpdated = await foundUser.save();
+      if (!userUpdated) {
+        return StatusResponse(res, 500, "Cannot update user with pending 2FA");
+      }
+
+      await writeAuthAudit(req, "password_sign_in", "pending", {
+        targetUserId: foundUser.id,
+        organizationId: foundUser.organizationId,
+        email,
+        message: "Password sign-in waiting for 2FA verification",
+        metadata: { requires2fa: true },
+      });
+
+      return StatusResponse(res, 302, "2FA Enabled", {
+        toURL: "/auth/verify/" + foundUser.id + "/" + foundUser.token2fa,
+      });
+    }
+
+    const tokens = await generateJWTAndSave(foundUser);
+    await writeAuthAudit(req, "password_sign_in", "success", {
+      targetUserId: foundUser.id,
+      organizationId: foundUser.organizationId,
+      email,
+      message: "Password sign-in succeeded",
+    });
+    return StatusResponse(res, 200, "OK", {
+      userId: foundUser.id,
+      firstName: foundUser.firstName,
+      lastName: foundUser.lastName,
+      email: foundUser.email,
+      alias: foundUser.alias,
+      admin: foundUser.admin,
+      systemAdmin: foundUser.systemAdmin === true || foundUser.admin === true,
+      organizationId: foundUser.organizationId || null,
+      organizationAdmin: foundUser.organizationAdmin === true,
+      workgroupAdmin: foundUser.workgroupAdmin === true,
+      adminWorkgroupId:
+        foundUser.adminWorkgroupId || foundUser.adminGroupId || null,
+      authToken: tokens.authToken,
+      refreshToken: tokens.refreshToken,
+    });
+  } catch (err) {
+    next(err);
   }
-
-  User.findOne({ where: { email: email } })
-    .then((foundUser) => {
-      if (!foundUser) {
-        return StatusResponse(res, 403, "Invalid credentials");
-      }
-
-      // Prevent login for inactive accounts
-      if (!foundUser.active) {
-        return StatusResponse(res, 403, "Account disabled");
-      }
-
-      if (!foundUser.auth)
-        return StatusResponse(res, 403, "Invalid credentials");
-      if (foundUser.auth === "")
-        return StatusResponse(res, 403, "Invalid credentials");
-
-      bcrypt
-        .compare(password, foundUser.auth)
-        .then(async (passwordMatch) => {
-          if (!passwordMatch) {
-            return StatusResponse(res, 403, "Invalid credentials");
-          }
-          /* If 2FA has been enabled, generate a verification token so that the app has to call the verification with both the token and the 2FA credentials */
-          if (foundUser.enable2fa) {
-            foundUser.token2fa = UUID("wotlwedu");
-            foundUser
-              .save()
-              .then((userUpdated) => {
-                if (!userUpdated)
-                  return StatusResponse(
-                    500,
-                    "Cannot update user with pending 2FA"
-                  );
-                /* Now tell the calling app to redirect to the verification */
-                return StatusResponse(res, 302, "2FA Enabled", {
-                  toURL:
-                    "/auth/verify/" + foundUser.id + "/" + foundUser.token2fa,
-                });
-              })
-              .catch((err) => next(err));
-          } else {
-            const tokens = await generateJWTAndSave(foundUser);
-            return StatusResponse(res, 200, "OK", {
-              userId: foundUser.id,
-              firstName: foundUser.firstName,
-              lastName: foundUser.lastName,
-              email: foundUser.email,
-              alias: foundUser.alias,
-              admin: foundUser.admin,
-              systemAdmin: foundUser.systemAdmin === true || foundUser.admin === true,
-              organizationId: foundUser.organizationId || null,
-              organizationAdmin: foundUser.organizationAdmin === true,
-              workgroupAdmin: foundUser.workgroupAdmin === true,
-              adminWorkgroupId:
-                foundUser.adminWorkgroupId || foundUser.adminGroupId || null,
-              authToken: tokens.authToken,
-              refreshToken: tokens.refreshToken,
-            });
-          }
-        })
-        .catch((err) => {
-          next(err);
-        });
-    })
-    .catch((err) => next(err));
 };
 
 exports.postSocialLogin = async (req, res, next) => {
   try {
-    const result = await findOrProvisionSocialUser(req.body || {});
+    const result = await findOrProvisionSocialUser(req.body || {}, { req });
     if (result.linkRequired) {
       return StatusResponse(res, 200, "Confirmation required", {
         linkRequired: true,
@@ -563,31 +806,52 @@ exports.postSocialLogin = async (req, res, next) => {
       })
     );
   } catch (err) {
-    if (err && err.message === "Account disabled") {
-      return StatusResponse(res, 403, "Account disabled");
+    if (err && err.message === "Must provide provider, subject, email, firstName, and lastName") {
+      await writeAuthAudit(req, "social_sign_in", "blocked", {
+        provider: req.body?.provider,
+        email: req.body?.email,
+        message: err.message,
+      });
+      return StatusResponse(res, 421, err.message);
     }
     if (
       err &&
       [
-        "Must provide provider, subject, email, firstName, and lastName",
         "Invite email does not match Google account",
         "No default role is available",
         "Account already linked to a different google sign-in",
+        "Existing account requires manual support review",
       ].includes(err.message)
     ) {
+      if (err.message === "Existing account requires manual support review") {
+        const matchedUser = await User.findOne({
+          where: { email: normalizeEmail(req.body?.email) },
+        });
+        await writeAuthAudit(req, "social_sign_in", "blocked", {
+          provider: req.body?.provider,
+          email: req.body?.email,
+          targetUserId: matchedUser?.id,
+          organizationId: matchedUser?.organizationId,
+          message: err.message,
+        });
+      }
       return StatusResponse(res, 421, err.message);
+    }
+    if (err && err.message === "Account disabled") {
+      return StatusResponse(res, 403, "Account disabled");
     }
     next(err);
   }
 };
 
 exports.postGoogleLogin = async (req, res, next) => {
+  let googleProfile = null;
   try {
-    const googleProfile = await verifyGoogleIdToken(req.body?.idToken);
+    googleProfile = await verifyGoogleIdToken(req.body?.idToken);
     if (req.body?.inviteToken) {
       googleProfile.inviteToken = req.body.inviteToken;
     }
-    const result = await findOrProvisionSocialUser(googleProfile);
+    const result = await findOrProvisionSocialUser(googleProfile, { req });
     if (result.linkRequired) {
       return StatusResponse(res, 200, "Confirmation required", {
         linkRequired: true,
@@ -615,12 +879,40 @@ exports.postGoogleLogin = async (req, res, next) => {
         "Invalid Google ID token",
         "Google account email is not verified",
         "Google token missing required identity claims",
+      ].includes(err.message)
+    ) {
+      await writeAuthAudit(req, "social_sign_in", "blocked", {
+        provider: "google",
+        email: googleProfile?.email || null,
+        message: err.message,
+      });
+      return StatusResponse(res, 421, err.message);
+    }
+    if (
+      err &&
+      [
         "Invite email does not match Google account",
         "No default role is available",
         "Account already linked to a different google sign-in",
+        "Existing account requires manual support review",
       ].includes(err.message)
     ) {
+      if (err.message === "Existing account requires manual support review") {
+        const matchedUser = await User.findOne({
+          where: { email: normalizeEmail(googleProfile?.email || req.body?.email) },
+        });
+        await writeAuthAudit(req, "social_sign_in", "blocked", {
+          provider: "google",
+          email: googleProfile?.email || null,
+          targetUserId: matchedUser?.id,
+          organizationId: matchedUser?.organizationId,
+          message: err.message,
+        });
+      }
       return StatusResponse(res, 421, err.message);
+    }
+    if (err && err.message === "Account disabled") {
+      return StatusResponse(res, 403, "Account disabled");
     }
     next(err);
   }
@@ -631,7 +923,7 @@ exports.postConfirmSocialLink = async (req, res, next) => {
     const linkToken = (req.body?.linkToken || "").toString().trim();
     if (!linkToken) return StatusResponse(res, 421, "No social link token provided");
 
-    const result = await confirmSocialLink(linkToken);
+    const result = await confirmSocialLink(linkToken, { req });
     const tokens = await generateJWTAndSave(result.user);
     return StatusResponse(
       res,
@@ -649,11 +941,18 @@ exports.postConfirmSocialLink = async (req, res, next) => {
         "Invalid social link token",
         "Social identity already linked to another account",
         "Account already linked to a different google sign-in",
+        "Existing account requires manual support review",
       ].includes(err.message)
     ) {
+      await writeAuthAudit(req, "social_link_confirmation", "blocked", {
+        message: err.message,
+      });
       return StatusResponse(res, 421, err.message);
     }
     if (err && err.message === "Account disabled") {
+      await writeAuthAudit(req, "social_link_confirmation", "blocked", {
+        message: "Account disabled",
+      });
       return StatusResponse(res, 403, "Account disabled");
     }
     next(err);

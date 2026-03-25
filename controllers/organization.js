@@ -3,6 +3,7 @@ const { Op } = require("sequelize");
 const UUID = require("../util/mini-uuid");
 const StatusResponse = require("../util/statusresponse");
 const Mailer = require("../util/mailer");
+const AuthAudit = require("../util/auth-audit");
 
 const Organization = require("../model/organization");
 const OrganizationInvite = require("../model/organizationinvite");
@@ -77,6 +78,23 @@ function canReadOrg(req, organizationId = null) {
   if (!req.authOrganizationId) return false;
   if (!organizationId) return true;
   return req.authOrganizationId === organizationId;
+}
+
+async function writeInviteAudit(req, outcome, details = {}) {
+  return AuthAudit.log(
+    {
+      eventType: details.eventType || "organization_invite_manage",
+      outcome,
+      actorUserId: req?.authUserId,
+      targetUserId: details.targetUserId,
+      organizationId: details.organizationId,
+      inviteId: details.inviteId,
+      email: details.email,
+      message: details.message,
+      metadata: details.metadata,
+    },
+    { req }
+  );
 }
 
 module.exports.getOrganization = async (req, res, next) => {
@@ -239,8 +257,22 @@ module.exports.putInviteToOrganization = async (req, res, next) => {
     const foundUser = await User.findOne({ where: { email } });
     if (foundUser) {
       if (foundUser.organizationId === organizationId) {
+        await writeInviteAudit(req, "blocked", {
+          organizationId,
+          targetUserId: foundUser.id,
+          email,
+          message: "Invite target already belongs to the organization",
+          metadata: { reason: "already_in_organization" },
+        });
         return StatusResponse(res, 421, "User already belongs to this organization");
       }
+      await writeInviteAudit(req, "blocked", {
+        organizationId,
+        targetUserId: foundUser.id,
+        email,
+        message: "Invite target belongs to another organization",
+        metadata: { reason: "belongs_to_another_organization" },
+      });
       return StatusResponse(res, 421, "User already belongs to another organization");
     }
 
@@ -282,6 +314,15 @@ module.exports.putInviteToOrganization = async (req, res, next) => {
       invite.token,
       Config.baseFrontendUrl
     );
+
+    await writeInviteAudit(req, invite.createdAt && invite.updatedAt && invite.createdAt.getTime() === invite.updatedAt.getTime() ? "success" : "success", {
+      eventType: "organization_invite_create",
+      organizationId,
+      inviteId: invite.id,
+      email,
+      message: "Organization invite created or refreshed",
+      metadata: { expiresAt: invite.expiresAt },
+    });
 
     return StatusResponse(res, 200, "OK", {
       invite: serializeInvite(invite),
@@ -353,6 +394,15 @@ module.exports.postResendOrganizationInvite = async (req, res, next) => {
       Config.baseFrontendUrl
     );
 
+    await writeInviteAudit(req, "success", {
+      eventType: "organization_invite_resend",
+      organizationId,
+      inviteId: invite.id,
+      email: invite.email,
+      message: "Organization invite resent",
+      metadata: { expiresAt: invite.expiresAt },
+    });
+
     return StatusResponse(res, 200, "OK", {
       invite: serializeInvite(invite),
     });
@@ -381,6 +431,13 @@ module.exports.deleteOrganizationInvite = async (req, res, next) => {
     invite.revokedByUserId = req.authUserId;
     invite.updatedAt = new Date();
     await invite.save();
+    await writeInviteAudit(req, "success", {
+      eventType: "organization_invite_revoke",
+      organizationId,
+      inviteId: invite.id,
+      email: invite.email,
+      message: "Organization invite revoked",
+    });
     return StatusResponse(res, 200, "OK", {
       invite: serializeInvite(invite),
     });

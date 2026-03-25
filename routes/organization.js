@@ -1,9 +1,17 @@
 const express = require("express");
 const Security = require("../util/security");
+const Config = require("../config/wotlwedu");
+const createRateLimiter = require("../util/rate-limit");
 
 const router = express.Router();
 
 const organizationController = require("../controllers/organization");
+const inviteManageRateLimit = createRateLimiter({
+  max: Config.authRateLimitInviteManageMax,
+  windowMs: Config.authRateLimitWindowMs,
+  keyMode: "ip+body",
+  message: "Too many invite management attempts",
+});
 
 router.get(
   "/:organizationId",
@@ -32,16 +40,19 @@ router.put(
 );
 router.post(
   "/:organizationId/invite",
+  inviteManageRateLimit,
   Security.checkCapability("organization", ["edit"]),
   organizationController.putInviteToOrganization
 );
 router.post(
   "/:organizationId/invite/:inviteId/resend",
+  inviteManageRateLimit,
   Security.checkCapability("organization", ["edit"]),
   organizationController.postResendOrganizationInvite
 );
 router.delete(
   "/:organizationId/invite/:inviteId",
+  inviteManageRateLimit,
   Security.checkCapability("organization", ["edit"]),
   organizationController.deleteOrganizationInvite
 );

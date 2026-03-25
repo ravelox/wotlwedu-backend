@@ -15,6 +15,7 @@ process.env.WOTLWEDU_DB_SYNC = "true";
 const database = require("../util/database");
 const Associations = require("../model/associations");
 const Mailer = require("../util/mailer");
+const AuthAudit = require("../model/authaudit");
 const Organization = require("../model/organization");
 const OrganizationInvite = require("../model/organizationinvite");
 const Role = require("../model/role");
@@ -197,6 +198,18 @@ module.exports = (addTest) => {
       admin: false,
       auth: await bcrypt.hash("password123", 12),
     });
+    await User.create({
+      id: "user_social_only",
+      firstName: "Sam",
+      lastName: "Social",
+      alias: "ssocial",
+      email: "social.only@example.com",
+      organizationId: "org_test",
+      creator: "user_test",
+      active: true,
+      admin: false,
+      auth: null,
+    });
 
     Status = require("../model/status");
     Notification = require("../model/notification");
@@ -330,6 +343,12 @@ module.exports = (addTest) => {
     assert.strictEqual(res.body.data.invite.status, "pending");
     assert.ok(res.body.data.invite.expiresAt);
     pendingInviteToken = res.body.data.invite.token;
+
+    const audit = await AuthAudit.findOne({
+      where: { eventType: "organization_invite_create", inviteId: res.body.data.invite.id },
+    });
+    assert.ok(audit);
+    assert.strictEqual(audit.outcome, "success");
   });
 
   addTest("public invite lookup returns organization context", async () => {
@@ -420,6 +439,16 @@ module.exports = (addTest) => {
       where: { provider: "google", subject: "google-subject-password-link" },
     });
     assert.strictEqual(social, null);
+
+    const audit = await AuthAudit.findOne({
+      where: {
+        eventType: "social_link_confirmation",
+        outcome: "pending",
+        targetUserId: "user_password",
+      },
+      order: [["createdAt", "DESC"]],
+    });
+    assert.ok(audit);
   });
 
   addTest("social link confirmation links to existing password account and returns session", async () => {
@@ -446,6 +475,38 @@ module.exports = (addTest) => {
     });
     assert.ok(social);
     assert.strictEqual(social.userId, "user_password");
+
+    const audit = await AuthAudit.findOne({
+      where: {
+        eventType: "social_link_confirmation",
+        outcome: "success",
+        targetUserId: "user_password",
+      },
+      order: [["createdAt", "DESC"]],
+    });
+    assert.ok(audit);
+  });
+
+  addTest("social login blocks automatic linking for existing non-password account", async () => {
+    const res = await request(server, "POST", "/login/social", {
+      provider: "google",
+      subject: "google-subject-social-only",
+      email: "social.only@example.com",
+      firstName: "Sam",
+      lastName: "Social",
+    });
+    assert.strictEqual(res.status, 421);
+    assert.strictEqual(res.body.message, "Existing account requires manual support review");
+
+    const audit = await AuthAudit.findOne({
+      where: {
+        eventType: "social_sign_in",
+        outcome: "blocked",
+        targetUserId: "user_social_only",
+      },
+      order: [["createdAt", "DESC"]],
+    });
+    assert.ok(audit);
   });
 
   addTest("organization invite revoke removes pending invite and invalidates lookup", async () => {
@@ -469,6 +530,12 @@ module.exports = (addTest) => {
     const historyRes = await request(server, "GET", "/organization/org_test/invite?status=revoked");
     assert.strictEqual(historyRes.status, 200);
     assert.ok(historyRes.body.data.invites.some((invite) => invite.id === inviteId));
+
+    const audit = await AuthAudit.findOne({
+      where: { eventType: "organization_invite_revoke", inviteId },
+    });
+    assert.ok(audit);
+    assert.strictEqual(audit.outcome, "success");
   });
 
   addTest("organization invite history reports expired invites", async () => {

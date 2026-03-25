@@ -20,6 +20,10 @@ function makeKey(req, mode) {
       ? req.body.email.trim().toLowerCase()
       : typeof req.body?.userId === "string"
       ? req.body.userId.trim().toLowerCase()
+      : typeof req.body?.linkToken === "string"
+      ? req.body.linkToken.trim().toLowerCase()
+      : typeof req.params?.inviteId === "string"
+      ? req.params.inviteId.trim().toLowerCase()
       : "";
   if (bodyValue) return `ip:${ip}|body:${bodyValue}`;
 

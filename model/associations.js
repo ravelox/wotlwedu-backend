@@ -11,6 +11,7 @@ const Item = require("./item");
 const List = require("./list");
 const ListItem = require("./listitem");
 const Notification = require("./notification");
+const AuthAudit = require("./authaudit");
 const Organization = require("./organization");
 const OrganizationInvite = require("./organizationinvite");
 const Role = require("./role");
@@ -95,6 +96,8 @@ module.exports.setup = function () {
   User.hasMany(UserRole);
   User.hasMany(Vote);
   User.hasMany(Notification);
+  User.hasMany(AuthAudit, { foreignKey: "actorUserId", sourceKey: "id", as: "authAuditActor" });
+  User.hasMany(AuthAudit, { foreignKey: "targetUserId", sourceKey: "id", as: "authAuditTarget" });
   User.hasMany(OrganizationInvite, { foreignKey: "invitedByUserId", sourceKey: "id" });
   User.hasMany(SocialIdentity, { foreignKey: "userId", sourceKey: "id" });
   User.hasOne(Image, { foreignKey: "id", sourceKey: "imageId" });
@@ -102,6 +105,7 @@ module.exports.setup = function () {
 
   Organization.hasMany(User, { foreignKey: "organizationId", sourceKey: "id" });
   Organization.hasMany(Workgroup, { foreignKey: "organizationId", sourceKey: "id" });
+  Organization.hasMany(AuthAudit, { foreignKey: "organizationId", sourceKey: "id" });
   Organization.hasMany(OrganizationInvite, {
     foreignKey: "organizationId",
     sourceKey: "id",
@@ -147,6 +151,9 @@ module.exports.setup = function () {
   Notification.hasOne(User, { foreignKey: "id", sourceKey: "userId" });
   Notification.hasOne(User, { foreignKey: "id", sourceKey: "senderId", as: "sender", });
   Notification.hasOne(Status, { foreignKey: "id", sourceKey: "statusId",});
+  AuthAudit.hasOne(User, { foreignKey: "id", sourceKey: "actorUserId", as: "actor" });
+  AuthAudit.hasOne(User, { foreignKey: "id", sourceKey: "targetUserId", as: "target" });
+  AuthAudit.hasOne(Organization, { foreignKey: "id", sourceKey: "organizationId" });
 
   Status.hasMany(Notification);
   Status.hasMany(Friend);

@@ -18,6 +18,7 @@ const Item = require("./item");
 const List = require("./list");
 const ListItem = require("./listitem");
 const Notification = require("./notification");
+const AuthAudit = require("./authaudit");
 const Organization = require("./organization");
 const OrganizationInvite = require("./organizationinvite");
 const Role = require("./role");

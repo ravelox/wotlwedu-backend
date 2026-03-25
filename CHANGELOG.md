@@ -5,6 +5,11 @@
 - Change social/Google first-link behavior so the backend returns a neutral `linkRequired` state plus a short-lived link token instead of auto-linking immediately.
 - Extend integration coverage for deferred social linking and duplicate-provider-link protection.
 
+## 0.0.26 - 2026-03-24
+- Add persistent `authaudits` records for password sign-in, social sign-in, deferred link confirmation, invite lookup, invite acceptance, invite create/resend/revoke flows, and blocked auth edge cases.
+- Add dedicated rate limits for invite lookup, invite management, and deferred social-link confirmation on top of the existing auth throttles.
+- Refuse automatic social linking when a verified social sign-in matches an existing non-password account, returning a manual-support path instead of risking ambiguous account state.
+
 ## 0.0.24 - 2026-03-24
 - Add organization invite default expiry policy via `WOTLWEDU_ORG_INVITE_EXPIRY_DAYS` and retain invite history with derived statuses for pending, accepted, revoked, and expired records.
 - Preserve revoked invites as historical records instead of deleting them, and expose invite status filtering for organization admin tooling.

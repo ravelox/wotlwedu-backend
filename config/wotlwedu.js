@@ -86,6 +86,12 @@ module.exports.authRateLimitResetMax =
   +(process.env.WOTLWEDU_RATE_RESET_MAX || 5);
 module.exports.authRateLimitVerify2faMax =
   +(process.env.WOTLWEDU_RATE_VERIFY2FA_MAX || 10);
+module.exports.authRateLimitSocialLinkMax =
+  +(process.env.WOTLWEDU_RATE_SOCIAL_LINK_MAX || 5);
+module.exports.authRateLimitInviteLookupMax =
+  +(process.env.WOTLWEDU_RATE_INVITE_LOOKUP_MAX || 30);
+module.exports.authRateLimitInviteManageMax =
+  +(process.env.WOTLWEDU_RATE_INVITE_MANAGE_MAX || 20);
 module.exports.authRateLimitWindowMs =
   +(process.env.WOTLWEDU_RATE_WINDOW_MS || 60 * 1000);
 module.exports.organizationInviteExpiryDays =
