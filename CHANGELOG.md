@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.29 - 2026-03-24
+- Refresh the backend checkpoint to reflect `wotlwedu-admin` as the active operational console.
+- Mark `wotlwedu-browser` and `wotlwedu-minimal` as archived counterparts in current project status.
+
 ## 0.0.25 - 2026-03-24
 - Add post-auth social link confirmation endpoints (`POST /login/google/link`, `POST /login/social/link`) for verified provider sign-ins that match an existing password-based account.
 - Change social/Google first-link behavior so the backend returns a neutral `linkRequired` state plus a short-lived link token instead of auto-linking immediately.

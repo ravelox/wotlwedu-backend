@@ -2,11 +2,11 @@
 
 Last updated: 2026-03-24
 Repo: `wotlwedu-backend`
-Current version: `0.0.28`
+Current version: `0.0.29`
 
 ## Current Focus
 
-This repo contains the backend side of the production auth/invite hardening and support observability work. The latest shipped slice added dedicated support endpoints, structured auth-audit stdout logging, richer support/admin diagnostics, and deployment config examples.
+This repo contains the backend side of the production auth/invite hardening and support observability work. The current frontend counterpart for operational workflows is now `wotlwedu-admin`, while `wotlwedu-browser` and `wotlwedu-minimal` are archived.
 
 ## Implemented State
 
@@ -26,6 +26,9 @@ This repo contains the backend side of the production auth/invite hardening and 
 - Auth-audit events can now be emitted as structured stdout logs via `WOTLWEDU_AUTH_AUDIT_STDOUT`.
 - Mailer templates support richer deep links and support contact configuration.
 - Added top-level [`.env.example`](/Users/dkelly/Projects/wotlwedu/wotlwedu-backend/.env.example).
+- Current admin-facing consumers include:
+  - `wotlwedu-ui` for the primary user web application
+  - `wotlwedu-admin` for sysops and support operations
 
 ## Key Files For This Baseline
 
@@ -70,4 +73,4 @@ node tests/run-tests.js
 
 1. Run the support endpoints and auth flows against the real deployed MariaDB-backed environment, not only sqlite integration mode.
 2. Decide whether to wire the structured auth-audit logs into an external metrics/alerting stack.
-3. Expand admin/support tooling further only if a dedicated operational workflow beyond the browser support console is needed.
+3. Add backend endpoints for richer remediation and infrastructure operations as `wotlwedu-admin` expands.
