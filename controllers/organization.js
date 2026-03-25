@@ -10,6 +10,34 @@ const User = require("../model/user");
 const Attributes = require("../model/attributes");
 const Config = require("../config/wotlwedu");
 
+function serializeInvite(invite) {
+  return {
+    id: invite.id,
+    organizationId: invite.organizationId,
+    email: invite.email,
+    token: invite.token,
+    invitedByUserId: invite.invitedByUserId,
+    acceptedAt: invite.acceptedAt,
+    expiresAt: invite.expiresAt,
+    createdAt: invite.createdAt,
+    updatedAt: invite.updatedAt,
+  };
+}
+
+async function findActiveOrganizationInvite(organizationId, inviteId) {
+  if (!organizationId || !inviteId) return null;
+
+  const invite = await OrganizationInvite.findOne({
+    where: {
+      id: inviteId,
+      organizationId,
+      acceptedAt: null,
+    },
+  });
+  if (!invite) return null;
+  return invite;
+}
+
 function assertOrgAdmin(req, organizationId = null) {
   if (req.isAdmin === true) return true;
   if (req.isOrganizationAdmin !== true) return false;
@@ -228,16 +256,98 @@ module.exports.putInviteToOrganization = async (req, res, next) => {
     );
 
     return StatusResponse(res, 200, "OK", {
-      invite: {
-        id: invite.id,
-        organizationId: invite.organizationId,
-        email: invite.email,
-        token: invite.token,
-        invitedByUserId: invite.invitedByUserId,
-        acceptedAt: invite.acceptedAt,
-        expiresAt: invite.expiresAt,
-      },
+      invite: serializeInvite(invite),
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports.getOrganizationInvites = async (req, res, next) => {
+  try {
+    const organizationId = req.params.organizationId;
+    if (!organizationId) return StatusResponse(res, 421, "No organization ID provided");
+    if (!assertOrgAdmin(req, organizationId))
+      return StatusResponse(res, 403, "Not authorized for this organization");
+
+    const foundOrganization = await Organization.findByPk(organizationId);
+    if (!foundOrganization) return StatusResponse(res, 404, "Organization not found");
+
+    const invites = await OrganizationInvite.findAll({
+      where: {
+        organizationId,
+        acceptedAt: null,
+      },
+      order: [["createdAt", "DESC"]],
+    });
+
+    const activeInvites = (invites || []).filter((invite) => {
+      if (!invite.expiresAt) return true;
+      return new Date(invite.expiresAt).getTime() >= Date.now();
+    });
+
+    return StatusResponse(res, 200, "OK", {
+      invites: activeInvites.map((invite) => serializeInvite(invite)),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports.postResendOrganizationInvite = async (req, res, next) => {
+  try {
+    const organizationId = req.params.organizationId;
+    const inviteId = req.params.inviteId;
+
+    if (!organizationId) return StatusResponse(res, 421, "No organization ID provided");
+    if (!inviteId) return StatusResponse(res, 421, "No invite ID provided");
+    if (!assertOrgAdmin(req, organizationId))
+      return StatusResponse(res, 403, "Not authorized for this organization");
+
+    const foundOrganization = await Organization.findByPk(organizationId);
+    if (!foundOrganization) return StatusResponse(res, 404, "Organization not found");
+
+    const invite = await findActiveOrganizationInvite(organizationId, inviteId);
+    if (!invite) return StatusResponse(res, 404, "Invite not found");
+
+    invite.token = UUID("orginvite");
+    invite.invitedByUserId = req.authUserId;
+    invite.updatedAt = new Date();
+    await invite.save();
+
+    await Mailer.sendOrganizationInviteMessage(
+      invite.email,
+      foundOrganization.name,
+      invite.token,
+      Config.baseFrontendUrl
+    );
+
+    return StatusResponse(res, 200, "OK", {
+      invite: serializeInvite(invite),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports.deleteOrganizationInvite = async (req, res, next) => {
+  try {
+    const organizationId = req.params.organizationId;
+    const inviteId = req.params.inviteId;
+
+    if (!organizationId) return StatusResponse(res, 421, "No organization ID provided");
+    if (!inviteId) return StatusResponse(res, 421, "No invite ID provided");
+    if (!assertOrgAdmin(req, organizationId))
+      return StatusResponse(res, 403, "Not authorized for this organization");
+
+    const foundOrganization = await Organization.findByPk(organizationId);
+    if (!foundOrganization) return StatusResponse(res, 404, "Organization not found");
+
+    const invite = await findActiveOrganizationInvite(organizationId, inviteId);
+    if (!invite) return StatusResponse(res, 404, "Invite not found");
+
+    await invite.destroy();
+    return StatusResponse(res, 200, "OK");
   } catch (err) {
     next(err);
   }

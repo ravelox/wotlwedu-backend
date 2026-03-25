@@ -34,6 +34,7 @@ router.post(
   Security.checkAuthentication,
   loginController.verify2FA
 );
+router.get("/invite/:token", loginController.getInviteStatus);
 router.post("/google", loginRateLimit, loginController.postGoogleLogin);
 router.post("/social", loginRateLimit, loginController.postSocialLogin);
 

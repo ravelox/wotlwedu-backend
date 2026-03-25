@@ -154,26 +154,23 @@ async function addDefaultRoleToUser(user, transaction) {
   );
 }
 
-async function findPendingOrganizationInvite(email, transaction) {
-  if (!email) return null;
+async function resolveInviteByToken(inviteToken, transaction) {
+  const normalizedToken = (inviteToken || "").toString().trim();
+  if (!normalizedToken) return null;
 
-  const invites = await OrganizationInvite.findAll({
-    where: { email: email, acceptedAt: null },
-    order: [["createdAt", "DESC"]],
+  const invite = await OrganizationInvite.findOne({
+    where: { token: normalizedToken, acceptedAt: null },
     transaction,
   });
-
-  for (const invite of invites) {
-    if (invite.expiresAt && new Date(invite.expiresAt).getTime() < Date.now()) {
-      continue;
-    }
-    const organization = await Organization.findByPk(invite.organizationId, { transaction });
-    if (organization && organization.active !== false) {
-      return { invite, organization };
-    }
+  if (!invite) return null;
+  if (invite.expiresAt && new Date(invite.expiresAt).getTime() < Date.now()) {
+    return null;
   }
 
-  return null;
+  const organization = await Organization.findByPk(invite.organizationId, { transaction });
+  if (!organization || organization.active === false) return null;
+
+  return { invite, organization };
 }
 
 async function findOrProvisionSocialUser(payload) {
@@ -183,6 +180,7 @@ async function findOrProvisionSocialUser(payload) {
   const firstName = (payload.firstName || "").toString().trim();
   const lastName = (payload.lastName || "").toString().trim();
   const requestedAlias = (payload.alias || "").toString().trim();
+  const inviteToken = (payload.inviteToken || "").toString().trim();
 
   if (!provider || !subject || !email || !firstName || !lastName) {
     throw new Error("Must provide provider, subject, email, firstName, and lastName");
@@ -227,11 +225,14 @@ async function findOrProvisionSocialUser(payload) {
       } else {
         isNewUser = true;
         const userId = UUID("user");
-        const invited = await findPendingOrganizationInvite(email, transaction);
+        const invited = await resolveInviteByToken(inviteToken, transaction);
 
         let organizationId;
         let organizationAdmin = false;
         if (invited) {
+          if (normalizeEmail(invited.invite.email) !== email) {
+            throw new Error("Invite email does not match Google account");
+          }
           organizationId = invited.organization.id;
           consumedInviteId = invited.invite.id;
           invited.invite.acceptedAt = new Date();
@@ -327,6 +328,28 @@ async function verifyGoogleIdToken(idToken) {
     alias: payload.email.split("@")[0],
   };
 }
+
+exports.getInviteStatus = async (req, res, next) => {
+  try {
+    const inviteToken = req.params.token;
+    if (!inviteToken) return StatusResponse(res, 421, "No invite token provided");
+
+    const resolved = await resolveInviteByToken(inviteToken, null);
+    if (!resolved) return StatusResponse(res, 404, "Invite not found");
+
+    return StatusResponse(res, 200, "OK", {
+      invite: {
+        token: resolved.invite.token,
+        email: resolved.invite.email,
+        organizationId: resolved.organization.id,
+        organizationName: resolved.organization.name,
+        expiresAt: resolved.invite.expiresAt,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
 
 exports.postLogin = async (req, res, next) => {
   const email = req.body.email;
@@ -434,6 +457,7 @@ exports.postSocialLogin = async (req, res, next) => {
       err &&
       [
         "Must provide provider, subject, email, firstName, and lastName",
+        "Invite email does not match Google account",
         "No default role is available",
       ].includes(err.message)
     ) {
@@ -446,6 +470,9 @@ exports.postSocialLogin = async (req, res, next) => {
 exports.postGoogleLogin = async (req, res, next) => {
   try {
     const googleProfile = await verifyGoogleIdToken(req.body?.idToken);
+    if (req.body?.inviteToken) {
+      googleProfile.inviteToken = req.body.inviteToken;
+    }
     const result = await findOrProvisionSocialUser(googleProfile);
     const tokens = await generateJWTAndSave(result.user);
 
@@ -476,6 +503,7 @@ exports.postGoogleLogin = async (req, res, next) => {
         "Invalid Google ID token",
         "Google account email is not verified",
         "Google token missing required identity claims",
+        "Invite email does not match Google account",
         "No default role is available",
       ].includes(err.message)
     ) {

@@ -140,6 +140,7 @@ module.exports = (addTest) => {
   let createdItemId;
   let Notification;
   let Status;
+  let pendingInviteToken;
 
   Mailer.sendOrganizationInviteMessage = async () => "OK";
 
@@ -313,6 +314,35 @@ module.exports = (addTest) => {
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.body.data.invite.organizationId, "org_test");
     assert.strictEqual(res.body.data.invite.email, "social.invited@example.com");
+    pendingInviteToken = res.body.data.invite.token;
+  });
+
+  addTest("public invite lookup returns organization context", async () => {
+    const res = await request(server, "GET", `/login/invite/${pendingInviteToken}`);
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.data.invite.organizationId, "org_test");
+    assert.strictEqual(res.body.data.invite.organizationName, "Test Organization");
+  });
+
+  addTest("organization invite list includes active pending invites", async () => {
+    const res = await request(server, "GET", "/organization/org_test/invite");
+    assert.strictEqual(res.status, 200);
+    assert.ok(Array.isArray(res.body.data.invites));
+    assert.ok(res.body.data.invites.some((invite) => invite.token === pendingInviteToken));
+  });
+
+  addTest("organization invite resend regenerates token", async () => {
+    const invite = await OrganizationInvite.findOne({
+      where: { token: pendingInviteToken },
+    });
+    const res = await request(
+      server,
+      "POST",
+      `/organization/org_test/invite/${invite.id}/resend`
+    );
+    assert.strictEqual(res.status, 200);
+    assert.notStrictEqual(res.body.data.invite.token, pendingInviteToken);
+    pendingInviteToken = res.body.data.invite.token;
   });
 
   addTest("social login consumes pending org invite for first-time user", async () => {
@@ -322,6 +352,7 @@ module.exports = (addTest) => {
       email: "social.invited@example.com",
       firstName: "Jane",
       lastName: "Doe",
+      inviteToken: pendingInviteToken,
     });
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.body.data.organizationId, "org_test");
@@ -339,6 +370,40 @@ module.exports = (addTest) => {
     });
     assert.ok(social);
     assert.strictEqual(social.userId, res.body.data.userId);
+  });
+
+  addTest("social login rejects invite token when Google email does not match", async () => {
+    const mismatchInviteRes = await request(server, "POST", "/organization/org_test/invite", {
+      email: "other.person@example.com",
+    });
+    const res = await request(server, "POST", "/login/social", {
+      provider: "google",
+      subject: "google-subject-mismatch",
+      email: "wrong.person@example.com",
+      firstName: "Wrong",
+      lastName: "Person",
+      inviteToken: mismatchInviteRes.body.data.invite.token,
+    });
+    assert.strictEqual(res.status, 421);
+    assert.strictEqual(res.body.message, "Invite email does not match Google account");
+  });
+
+  addTest("organization invite revoke removes pending invite and invalidates lookup", async () => {
+    const inviteRes = await request(server, "POST", "/organization/org_test/invite", {
+      email: "revoke.person@example.com",
+    });
+    const inviteId = inviteRes.body.data.invite.id;
+    const token = inviteRes.body.data.invite.token;
+
+    const revokeRes = await request(
+      server,
+      "DELETE",
+      `/organization/org_test/invite/${inviteId}`
+    );
+    assert.strictEqual(revokeRes.status, 200);
+
+    const lookupRes = await request(server, "GET", `/login/invite/${token}`);
+    assert.strictEqual(lookupRes.status, 404);
   });
 
   addTest("social login provisions organization for first-time uninvited user", async () => {

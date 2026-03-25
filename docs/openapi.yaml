@@ -4,6 +4,18 @@ info:
   version: 1.0.0
 
 paths:
+  /login/invite/:token:
+    get:
+      summary: GET /login/invite/:token
+      parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
   /login/google:
     post:
       summary: POST /login/google
@@ -55,6 +67,19 @@ paths:
                 alias:
                   type: string
   /organization/:organizationId/invite:
+    get:
+      summary: GET /organization/:organizationId/invite
+      parameters:
+      - name: organizationId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
     post:
       summary: POST /organization/:organizationId/invite
       parameters:
@@ -81,6 +106,44 @@ paths:
                   type: string
                 expiresAt:
                   type: string
+  /organization/:organizationId/invite/:inviteId/resend:
+    post:
+      summary: POST /organization/:organizationId/invite/:inviteId/resend
+      parameters:
+      - name: organizationId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: inviteId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /organization/:organizationId/invite/:inviteId:
+    delete:
+      summary: DELETE /organization/:organizationId/invite/:inviteId
+      parameters:
+      - name: organizationId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: inviteId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
   /image/:imageId/notif/:notificationId:
     get:
       summary: GET /image/:imageId/notif/:notificationId

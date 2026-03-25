@@ -26,7 +26,7 @@ Core stack:
 - `Workgroup admin user`: can administer data for one workgroup (`adminWorkgroupId`, legacy `adminGroupId`).
 
 ## Current version
-The backend changes in this repo are documented as **0.0.22** in `CHANGELOG.md`.
+The backend changes in this repo are documented as **0.0.23** in `CHANGELOG.md`.
 
 ## Recent API behavior updates
 - Category IDs are now consistently included on category-enabled resources (`group`, `workgroup`, `image`, `item`, `list`, `election`).
@@ -40,7 +40,9 @@ The backend changes in this repo are documented as **0.0.22** in `CHANGELOG.md`.
 - Add `POST /login/google` for verified Google ID-token sign-in.
 - Add `POST /login/social` for JIT social sign-in provisioning using provider identity + email.
 - Add organization email invitations via `POST /organization/:organizationId/invite`.
-- First-time social sign-in now consumes a pending organization invite by email or auto-provisions a new organization named `<FirstInitial> <LastInitial>'s Organization`.
+- Add public invite lookup via `GET /login/invite/:token` so clients can show invite context before Google sign-in.
+- First-time social sign-in now consumes a pending organization invite only when the supplied invite token matches the Google account email; otherwise it auto-provisions a new organization named `<FirstInitial> <LastInitial>'s Organization`.
+- Add invite lifecycle controls for org admins: `GET /organization/:organizationId/invite`, `POST /organization/:organizationId/invite/:inviteId/resend`, and `DELETE /organization/:organizationId/invite/:inviteId`.
 
 ## Prerequisites
 - Node.js and npm
@@ -149,8 +151,11 @@ Swagger UI assets are in `docs/` and served by the app at `/docs`.
 Additional tenancy endpoints:
 - `GET /organization`
 - `GET /organization/:organizationId`
+- `GET /organization/:organizationId/invite`
 - `POST /organization`
 - `POST /organization/:organizationId/invite`
+- `POST /organization/:organizationId/invite/:inviteId/resend`
+- `DELETE /organization/:organizationId/invite/:inviteId`
 - `PUT /organization/:organizationId`
 - `DELETE /organization/:organizationId`
 

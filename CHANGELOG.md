@@ -1,10 +1,17 @@
 # Changelog
 
+## 0.0.23 - 2026-03-24
+- Add invite lifecycle controls for organizations, including public invite lookup, pending invite listing, resend/regenerate, and revoke flows.
+- Tighten social invite acceptance to require an explicit invite token whose email matches the Google account used for first sign-in.
+- Extend backend tests and API documentation for invite-aware login and invite lifecycle operations.
+
 ## 0.0.22 - 2026-03-19
 - Add verified Google web sign-in via `POST /login/google` using Google ID token validation against `WOTLWEDU_GOOGLE_CLIENT_ID`.
 - Add `POST /login/social` for JIT social sign-in based on provider identity, linking repeat logins through persisted `socialidentities`.
 - Add `organizationinvites` for email-based org invitation and `POST /organization/:organizationId/invite` for org admins/system admins.
-- On first social sign-in, consume a pending invitation by matching email; otherwise auto-provision a new organization named `<FirstInitial> <LastInitial>'s Organization`.
+- Add public invite lookup via `GET /login/invite/:token` plus org-admin pending invite listing via `GET /organization/:organizationId/invite`.
+- Add invite lifecycle controls for org admins: resend/regenerate link via `POST /organization/:organizationId/invite/:inviteId/resend` and revoke via `DELETE /organization/:organizationId/invite/:inviteId`.
+- Tighten invite acceptance so first-time social sign-in consumes an invite only when the supplied invite token matches the Google account email; otherwise it auto-provisions a new organization named `<FirstInitial> <LastInitial>'s Organization`.
 - Auto-provisioned social users are activated immediately, verified, assigned the default role, and made `organizationAdmin` for their new tenant.
 
 ## 0.0.21 - 2026-03-09
