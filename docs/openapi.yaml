@@ -34,6 +34,30 @@ paths:
               properties:
                 idToken:
                   type: string
+                inviteToken:
+                  type: string
+      description: |
+        Returns normal auth tokens for a linked or newly provisioned account.
+        When the verified Google identity matches an existing password-based account,
+        this returns `linkRequired: true` plus a short-lived `linkToken` instead of auth tokens.
+  /login/google/link:
+    post:
+      summary: POST /login/google/link
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - linkToken
+              properties:
+                linkToken:
+                  type: string
   /login/social:
     post:
       summary: POST /login/social
@@ -65,6 +89,30 @@ paths:
                 lastName:
                   type: string
                 alias:
+                  type: string
+                inviteToken:
+                  type: string
+      description: |
+        Returns normal auth tokens for a linked or newly provisioned account.
+        When the verified social identity matches an existing password-based account,
+        this returns `linkRequired: true` plus a short-lived `linkToken` instead of auth tokens.
+  /login/social/link:
+    post:
+      summary: POST /login/social/link
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - linkToken
+              properties:
+                linkToken:
                   type: string
   /organization/:organizationId/invite:
     get:

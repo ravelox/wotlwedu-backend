@@ -36,7 +36,9 @@ router.post(
 );
 router.get("/invite/:token", loginController.getInviteStatus);
 router.post("/google", loginRateLimit, loginController.postGoogleLogin);
+router.post("/google/link", loginRateLimit, loginController.postConfirmSocialLink);
 router.post("/social", loginRateLimit, loginController.postSocialLogin);
+router.post("/social/link", loginRateLimit, loginController.postConfirmSocialLink);
 
 /* Must be authenticated to enable 2FA */
 router.post("/2fa", Security.checkAuthentication, loginController.enable2FA);

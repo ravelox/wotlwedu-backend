@@ -23,6 +23,7 @@ const UserRole = require("../model/userrole");
 const TestToken = require("../model/testtoken");
 
 let googleOAuthClient = null;
+const SOCIAL_LINK_TOKEN_EXPIRY = "10m";
 
 async function generateJWTAndSave(foundUser) {
   if (!foundUser) return null;
@@ -53,6 +54,26 @@ async function generateJWTAndSave(foundUser) {
   });
 
   return { authToken: newAuthToken, refreshToken: newRefreshToken };
+}
+
+function buildAuthResponse(foundUser, tokens, extras = {}) {
+  return {
+    userId: foundUser.id,
+    firstName: foundUser.firstName,
+    lastName: foundUser.lastName,
+    email: foundUser.email,
+    alias: foundUser.alias,
+    admin: foundUser.admin,
+    systemAdmin: foundUser.systemAdmin === true || foundUser.admin === true,
+    organizationId: foundUser.organizationId || null,
+    organizationAdmin: foundUser.organizationAdmin === true,
+    workgroupAdmin: foundUser.workgroupAdmin === true,
+    adminWorkgroupId:
+      foundUser.adminWorkgroupId || foundUser.adminGroupId || null,
+    authToken: tokens.authToken,
+    refreshToken: tokens.refreshToken,
+    ...extras,
+  };
 }
 
 function parseTokenDurationMinutes(input) {
@@ -174,6 +195,29 @@ async function resolveInviteByToken(inviteToken, transaction) {
   return { invite, organization };
 }
 
+function buildSocialLinkToken(payload) {
+  return JWT.sign(
+    {
+      type: "social-link",
+      provider: normalizeProvider(payload.provider),
+      subject: payload.subject,
+      email: normalizeEmail(payload.email),
+      userId: payload.userId,
+      inviteToken: payload.inviteToken || null,
+    },
+    Config.jwtSecret,
+    { expiresIn: SOCIAL_LINK_TOKEN_EXPIRY }
+  );
+}
+
+function decodeSocialLinkToken(token) {
+  const decoded = JWT.verify(token, Config.jwtSecret);
+  if (!decoded || decoded.type !== "social-link") {
+    throw new Error("Invalid social link token");
+  }
+  return decoded;
+}
+
 async function findOrProvisionSocialUser(payload) {
   const provider = normalizeProvider(payload.provider);
   const subject = (payload.subject || "").toString().trim();
@@ -192,6 +236,8 @@ async function findOrProvisionSocialUser(payload) {
     let provisionedOrganizationId = null;
     let consumedInviteId = null;
     let isNewUser = false;
+    let linkRequired = false;
+    let linkToken = null;
 
     const existingIdentity = await SocialIdentity.findOne({
       where: { provider, subject },
@@ -212,17 +258,25 @@ async function findOrProvisionSocialUser(payload) {
       });
 
       if (user) {
-        await SocialIdentity.create(
-          {
-            id: UUID("social"),
-            userId: user.id,
-            provider,
-            subject,
-            email,
-            creator: user.creator || user.id,
-          },
-          { transaction }
-        );
+        if (!user.active) throw new Error("Account disabled");
+
+        const existingProviderIdentity = await SocialIdentity.findOne({
+          where: { userId: user.id, provider },
+          transaction,
+        });
+
+        if (existingProviderIdentity) {
+          throw new Error(`Account already linked to a different ${provider} sign-in`);
+        }
+
+        linkRequired = true;
+        linkToken = buildSocialLinkToken({
+          provider,
+          subject,
+          email,
+          userId: user.id,
+          inviteToken,
+        });
       } else {
         isNewUser = true;
         const userId = UUID("user");
@@ -294,7 +348,67 @@ async function findOrProvisionSocialUser(payload) {
 
     if (!user.active) throw new Error("Account disabled");
 
-    return { user, isNewUser, provisionedOrganizationId, consumedInviteId };
+    return {
+      user,
+      isNewUser,
+      provisionedOrganizationId,
+      consumedInviteId,
+      linkRequired,
+      linkToken,
+    };
+  });
+}
+
+async function confirmSocialLink(linkToken) {
+  const decoded = decodeSocialLinkToken(linkToken);
+
+  return await database.transaction(async (transaction) => {
+    const provider = normalizeProvider(decoded.provider);
+    const subject = (decoded.subject || "").toString().trim();
+    const userId = (decoded.userId || "").toString().trim();
+    const email = normalizeEmail(decoded.email);
+
+    if (!provider || !subject || !userId || !email) {
+      throw new Error("Invalid social link token");
+    }
+
+    const user = await User.findByPk(userId, { transaction });
+    if (!user) throw new Error("User not found");
+    if (!user.active) throw new Error("Account disabled");
+
+    const existingIdentity = await SocialIdentity.findOne({
+      where: { provider, subject },
+      transaction,
+    });
+    if (existingIdentity && existingIdentity.userId !== user.id) {
+      throw new Error("Social identity already linked to another account");
+    }
+    if (!existingIdentity) {
+      const existingProviderIdentity = await SocialIdentity.findOne({
+        where: { userId: user.id, provider },
+        transaction,
+      });
+      if (existingProviderIdentity && existingProviderIdentity.subject !== subject) {
+        throw new Error(`Account already linked to a different ${provider} sign-in`);
+      }
+
+      await SocialIdentity.create(
+        {
+          id: UUID("social"),
+          userId: user.id,
+          provider,
+          subject,
+          email,
+          creator: user.creator || user.id,
+        },
+        { transaction }
+      );
+    } else if (existingIdentity.email !== email) {
+      existingIdentity.email = email;
+      await existingIdentity.save({ transaction });
+    }
+
+    return { user, linkedProvider: provider };
   });
 }
 
@@ -430,26 +544,24 @@ exports.postLogin = async (req, res, next) => {
 exports.postSocialLogin = async (req, res, next) => {
   try {
     const result = await findOrProvisionSocialUser(req.body || {});
+    if (result.linkRequired) {
+      return StatusResponse(res, 200, "Confirmation required", {
+        linkRequired: true,
+        linkToken: result.linkToken,
+        provider: normalizeProvider(req.body?.provider),
+      });
+    }
     const tokens = await generateJWTAndSave(result.user);
-
-    return StatusResponse(res, 200, "OK", {
-      userId: result.user.id,
-      firstName: result.user.firstName,
-      lastName: result.user.lastName,
-      email: result.user.email,
-      alias: result.user.alias,
-      admin: result.user.admin,
-      systemAdmin: result.user.systemAdmin === true || result.user.admin === true,
-      organizationId: result.user.organizationId || null,
-      organizationAdmin: result.user.organizationAdmin === true,
-      workgroupAdmin: result.user.workgroupAdmin === true,
-      adminWorkgroupId: result.user.adminWorkgroupId || result.user.adminGroupId || null,
-      authToken: tokens.authToken,
-      refreshToken: tokens.refreshToken,
-      isNewUser: result.isNewUser,
-      provisionedOrganizationId: result.provisionedOrganizationId,
-      consumedInviteId: result.consumedInviteId,
-    });
+    return StatusResponse(
+      res,
+      200,
+      "OK",
+      buildAuthResponse(result.user, tokens, {
+        isNewUser: result.isNewUser,
+        provisionedOrganizationId: result.provisionedOrganizationId,
+        consumedInviteId: result.consumedInviteId,
+      })
+    );
   } catch (err) {
     if (err && err.message === "Account disabled") {
       return StatusResponse(res, 403, "Account disabled");
@@ -460,6 +572,7 @@ exports.postSocialLogin = async (req, res, next) => {
         "Must provide provider, subject, email, firstName, and lastName",
         "Invite email does not match Google account",
         "No default role is available",
+        "Account already linked to a different google sign-in",
       ].includes(err.message)
     ) {
       return StatusResponse(res, 421, err.message);
@@ -475,26 +588,24 @@ exports.postGoogleLogin = async (req, res, next) => {
       googleProfile.inviteToken = req.body.inviteToken;
     }
     const result = await findOrProvisionSocialUser(googleProfile);
+    if (result.linkRequired) {
+      return StatusResponse(res, 200, "Confirmation required", {
+        linkRequired: true,
+        linkToken: result.linkToken,
+        provider: "google",
+      });
+    }
     const tokens = await generateJWTAndSave(result.user);
-
-    return StatusResponse(res, 200, "OK", {
-      userId: result.user.id,
-      firstName: result.user.firstName,
-      lastName: result.user.lastName,
-      email: result.user.email,
-      alias: result.user.alias,
-      admin: result.user.admin,
-      systemAdmin: result.user.systemAdmin === true || result.user.admin === true,
-      organizationId: result.user.organizationId || null,
-      organizationAdmin: result.user.organizationAdmin === true,
-      workgroupAdmin: result.user.workgroupAdmin === true,
-      adminWorkgroupId: result.user.adminWorkgroupId || result.user.adminGroupId || null,
-      authToken: tokens.authToken,
-      refreshToken: tokens.refreshToken,
-      isNewUser: result.isNewUser,
-      provisionedOrganizationId: result.provisionedOrganizationId,
-      consumedInviteId: result.consumedInviteId,
-    });
+    return StatusResponse(
+      res,
+      200,
+      "OK",
+      buildAuthResponse(result.user, tokens, {
+        isNewUser: result.isNewUser,
+        provisionedOrganizationId: result.provisionedOrganizationId,
+        consumedInviteId: result.consumedInviteId,
+      })
+    );
   } catch (err) {
     if (
       err &&
@@ -506,9 +617,44 @@ exports.postGoogleLogin = async (req, res, next) => {
         "Google token missing required identity claims",
         "Invite email does not match Google account",
         "No default role is available",
+        "Account already linked to a different google sign-in",
       ].includes(err.message)
     ) {
       return StatusResponse(res, 421, err.message);
+    }
+    next(err);
+  }
+};
+
+exports.postConfirmSocialLink = async (req, res, next) => {
+  try {
+    const linkToken = (req.body?.linkToken || "").toString().trim();
+    if (!linkToken) return StatusResponse(res, 421, "No social link token provided");
+
+    const result = await confirmSocialLink(linkToken);
+    const tokens = await generateJWTAndSave(result.user);
+    return StatusResponse(
+      res,
+      200,
+      "OK",
+      buildAuthResponse(result.user, tokens, {
+        linkedProvider: result.linkedProvider,
+      })
+    );
+  } catch (err) {
+    if (
+      err &&
+      [
+        "No social link token provided",
+        "Invalid social link token",
+        "Social identity already linked to another account",
+        "Account already linked to a different google sign-in",
+      ].includes(err.message)
+    ) {
+      return StatusResponse(res, 421, err.message);
+    }
+    if (err && err.message === "Account disabled") {
+      return StatusResponse(res, 403, "Account disabled");
     }
     next(err);
   }

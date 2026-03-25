@@ -39,9 +39,11 @@ The backend changes in this repo are documented as **0.0.24** in `CHANGELOG.md`.
 - Socket.IO notification events now carry structured payloads so clients can update local inbox/badge state without full refetches.
 - Add `POST /login/google` for verified Google ID-token sign-in.
 - Add `POST /login/social` for JIT social sign-in provisioning using provider identity + email.
+- Add post-auth social-link confirmation via `POST /login/google/link` and `POST /login/social/link` when a verified Google/social sign-in matches an existing password-based account.
 - Add organization email invitations via `POST /organization/:organizationId/invite`.
 - Add public invite lookup via `GET /login/invite/:token` so clients can show invite context before Google sign-in.
 - First-time social sign-in now consumes a pending organization invite only when the supplied invite token matches the Google account email; otherwise it auto-provisions a new organization named `<FirstInitial> <LastInitial>'s Organization`.
+- Matching password-based accounts are not auto-linked before provider authentication. Social login now returns a neutral `linkRequired` confirmation state after verified provider authentication, and linking preserves password login.
 - Add invite lifecycle controls for org admins: `GET /organization/:organizationId/invite`, `POST /organization/:organizationId/invite/:inviteId/resend`, and `DELETE /organization/:organizationId/invite/:inviteId`.
 - Organization invites now default to a 7-day expiry (`WOTLWEDU_ORG_INVITE_EXPIRY_DAYS`) and retain status history (`pending`, `accepted`, `revoked`, `expired`) for admin review.
 

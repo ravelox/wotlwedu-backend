@@ -2,6 +2,7 @@ const assert = require("assert");
 const http = require("http");
 const bodyParser = require("body-parser");
 const express = require("express");
+const bcrypt = require("bcryptjs");
 
 // Configure environment for in-memory sqlite before loading app/config
 process.env.NODE_ENV = "test";
@@ -183,6 +184,18 @@ module.exports = (addTest) => {
       creator: "user_test",
       active: true,
       admin: false,
+    });
+    await User.create({
+      id: "user_password",
+      firstName: "Pat",
+      lastName: "Password",
+      alias: "ppassword",
+      email: "password.link@example.com",
+      organizationId: "org_test",
+      creator: "user_test",
+      active: true,
+      admin: false,
+      auth: await bcrypt.hash("password123", 12),
     });
 
     Status = require("../model/status");
@@ -388,6 +401,51 @@ module.exports = (addTest) => {
     });
     assert.strictEqual(res.status, 421);
     assert.strictEqual(res.body.message, "Invite email does not match Google account");
+  });
+
+  addTest("social login requires post-auth confirmation before linking existing password account", async () => {
+    const res = await request(server, "POST", "/login/social", {
+      provider: "google",
+      subject: "google-subject-password-link",
+      email: "password.link@example.com",
+      firstName: "Pat",
+      lastName: "Password",
+    });
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.data.linkRequired, true);
+    assert.ok(res.body.data.linkToken);
+    assert.strictEqual(res.body.data.authToken, undefined);
+
+    const social = await SocialIdentity.findOne({
+      where: { provider: "google", subject: "google-subject-password-link" },
+    });
+    assert.strictEqual(social, null);
+  });
+
+  addTest("social link confirmation links to existing password account and returns session", async () => {
+    const initialRes = await request(server, "POST", "/login/social", {
+      provider: "google",
+      subject: "google-subject-password-link-confirm",
+      email: "password.link@example.com",
+      firstName: "Pat",
+      lastName: "Password",
+    });
+    assert.strictEqual(initialRes.status, 200);
+    assert.strictEqual(initialRes.body.data.linkRequired, true);
+
+    const confirmRes = await request(server, "POST", "/login/social/link", {
+      linkToken: initialRes.body.data.linkToken,
+    });
+    assert.strictEqual(confirmRes.status, 200);
+    assert.strictEqual(confirmRes.body.data.userId, "user_password");
+    assert.ok(confirmRes.body.data.authToken);
+    assert.ok(confirmRes.body.data.refreshToken);
+
+    const social = await SocialIdentity.findOne({
+      where: { provider: "google", subject: "google-subject-password-link-confirm" },
+    });
+    assert.ok(social);
+    assert.strictEqual(social.userId, "user_password");
   });
 
   addTest("organization invite revoke removes pending invite and invalidates lookup", async () => {

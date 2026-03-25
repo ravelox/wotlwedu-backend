@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.25 - 2026-03-24
+- Add post-auth social link confirmation endpoints (`POST /login/google/link`, `POST /login/social/link`) for verified provider sign-ins that match an existing password-based account.
+- Change social/Google first-link behavior so the backend returns a neutral `linkRequired` state plus a short-lived link token instead of auto-linking immediately.
+- Extend integration coverage for deferred social linking and duplicate-provider-link protection.
+
 ## 0.0.24 - 2026-03-24
 - Add organization invite default expiry policy via `WOTLWEDU_ORG_INVITE_EXPIRY_DAYS` and retain invite history with derived statuses for pending, accepted, revoked, and expired records.
 - Preserve revoked invites as historical records instead of deleting them, and expose invite status filtering for organization admin tooling.
