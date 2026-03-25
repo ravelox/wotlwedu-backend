@@ -26,7 +26,7 @@ Core stack:
 - `Workgroup admin user`: can administer data for one workgroup (`adminWorkgroupId`, legacy `adminGroupId`).
 
 ## Current version
-The backend changes in this repo are documented as **0.0.23** in `CHANGELOG.md`.
+The backend changes in this repo are documented as **0.0.24** in `CHANGELOG.md`.
 
 ## Recent API behavior updates
 - Category IDs are now consistently included on category-enabled resources (`group`, `workgroup`, `image`, `item`, `list`, `election`).
@@ -43,6 +43,7 @@ The backend changes in this repo are documented as **0.0.23** in `CHANGELOG.md`.
 - Add public invite lookup via `GET /login/invite/:token` so clients can show invite context before Google sign-in.
 - First-time social sign-in now consumes a pending organization invite only when the supplied invite token matches the Google account email; otherwise it auto-provisions a new organization named `<FirstInitial> <LastInitial>'s Organization`.
 - Add invite lifecycle controls for org admins: `GET /organization/:organizationId/invite`, `POST /organization/:organizationId/invite/:inviteId/resend`, and `DELETE /organization/:organizationId/invite/:inviteId`.
+- Organization invites now default to a 7-day expiry (`WOTLWEDU_ORG_INVITE_EXPIRY_DAYS`) and retain status history (`pending`, `accepted`, `revoked`, `expired`) for admin review.
 
 ## Prerequisites
 - Node.js and npm
@@ -103,6 +104,7 @@ Commonly used settings:
 - App listener: `WOTLWEDU_APP_LISTEN`, `WOTLWEDU_APP_PORT`
 - DB: `WOTLWEDU_DB_HOST`, `WOTLWEDU_DB_USER`, `WOTLWEDU_DB_NAME`, `WOTLWEDU_DB_PASSWORD`, `WOTLWEDU_DB_TYPE`
 - Auth: `WOTLWEDU_JWT_SECRET`, `WOTLWEDU_GOOGLE_CLIENT_ID`
+- Invite policy: `WOTLWEDU_ORG_INVITE_EXPIRY_DAYS`
 - TLS: `WOTLWEDU_SSL`, `WOTLWEDU_SSL_KEY`, `WOTLWEDU_SSL_CERT`
 - CORS: `WOTLWEDU_CORS_ORIGINS` (comma-separated allowed origins)
 - Auth rate limits: `WOTLWEDU_RATE_LOGIN_MAX`, `WOTLWEDU_RATE_RESET_MAX`, `WOTLWEDU_RATE_VERIFY2FA_MAX`, `WOTLWEDU_RATE_WINDOW_MS`

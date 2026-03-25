@@ -314,6 +314,8 @@ module.exports = (addTest) => {
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.body.data.invite.organizationId, "org_test");
     assert.strictEqual(res.body.data.invite.email, "social.invited@example.com");
+    assert.strictEqual(res.body.data.invite.status, "pending");
+    assert.ok(res.body.data.invite.expiresAt);
     pendingInviteToken = res.body.data.invite.token;
   });
 
@@ -325,7 +327,7 @@ module.exports = (addTest) => {
   });
 
   addTest("organization invite list includes active pending invites", async () => {
-    const res = await request(server, "GET", "/organization/org_test/invite");
+    const res = await request(server, "GET", "/organization/org_test/invite?status=pending");
     assert.strictEqual(res.status, 200);
     assert.ok(Array.isArray(res.body.data.invites));
     assert.ok(res.body.data.invites.some((invite) => invite.token === pendingInviteToken));
@@ -401,9 +403,29 @@ module.exports = (addTest) => {
       `/organization/org_test/invite/${inviteId}`
     );
     assert.strictEqual(revokeRes.status, 200);
+    assert.strictEqual(revokeRes.body.data.invite.status, "revoked");
 
     const lookupRes = await request(server, "GET", `/login/invite/${token}`);
     assert.strictEqual(lookupRes.status, 404);
+
+    const historyRes = await request(server, "GET", "/organization/org_test/invite?status=revoked");
+    assert.strictEqual(historyRes.status, 200);
+    assert.ok(historyRes.body.data.invites.some((invite) => invite.id === inviteId));
+  });
+
+  addTest("organization invite history reports expired invites", async () => {
+    const inviteRes = await request(server, "POST", "/organization/org_test/invite", {
+      email: "expired.person@example.com",
+      expiresAt: "2026-03-01T00:00:00.000Z",
+    });
+    assert.strictEqual(inviteRes.status, 200);
+    assert.strictEqual(inviteRes.body.data.invite.status, "expired");
+
+    const historyRes = await request(server, "GET", "/organization/org_test/invite?status=expired");
+    assert.strictEqual(historyRes.status, 200);
+    assert.ok(
+      historyRes.body.data.invites.some((invite) => invite.email === "expired.person@example.com")
+    );
   });
 
   addTest("social login provisions organization for first-time uninvited user", async () => {

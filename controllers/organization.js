@@ -10,7 +10,27 @@ const User = require("../model/user");
 const Attributes = require("../model/attributes");
 const Config = require("../config/wotlwedu");
 
+function computeInviteStatus(invite, nowValue = Date.now()) {
+  if (!invite) return "unknown";
+  if (invite.acceptedAt) return "accepted";
+  if (invite.revokedAt) return "revoked";
+  if (invite.expiresAt && new Date(invite.expiresAt).getTime() < nowValue) return "expired";
+  return "pending";
+}
+
+function buildInviteExpiry(requestedValue) {
+  if (requestedValue) {
+    const explicit = new Date(requestedValue);
+    if (!Number.isNaN(explicit.getTime())) return explicit;
+  }
+
+  const days = Number(Config.organizationInviteExpiryDays);
+  const safeDays = Number.isFinite(days) && days > 0 ? days : 7;
+  return new Date(Date.now() + safeDays * 24 * 60 * 60 * 1000);
+}
+
 function serializeInvite(invite) {
+  const nowValue = Date.now();
   return {
     id: invite.id,
     organizationId: invite.organizationId,
@@ -18,9 +38,12 @@ function serializeInvite(invite) {
     token: invite.token,
     invitedByUserId: invite.invitedByUserId,
     acceptedAt: invite.acceptedAt,
+    revokedByUserId: invite.revokedByUserId,
+    revokedAt: invite.revokedAt,
     expiresAt: invite.expiresAt,
     createdAt: invite.createdAt,
     updatedAt: invite.updatedAt,
+    status: computeInviteStatus(invite, nowValue),
   };
 }
 
@@ -32,9 +55,11 @@ async function findActiveOrganizationInvite(organizationId, inviteId) {
       id: inviteId,
       organizationId,
       acceptedAt: null,
+      revokedAt: null,
     },
   });
   if (!invite) return null;
+  if (invite.expiresAt && new Date(invite.expiresAt).getTime() < Date.now()) return null;
   return invite;
 }
 
@@ -224,16 +249,19 @@ module.exports.putInviteToOrganization = async (req, res, next) => {
         organizationId,
         email,
         acceptedAt: null,
+        revokedAt: null,
         [Op.or]: [{ expiresAt: null }, { expiresAt: { [Op.gte]: new Date() } }],
       },
       order: [["createdAt", "DESC"]],
     });
 
-    const expiresAt = req.body.expiresAt || null;
+    const expiresAt = buildInviteExpiry(req.body.expiresAt);
     if (invite) {
       invite.token = UUID("orginvite");
       invite.invitedByUserId = req.authUserId;
       invite.expiresAt = expiresAt;
+      invite.revokedAt = null;
+      invite.revokedByUserId = null;
       invite.creator = req.authUserId;
       await invite.save();
     } else {
@@ -273,21 +301,23 @@ module.exports.getOrganizationInvites = async (req, res, next) => {
     const foundOrganization = await Organization.findByPk(organizationId);
     if (!foundOrganization) return StatusResponse(res, 404, "Organization not found");
 
+    const statusFilter = (req.query.status || "").trim().toLowerCase();
     const invites = await OrganizationInvite.findAll({
       where: {
         organizationId,
-        acceptedAt: null,
       },
       order: [["createdAt", "DESC"]],
     });
 
-    const activeInvites = (invites || []).filter((invite) => {
-      if (!invite.expiresAt) return true;
-      return new Date(invite.expiresAt).getTime() >= Date.now();
-    });
+    let filteredInvites = invites || [];
+    if (statusFilter) {
+      filteredInvites = filteredInvites.filter(
+        (invite) => computeInviteStatus(invite) === statusFilter
+      );
+    }
 
     return StatusResponse(res, 200, "OK", {
-      invites: activeInvites.map((invite) => serializeInvite(invite)),
+      invites: filteredInvites.map((invite) => serializeInvite(invite)),
     });
   } catch (err) {
     next(err);
@@ -312,6 +342,7 @@ module.exports.postResendOrganizationInvite = async (req, res, next) => {
 
     invite.token = UUID("orginvite");
     invite.invitedByUserId = req.authUserId;
+    invite.expiresAt = buildInviteExpiry(req.body?.expiresAt);
     invite.updatedAt = new Date();
     await invite.save();
 
@@ -346,8 +377,13 @@ module.exports.deleteOrganizationInvite = async (req, res, next) => {
     const invite = await findActiveOrganizationInvite(organizationId, inviteId);
     if (!invite) return StatusResponse(res, 404, "Invite not found");
 
-    await invite.destroy();
-    return StatusResponse(res, 200, "OK");
+    invite.revokedAt = new Date();
+    invite.revokedByUserId = req.authUserId;
+    invite.updatedAt = new Date();
+    await invite.save();
+    return StatusResponse(res, 200, "OK", {
+      invite: serializeInvite(invite),
+    });
   } catch (err) {
     next(err);
   }

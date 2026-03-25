@@ -163,6 +163,7 @@ async function resolveInviteByToken(inviteToken, transaction) {
     transaction,
   });
   if (!invite) return null;
+  if (invite.revokedAt) return null;
   if (invite.expiresAt && new Date(invite.expiresAt).getTime() < Date.now()) {
     return null;
   }

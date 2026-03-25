@@ -1,7 +1,13 @@
 # Changelog
 
+## 0.0.24 - 2026-03-24
+- Add organization invite default expiry policy via `WOTLWEDU_ORG_INVITE_EXPIRY_DAYS` and retain invite history with derived statuses for pending, accepted, revoked, and expired records.
+- Preserve revoked invites as historical records instead of deleting them, and expose invite status filtering for organization admin tooling.
+- Add schema support for invite revocation metadata and extend integration coverage for expired/revoked invite history.
+
 ## 0.0.23 - 2026-03-24
 - Add invite lifecycle controls for organizations, including public invite lookup, pending invite listing, resend/regenerate, and revoke flows.
+- Add default organization invite expiry (`WOTLWEDU_ORG_INVITE_EXPIRY_DAYS`, default 7 days) and retained invite history with derived statuses (`pending`, `accepted`, `revoked`, `expired`).
 - Tighten social invite acceptance to require an explicit invite token whose email matches the Google account used for first sign-in.
 - Extend backend tests and API documentation for invite-aware login and invite lifecycle operations.
 
