@@ -68,6 +68,7 @@ function buildApp() {
   const listRoutes = require("../routes/list");
   const notificationRoutes = require("../routes/notification");
   const organizationRoutes = require("../routes/organization");
+  const userRoutes = require("../routes/user");
 
   // Mirror app.js protected routes used in tests
   baseApp.use("/login", loginRoutes);
@@ -75,6 +76,7 @@ function buildApp() {
   baseApp.use("/list", Security.checkAuthentication, listRoutes);
   baseApp.use("/notification", Security.checkAuthentication, notificationRoutes);
   baseApp.use("/organization", Security.checkAuthentication, organizationRoutes);
+  baseApp.use("/user", Security.checkAuthentication, userRoutes);
 
   // Ping route
   baseApp.use(
@@ -507,6 +509,62 @@ module.exports = (addTest) => {
       order: [["createdAt", "DESC"]],
     });
     assert.ok(audit);
+  });
+
+  addTest("user sign-in methods expose password and linked providers", async () => {
+    const res = await request(server, "GET", "/user/user_password/signin-method");
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.data.methods.passwordEnabled, true);
+    assert.ok(Array.isArray(res.body.data.methods.linkedProviders));
+    assert.ok(
+      res.body.data.methods.linkedProviders.some((method) => method.provider === "google")
+    );
+  });
+
+  addTest("organization invite conflict returns support diagnostics", async () => {
+    const res = await request(server, "POST", "/organization/org_test/invite", {
+      email: "social.only@example.com",
+    });
+    assert.strictEqual(res.status, 421);
+    assert.strictEqual(res.body.message, "User already belongs to this organization");
+
+    const otherOrg = await Organization.create({
+      id: "org_other",
+      name: "Other Organization",
+      active: true,
+      creator: "user_test",
+    });
+    await User.create({
+      id: "user_other_org",
+      firstName: "Other",
+      lastName: "Org",
+      alias: "otherorg",
+      email: "other.org@example.com",
+      organizationId: otherOrg.id,
+      creator: "user_test",
+      active: true,
+      admin: false,
+      auth: await bcrypt.hash("password123", 12),
+    });
+
+    const conflictRes = await request(server, "POST", "/organization/org_test/invite", {
+      email: "other.org@example.com",
+    });
+    assert.strictEqual(conflictRes.status, 421);
+    assert.strictEqual(conflictRes.body.data.conflict.organizationId, "org_other");
+    assert.strictEqual(conflictRes.body.data.conflict.organizationName, "Other Organization");
+  });
+
+  addTest("user and organization audit feeds return recent events", async () => {
+    const userAuditRes = await request(server, "GET", "/user/user_password/authaudit");
+    assert.strictEqual(userAuditRes.status, 200);
+    assert.ok(Array.isArray(userAuditRes.body.data.audits));
+    assert.ok(userAuditRes.body.data.audits.length >= 1);
+
+    const orgAuditRes = await request(server, "GET", "/organization/org_test/authaudit");
+    assert.strictEqual(orgAuditRes.status, 200);
+    assert.ok(Array.isArray(orgAuditRes.body.data.audits));
+    assert.ok(orgAuditRes.body.data.audits.some((audit) => audit.eventType));
   });
 
   addTest("organization invite revoke removes pending invite and invalidates lookup", async () => {

@@ -12,6 +12,8 @@ router.post(  "/accept/:tokenId",  Security.checkCapability("user", ["edit"]),  
 
 router.get( "/friend", Security.checkCapability("user",["view"]), userController.getUserFriends)
 router.get(  "/:userId/friend",  Security.checkCapability("user", ["view"]),  userController.getUserFriends);
+router.get(  "/:userId/signin-method",  Security.checkCapability("user", ["view"]),  userController.getUserSignInMethods);
+router.get(  "/:userId/authaudit",  Security.checkCapability("user", ["view"]),  userController.getUserAuthAudit);
 
 router.get(  "/:userId",  Security.checkCapability("user", ["view"]),  userController.getUser);
 router.get(  "/",  Security.checkCapability("user", ["view"]),  userController.getAllUser);
@@ -30,6 +32,7 @@ router.delete(  "/relationship/:relationshipId",  Security.checkCapability("user
 router.delete(  "/:userId/relationship/:relationshipId",  Security.checkCapability("user", ["edit"]),  userController.deleteRelationship);
 router.delete( "/friend/:friendId", userController.deleteRelationship);
 router.delete(  "/:userId/friend/:friendId",  Security.checkCapability("user", ["edit"]),  userController.deleteRelationship);
+router.delete(  "/:userId/signin-method/:identityId",  Security.checkCapability("user", ["edit"]),  userController.deleteUserSignInMethod);
 
 router.delete(  "/:userId/reassign/:ownerId",  Security.checkCapability("user", ["delete"]),  userController.deleteUser);
 router.delete(  "/:userId",  Security.checkCapability("user", ["delete"]),  userController.deleteUser);

@@ -47,6 +47,9 @@ The backend changes in this repo are documented as **0.0.24** in `CHANGELOG.md`.
 - Social sign-in now refuses to auto-link against an existing non-password account match and returns a manual-support error instead of risking account takeover or duplicate identity state.
 - Auth and invite operations now emit persistent audit records (`authaudits`) covering password sign-in, social sign-in, deferred link confirmation, invite lookup, invite acceptance, invite creation, resend, and revoke flows.
 - Invite lookup, invite management, and deferred social-link confirmation now use dedicated rate limits in addition to the existing password/social login throttles.
+- Add user-level support endpoints for linked sign-in methods and recent auth audit history via `GET /user/:userId/signin-method`, `DELETE /user/:userId/signin-method/:identityId`, and `GET /user/:userId/authaudit`.
+- Add organization-level audit visibility for admins via `GET /organization/:organizationId/authaudit`.
+- Organization invite conflicts now return structured diagnostics when the target email already belongs to another organization.
 - Add invite lifecycle controls for org admins: `GET /organization/:organizationId/invite`, `POST /organization/:organizationId/invite/:inviteId/resend`, and `DELETE /organization/:organizationId/invite/:inviteId`.
 - Organization invites now default to a 7-day expiry (`WOTLWEDU_ORG_INVITE_EXPIRY_DAYS`) and retain status history (`pending`, `accepted`, `revoked`, `expired`) for admin review.
 
@@ -75,6 +78,7 @@ Without `WOTLWEDU_JWT_SECRET`, the app exits at startup.
    export WOTLWEDU_DB_NAME="wotlwedu"
    export WOTLWEDU_DB_PASSWORD="wotlwedu"
    ```
+   For the full auth/invite/deep-link configuration, start from [`.env.example`](/Users/dkelly/Projects/wotlwedu/wotlwedu-backend/.env.example).
 4. Start the API:
    ```bash
    npm start
@@ -109,10 +113,11 @@ Commonly used settings:
 - App listener: `WOTLWEDU_APP_LISTEN`, `WOTLWEDU_APP_PORT`
 - DB: `WOTLWEDU_DB_HOST`, `WOTLWEDU_DB_USER`, `WOTLWEDU_DB_NAME`, `WOTLWEDU_DB_PASSWORD`, `WOTLWEDU_DB_TYPE`
 - Auth: `WOTLWEDU_JWT_SECRET`, `WOTLWEDU_GOOGLE_CLIENT_ID`
+- Support/deep links: `WOTLWEDU_SUPPORT_EMAIL`, `WOTLWEDU_INVITE_LINK_BASE_URL`, `WOTLWEDU_PASSWORD_RESET_LINK_BASE_URL`, `WOTLWEDU_CONFIRMATION_LINK_BASE_URL`
 - Invite policy: `WOTLWEDU_ORG_INVITE_EXPIRY_DAYS`
 - TLS: `WOTLWEDU_SSL`, `WOTLWEDU_SSL_KEY`, `WOTLWEDU_SSL_CERT`
 - CORS: `WOTLWEDU_CORS_ORIGINS` (comma-separated allowed origins)
-- Auth rate limits: `WOTLWEDU_RATE_LOGIN_MAX`, `WOTLWEDU_RATE_RESET_MAX`, `WOTLWEDU_RATE_VERIFY2FA_MAX`, `WOTLWEDU_RATE_WINDOW_MS`
+- Auth rate limits: `WOTLWEDU_RATE_LOGIN_MAX`, `WOTLWEDU_RATE_RESET_MAX`, `WOTLWEDU_RATE_VERIFY2FA_MAX`, `WOTLWEDU_RATE_SOCIAL_LINK_MAX`, `WOTLWEDU_RATE_INVITE_LOOKUP_MAX`, `WOTLWEDU_RATE_INVITE_MANAGE_MAX`, `WOTLWEDU_RATE_WINDOW_MS`
 - URLs: `WOTLWEDU_API_URL`, `WOTLWEDU_FRONTEND_URL`, `WOTLWEDU_IMAGE_URL`
 - Images: `WOTLWEDU_IMAGE_DIR`
 

@@ -25,6 +25,8 @@ const Notify = require("../util/notification");
 const Status = require("../model/status");
 const Notification = require("../model/notification");
 const Role = require("../model/role");
+const SocialIdentity = require("../model/socialidentity");
+const AuthAudit = require("../model/authaudit");
 
 const Attributes = require("../model/attributes");
 
@@ -63,6 +65,57 @@ function generateIncludes(details) {
   return includes;
 }
 
+function canAccessUserSupportData(req, targetUser) {
+  if (!req || !targetUser) return false;
+  if (req.isAdmin === true) return true;
+  if (targetUser.id === req.authUserId) return true;
+  if (!req.authOrganizationId) return false;
+  if (targetUser.organizationId !== req.authOrganizationId) return false;
+  return req.isOrganizationAdmin === true;
+}
+
+function parseAuditMetadata(value) {
+  if (!value) return null;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function serializeSignInMethod(identity) {
+  return {
+    id: identity.id,
+    provider: identity.provider,
+    email: identity.email,
+    subjectPreview: identity.subject
+      ? `${identity.subject}`.slice(0, 6) + "..."
+      : null,
+    createdAt: identity.createdAt,
+    updatedAt: identity.updatedAt,
+  };
+}
+
+function serializeAudit(audit) {
+  return {
+    id: audit.id,
+    eventType: audit.eventType,
+    outcome: audit.outcome,
+    actorUserId: audit.actorUserId,
+    targetUserId: audit.targetUserId,
+    organizationId: audit.organizationId,
+    inviteId: audit.inviteId,
+    provider: audit.provider,
+    email: audit.email,
+    ipAddress: audit.ipAddress,
+    userAgent: audit.userAgent,
+    message: audit.message,
+    metadata: parseAuditMetadata(audit.metadata),
+    createdAt: audit.createdAt,
+    updatedAt: audit.updatedAt,
+  };
+}
+
 exports.getUser = async (req, res, next) => {
   const options = {};
   const userToFind = req.params.userId;
@@ -94,6 +147,101 @@ exports.getUser = async (req, res, next) => {
       return StatusResponse(res, 200, "OK", { user: foundUser });
     })
     .catch((err) => next(err));
+};
+
+exports.getUserSignInMethods = async (req, res, next) => {
+  try {
+    const userId = req.params.userId;
+    if (!userId) return StatusResponse(res, 400, "No user ID provided");
+
+    const foundUser = await User.findByPk(userId);
+    if (!foundUser) return StatusResponse(res, 404, "User not found");
+    if (!canAccessUserSupportData(req, foundUser))
+      return StatusResponse(res, 403, "Not authorized for this user");
+
+    const identities = await SocialIdentity.findAll({
+      where: { userId },
+      order: [["provider", "ASC"]],
+    });
+
+    return StatusResponse(res, 200, "OK", {
+      methods: {
+        passwordEnabled: !!(foundUser.auth && foundUser.auth !== ""),
+        linkedProviders: (identities || []).map(serializeSignInMethod),
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.deleteUserSignInMethod = async (req, res, next) => {
+  try {
+    const userId = req.params.userId;
+    const identityId = req.params.identityId;
+    if (!userId) return StatusResponse(res, 400, "No user ID provided");
+    if (!identityId) return StatusResponse(res, 400, "No identity ID provided");
+
+    const foundUser = await User.findByPk(userId);
+    if (!foundUser) return StatusResponse(res, 404, "User not found");
+    if (!canAccessUserSupportData(req, foundUser))
+      return StatusResponse(res, 403, "Not authorized for this user");
+
+    const identity = await SocialIdentity.findOne({ where: { id: identityId, userId } });
+    if (!identity) return StatusResponse(res, 404, "Linked sign-in method not found");
+
+    const hasPassword = !!(foundUser.auth && foundUser.auth !== "");
+    const identityCount = await SocialIdentity.count({ where: { userId } });
+    if (!hasPassword && identityCount <= 1) {
+      return StatusResponse(res, 421, "Cannot remove the last available sign-in method");
+    }
+
+    await identity.destroy();
+    return StatusResponse(res, 200, "OK", {
+      removed: serializeSignInMethod(identity),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getUserAuthAudit = async (req, res, next) => {
+  try {
+    const userId = req.params.userId;
+    if (!userId) return StatusResponse(res, 400, "No user ID provided");
+
+    const foundUser = await User.findByPk(userId);
+    if (!foundUser) return StatusResponse(res, 404, "User not found");
+    if (!canAccessUserSupportData(req, foundUser))
+      return StatusResponse(res, 403, "Not authorized for this user");
+
+    let page = +req.query.page || 1;
+    let itemsPerPage = +req.query.items || 25;
+    if (page <= 0) page = 1;
+    if (itemsPerPage <= 0) itemsPerPage = 25;
+
+    const where = {
+      [Op.or]: [{ actorUserId: userId }, { targetUserId: userId }],
+    };
+    if (req.query.eventType) where.eventType = req.query.eventType;
+    if (req.query.outcome) where.outcome = req.query.outcome;
+
+    const { count, rows } = await AuthAudit.findAndCountAll({
+      where,
+      order: [["createdAt", "DESC"]],
+      limit: itemsPerPage,
+      offset: (page - 1) * itemsPerPage,
+    });
+
+    return StatusResponse(res, 200, "OK", {
+      total: count,
+      page,
+      itemsPerPage,
+      audits: (rows || []).map(serializeAudit),
+    });
+  } catch (err) {
+    next(err);
+  }
 };
 
 exports.getAllUser = async (req, res, next) => {

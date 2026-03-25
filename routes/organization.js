@@ -28,6 +28,11 @@ router.get(
   Security.checkCapability("organization", ["view"]),
   organizationController.getOrganizationInvites
 );
+router.get(
+  "/:organizationId/authaudit",
+  Security.checkCapability("organization", ["view"]),
+  organizationController.getOrganizationAuthAudits
+);
 router.post(
   "/",
   Security.checkCapability("organization", ["add"]),

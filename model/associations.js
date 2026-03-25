@@ -125,6 +125,11 @@ module.exports.setup = function () {
     sourceKey: "acceptedByUserId",
     as: "acceptedBy",
   });
+  OrganizationInvite.hasOne(User, {
+    foreignKey: "id",
+    sourceKey: "revokedByUserId",
+    as: "revokedBy",
+  });
 
   SocialIdentity.hasOne(User, { foreignKey: "id", sourceKey: "userId" });
 

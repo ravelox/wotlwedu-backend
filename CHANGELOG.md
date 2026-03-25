@@ -10,6 +10,11 @@
 - Add dedicated rate limits for invite lookup, invite management, and deferred social-link confirmation on top of the existing auth throttles.
 - Refuse automatic social linking when a verified social sign-in matches an existing non-password account, returning a manual-support path instead of risking ambiguous account state.
 
+## Unreleased
+- Add linked sign-in method visibility/unlink support at the user level, plus user/org auth audit query endpoints for admin/support tooling.
+- Return structured organization-invite conflict diagnostics when an invite target already belongs to another organization.
+- Add support email and deep-link configuration for invite/password-reset/confirmation email templates, plus HTML mail output and `.env.example`.
+
 ## 0.0.24 - 2026-03-24
 - Add organization invite default expiry policy via `WOTLWEDU_ORG_INVITE_EXPIRY_DAYS` and retain invite history with derived statuses for pending, accepted, revoked, and expired records.
 - Preserve revoked invites as historical records instead of deleting them, and expose invite status filtering for organization admin tooling.

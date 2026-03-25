@@ -197,6 +197,35 @@ paths:
           description: Successful response
       security:
       - bearerAuth: []
+  /organization/:organizationId/authaudit:
+    get:
+      summary: GET /organization/:organizationId/authaudit
+      parameters:
+      - name: organizationId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: outcome
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: eventType
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: userId
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
   /image/:imageId/notif/:notificationId:
     get:
       summary: GET /image/:imageId/notif/:notificationId
@@ -1154,6 +1183,63 @@ paths:
       - name: userId
         in: path
         required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /user/:userId/signin-method:
+    get:
+      summary: GET /user/:userId/signin-method
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /user/:userId/signin-method/:identityId:
+    delete:
+      summary: DELETE /user/:userId/signin-method/:identityId
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: identityId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /user/:userId/authaudit:
+    get:
+      summary: GET /user/:userId/authaudit
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: outcome
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: eventType
+        in: query
+        required: false
         schema:
           type: string
       responses:

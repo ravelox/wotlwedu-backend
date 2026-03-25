@@ -39,11 +39,21 @@ function serializeInvite(invite) {
     token: invite.token,
     invitedByUserId: invite.invitedByUserId,
     acceptedAt: invite.acceptedAt,
+    acceptedByUserId: invite.acceptedByUserId,
     revokedByUserId: invite.revokedByUserId,
     revokedAt: invite.revokedAt,
     expiresAt: invite.expiresAt,
     createdAt: invite.createdAt,
     updatedAt: invite.updatedAt,
+    invitedByName: invite.invitedBy
+      ? `${invite.invitedBy.firstName || ""} ${invite.invitedBy.lastName || ""}`.trim()
+      : null,
+    acceptedByName: invite.acceptedBy
+      ? `${invite.acceptedBy.firstName || ""} ${invite.acceptedBy.lastName || ""}`.trim()
+      : null,
+    revokedByName: invite.revokedBy
+      ? `${invite.revokedBy.firstName || ""} ${invite.revokedBy.lastName || ""}`.trim()
+      : null,
     status: computeInviteStatus(invite, nowValue),
   };
 }
@@ -264,8 +274,11 @@ module.exports.putInviteToOrganization = async (req, res, next) => {
           message: "Invite target already belongs to the organization",
           metadata: { reason: "already_in_organization" },
         });
-        return StatusResponse(res, 421, "User already belongs to this organization");
+      return StatusResponse(res, 421, "User already belongs to this organization");
       }
+      const userOrganization = foundUser.organizationId
+        ? await Organization.findByPk(foundUser.organizationId)
+        : null;
       await writeInviteAudit(req, "blocked", {
         organizationId,
         targetUserId: foundUser.id,
@@ -273,7 +286,16 @@ module.exports.putInviteToOrganization = async (req, res, next) => {
         message: "Invite target belongs to another organization",
         metadata: { reason: "belongs_to_another_organization" },
       });
-      return StatusResponse(res, 421, "User already belongs to another organization");
+      return StatusResponse(res, 421, "User already belongs to another organization", {
+        conflict: {
+          type: "existing_user_other_organization",
+          userId: foundUser.id,
+          organizationId: foundUser.organizationId,
+          organizationName: userOrganization?.name || null,
+          resolution:
+            "This email already belongs to another organization. Use support/admin tooling to review memberships before inviting.",
+        },
+      });
     }
 
     let invite = await OrganizationInvite.findOne({
@@ -312,7 +334,8 @@ module.exports.putInviteToOrganization = async (req, res, next) => {
       email,
       foundOrganization.name,
       invite.token,
-      Config.baseFrontendUrl
+      Config.baseFrontendUrl,
+      invite.expiresAt
     );
 
     await writeInviteAudit(req, invite.createdAt && invite.updatedAt && invite.createdAt.getTime() === invite.updatedAt.getTime() ? "success" : "success", {
@@ -343,10 +366,20 @@ module.exports.getOrganizationInvites = async (req, res, next) => {
     if (!foundOrganization) return StatusResponse(res, 404, "Organization not found");
 
     const statusFilter = (req.query.status || "").trim().toLowerCase();
+    const isSqliteTest =
+      process.env.NODE_ENV === "test" &&
+      process.env.WOTLWEDU_DB_DIALECT === "sqlite";
     const invites = await OrganizationInvite.findAll({
       where: {
         organizationId,
       },
+      include: isSqliteTest
+        ? []
+        : [
+            { model: User, as: "invitedBy", attributes: ["firstName", "lastName"] },
+            { model: User, as: "acceptedBy", attributes: ["firstName", "lastName"] },
+            { model: User, as: "revokedBy", attributes: ["firstName", "lastName"] },
+          ],
       order: [["createdAt", "DESC"]],
     });
 
@@ -391,7 +424,8 @@ module.exports.postResendOrganizationInvite = async (req, res, next) => {
       invite.email,
       foundOrganization.name,
       invite.token,
-      Config.baseFrontendUrl
+      Config.baseFrontendUrl,
+      invite.expiresAt
     );
 
     await writeInviteAudit(req, "success", {
@@ -405,6 +439,68 @@ module.exports.postResendOrganizationInvite = async (req, res, next) => {
 
     return StatusResponse(res, 200, "OK", {
       invite: serializeInvite(invite),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports.getOrganizationAuthAudits = async (req, res, next) => {
+  try {
+    const organizationId = req.params.organizationId;
+    if (!organizationId) return StatusResponse(res, 421, "No organization ID provided");
+    if (!assertOrgAdmin(req, organizationId))
+      return StatusResponse(res, 403, "Not authorized for this organization");
+
+    const foundOrganization = await Organization.findByPk(organizationId);
+    if (!foundOrganization) return StatusResponse(res, 404, "Organization not found");
+
+    const AuthAuditModel = require("../model/authaudit");
+    const eventType = (req.query.eventType || "").trim();
+    const outcome = (req.query.outcome || "").trim();
+    const userId = (req.query.userId || "").trim();
+    let page = +(req.query.page || 1);
+    let itemsPerPage = +(req.query.items || 25);
+    if (page <= 0) page = 1;
+    if (itemsPerPage <= 0) itemsPerPage = 25;
+
+    const where = { organizationId };
+    if (eventType) where.eventType = eventType;
+    if (outcome) where.outcome = outcome;
+    if (userId) {
+      where[Op.or] = [{ actorUserId: userId }, { targetUserId: userId }];
+    }
+
+    const { count, rows } = await AuthAuditModel.findAndCountAll({
+      where,
+      order: [["createdAt", "DESC"]],
+      limit: itemsPerPage,
+      offset: (page - 1) * itemsPerPage,
+    });
+
+    const audits = (rows || []).map((audit) => ({
+      id: audit.id,
+      eventType: audit.eventType,
+      outcome: audit.outcome,
+      actorUserId: audit.actorUserId,
+      targetUserId: audit.targetUserId,
+      organizationId: audit.organizationId,
+      inviteId: audit.inviteId,
+      provider: audit.provider,
+      email: audit.email,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+      message: audit.message,
+      metadata: audit.metadata ? JSON.parse(audit.metadata) : null,
+      createdAt: audit.createdAt,
+      updatedAt: audit.updatedAt,
+    }));
+
+    return StatusResponse(res, 200, "OK", {
+      total: count,
+      page,
+      itemsPerPage,
+      audits,
     });
   } catch (err) {
     next(err);

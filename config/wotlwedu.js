@@ -53,6 +53,8 @@ const smtp = require("../mailprovider/smtp");
 module.exports.mailerProvider = smtp;
 module.exports.mailerFromAddress = "admin@wotlwedu.net";
 module.exports.mailerDisplayName = "Wotlwedu Admin";
+module.exports.supportEmail =
+  process.env.WOTLWEDU_SUPPORT_EMAIL || module.exports.mailerFromAddress;
 
 enable_ssl = toBool(process.env.WOTLWEDU_SSL || false);
 module.exports.ssl = enable_ssl;
@@ -66,6 +68,12 @@ baseFrontendUrl =
 
 module.exports.baseFrontendUrl = baseFrontendUrl;
 module.exports.baseApiUrl = baseApiUrl;
+module.exports.inviteLinkBaseUrl =
+  process.env.WOTLWEDU_INVITE_LINK_BASE_URL || baseFrontendUrl;
+module.exports.passwordResetLinkBaseUrl =
+  process.env.WOTLWEDU_PASSWORD_RESET_LINK_BASE_URL || baseFrontendUrl;
+module.exports.confirmationLinkBaseUrl =
+  process.env.WOTLWEDU_CONFIRMATION_LINK_BASE_URL || baseFrontendUrl;
 module.exports.imageURL =
   process.env.WOTLWEDU_IMAGE_URL || baseApiUrl + "images/";
 module.exports.imageDir = process.env.WOTLWEDU_IMAGE_DIR || "public/images/";
