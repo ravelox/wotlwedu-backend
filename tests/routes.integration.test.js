@@ -68,6 +68,7 @@ function buildApp() {
   const listRoutes = require("../routes/list");
   const notificationRoutes = require("../routes/notification");
   const organizationRoutes = require("../routes/organization");
+  const supportRoutes = require("../routes/support");
   const userRoutes = require("../routes/user");
 
   // Mirror app.js protected routes used in tests
@@ -76,6 +77,7 @@ function buildApp() {
   baseApp.use("/list", Security.checkAuthentication, listRoutes);
   baseApp.use("/notification", Security.checkAuthentication, notificationRoutes);
   baseApp.use("/organization", Security.checkAuthentication, organizationRoutes);
+  baseApp.use("/support", Security.checkAuthentication, supportRoutes);
   baseApp.use("/user", Security.checkAuthentication, userRoutes);
 
   // Ping route
@@ -565,6 +567,50 @@ module.exports = (addTest) => {
     assert.strictEqual(orgAuditRes.status, 200);
     assert.ok(Array.isArray(orgAuditRes.body.data.audits));
     assert.ok(orgAuditRes.body.data.audits.some((audit) => audit.eventType));
+  });
+
+  addTest("support auth overview and feed return scoped observability data", async () => {
+    await AuthAudit.create({
+      id: "audit_support_success",
+      eventType: "social_login",
+      outcome: "success",
+      actorUserId: "user_test",
+      targetUserId: "user_test",
+      organizationId: "org_test",
+      provider: "google",
+      email: "test@example.com",
+      message: "Google login succeeded",
+      creator: "user_test",
+    });
+    await AuthAudit.create({
+      id: "audit_support_failure",
+      eventType: "organization_invite_create",
+      outcome: "failure",
+      actorUserId: "user_test",
+      organizationId: "org_test",
+      email: "blocked@example.com",
+      message: "Invite blocked",
+      creator: "user_test",
+    });
+
+    const overviewRes = await request(
+      server,
+      "GET",
+      "/support/auth/overview?days=7&organizationId=org_test"
+    );
+    assert.strictEqual(overviewRes.status, 200);
+    assert.strictEqual(overviewRes.body.data.organizationId, "org_test");
+    assert.ok(overviewRes.body.data.totals.totalEvents >= 2);
+    assert.ok(Array.isArray(overviewRes.body.data.recentFailures));
+
+    const feedRes = await request(
+      server,
+      "GET",
+      "/support/auth/audit?organizationId=org_test&outcome=failure&items=10"
+    );
+    assert.strictEqual(feedRes.status, 200);
+    assert.ok(Array.isArray(feedRes.body.data.audits));
+    assert.ok(feedRes.body.data.audits.some((audit) => audit.outcome === "failure"));
   });
 
   addTest("organization invite revoke removes pending invite and invalidates lookup", async () => {

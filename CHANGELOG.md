@@ -11,6 +11,8 @@
 - Refuse automatic social linking when a verified social sign-in matches an existing non-password account, returning a manual-support path instead of risking ambiguous account state.
 
 ## Unreleased
+- Add support observability endpoints for aggregated auth/invite metrics and paged support audit feeds.
+- Add structured stdout auth-audit logging via `WOTLWEDU_AUTH_AUDIT_STDOUT`.
 - Add linked sign-in method visibility/unlink support at the user level, plus user/org auth audit query endpoints for admin/support tooling.
 - Return structured organization-invite conflict diagnostics when an invite target already belongs to another organization.
 - Add support email and deep-link configuration for invite/password-reset/confirmation email templates, plus HTML mail output and `.env.example`.

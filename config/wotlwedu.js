@@ -104,6 +104,9 @@ module.exports.authRateLimitWindowMs =
   +(process.env.WOTLWEDU_RATE_WINDOW_MS || 60 * 1000);
 module.exports.organizationInviteExpiryDays =
   +(process.env.WOTLWEDU_ORG_INVITE_EXPIRY_DAYS || 7);
+module.exports.authAuditStdout = toBool(
+  process.env.WOTLWEDU_AUTH_AUDIT_STDOUT || true
+);
 
 module.exports.housekeepingInterval = 300;
 

@@ -1,5 +1,6 @@
 const UUID = require("./mini-uuid");
 const AuthAudit = require("../model/authaudit");
+const Config = require("../config/wotlwedu");
 
 function normalizeString(value) {
   if (value === undefined || value === null) return null;
@@ -33,7 +34,7 @@ module.exports.log = async function logAuthAudit(event = {}, options = {}) {
     event.actorUserId !== undefined ? event.actorUserId : req?.authUserId
   );
 
-  return AuthAudit.create(
+  const createdAudit = await AuthAudit.create(
     {
       id: UUID("audit"),
       eventType: normalizeString(event.eventType) || "unknown",
@@ -52,4 +53,33 @@ module.exports.log = async function logAuthAudit(event = {}, options = {}) {
     },
     transaction ? { transaction } : undefined
   );
+
+  if (Config.authAuditStdout === true) {
+    try {
+      const payload =
+        typeof createdAudit.get === "function"
+          ? createdAudit.get({ plain: true })
+          : createdAudit;
+      console.log(
+        JSON.stringify({
+          type: "auth_audit",
+          eventType: payload.eventType,
+          outcome: payload.outcome,
+          actorUserId: payload.actorUserId,
+          targetUserId: payload.targetUserId,
+          organizationId: payload.organizationId,
+          inviteId: payload.inviteId,
+          provider: payload.provider,
+          email: payload.email,
+          ipAddress: payload.ipAddress,
+          createdAt: payload.createdAt,
+          message: payload.message,
+        })
+      );
+    } catch (err) {
+      console.warn("Failed to emit auth audit log", err.message);
+    }
+  }
+
+  return createdAudit;
 };

@@ -226,6 +226,99 @@ paths:
           description: Successful response
       security:
       - bearerAuth: []
+  /support/auth/overview:
+    get:
+      summary: GET /support/auth/overview
+      parameters:
+      - name: organizationId
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: days
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: eventType
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: outcome
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: provider
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: email
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: userId
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /support/auth/audit:
+    get:
+      summary: GET /support/auth/audit
+      parameters:
+      - name: organizationId
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: items
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: eventType
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: outcome
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: provider
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: email
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: userId
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
   /image/:imageId/notif/:notificationId:
     get:
       summary: GET /image/:imageId/notif/:notificationId

@@ -46,6 +46,7 @@ The backend changes in this repo are documented as **0.0.24** in `CHANGELOG.md`.
 - Matching password-based accounts are not auto-linked before provider authentication. Social login now returns a neutral `linkRequired` confirmation state after verified provider authentication, and linking preserves password login.
 - Social sign-in now refuses to auto-link against an existing non-password account match and returns a manual-support error instead of risking account takeover or duplicate identity state.
 - Auth and invite operations now emit persistent audit records (`authaudits`) covering password sign-in, social sign-in, deferred link confirmation, invite lookup, invite acceptance, invite creation, resend, and revoke flows.
+- Support/admin observability now includes aggregated support endpoints via `GET /support/auth/overview` and `GET /support/auth/audit`.
 - Invite lookup, invite management, and deferred social-link confirmation now use dedicated rate limits in addition to the existing password/social login throttles.
 - Add user-level support endpoints for linked sign-in methods and recent auth audit history via `GET /user/:userId/signin-method`, `DELETE /user/:userId/signin-method/:identityId`, and `GET /user/:userId/authaudit`.
 - Add organization-level audit visibility for admins via `GET /organization/:organizationId/authaudit`.
@@ -118,6 +119,7 @@ Commonly used settings:
 - TLS: `WOTLWEDU_SSL`, `WOTLWEDU_SSL_KEY`, `WOTLWEDU_SSL_CERT`
 - CORS: `WOTLWEDU_CORS_ORIGINS` (comma-separated allowed origins)
 - Auth rate limits: `WOTLWEDU_RATE_LOGIN_MAX`, `WOTLWEDU_RATE_RESET_MAX`, `WOTLWEDU_RATE_VERIFY2FA_MAX`, `WOTLWEDU_RATE_SOCIAL_LINK_MAX`, `WOTLWEDU_RATE_INVITE_LOOKUP_MAX`, `WOTLWEDU_RATE_INVITE_MANAGE_MAX`, `WOTLWEDU_RATE_WINDOW_MS`
+- Observability: `WOTLWEDU_AUTH_AUDIT_STDOUT`
 - URLs: `WOTLWEDU_API_URL`, `WOTLWEDU_FRONTEND_URL`, `WOTLWEDU_IMAGE_URL`
 - Images: `WOTLWEDU_IMAGE_DIR`
 
@@ -164,12 +166,15 @@ Additional tenancy endpoints:
 - `GET /organization`
 - `GET /organization/:organizationId`
 - `GET /organization/:organizationId/invite`
+- `GET /organization/:organizationId/authaudit`
 - `POST /organization`
 - `POST /organization/:organizationId/invite`
 - `POST /organization/:organizationId/invite/:inviteId/resend`
 - `DELETE /organization/:organizationId/invite/:inviteId`
 - `PUT /organization/:organizationId`
 - `DELETE /organization/:organizationId`
+- `GET /support/auth/overview`
+- `GET /support/auth/audit`
 
 ## Notes for contributors
 - Response format helper: `util/statusresponse.js`
