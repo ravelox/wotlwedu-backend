@@ -2,7 +2,7 @@
 
 Last updated: 2026-03-24
 Repo: `wotlwedu-backend`
-Current version: `0.0.30`
+Current version: `0.0.31`
 
 ## Current Focus
 
@@ -27,7 +27,7 @@ This repo contains the backend side of the production auth/invite hardening and 
 - Auth-audit events can now be emitted as structured stdout logs via `WOTLWEDU_AUTH_AUDIT_STDOUT`.
 - Mailer templates support richer deep links and support contact configuration.
 - Added top-level [`.env.example`](/Users/dkelly/Projects/wotlwedu/wotlwedu-backend/.env.example).
-- Added a live validation hook for deployed support/auth surfaces via `npm run validate:deployed-support`.
+- Added a live validation hook for deployed support/auth surfaces via `npm run validate:deployed-support`, including login-based auto-discovery of user/org scope.
 - Current admin-facing consumers include:
   - `wotlwedu-ui` for the primary user web application
   - `wotlwedu-admin` for sysops and support operations

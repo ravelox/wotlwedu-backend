@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.31 - 2026-03-25
+- Make deployed support/auth validation scripts accept login credentials, auto-discover user and organization scope, and optionally write JSON reports.
+- Update backend docs and checkpoint guidance to reflect the improved live validation workflow.
+
 ## 0.0.30 - 2026-03-25
 - Add explicit `organizationId` narrowing support for `GET /user` and `GET /workgroup` to improve admin relation search precision.
 - Add deployed support/auth validation tooling via `npm run validate:deployed-support`.

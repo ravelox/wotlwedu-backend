@@ -26,7 +26,7 @@ Core stack:
 - `Workgroup admin user`: can administer data for one workgroup (`adminWorkgroupId`, legacy `adminGroupId`).
 
 ## Current version
-The backend changes in this repo are documented as **0.0.30** in `CHANGELOG.md`.
+The backend changes in this repo are documented as **0.0.31** in `CHANGELOG.md`.
 
 ## Recent API behavior updates
 - Category IDs are now consistently included on category-enabled resources (`group`, `workgroup`, `image`, `item`, `list`, `election`).
@@ -102,6 +102,15 @@ export WOTLWEDU_VALIDATE_BASE_URL="https://api.example.com"
 export WOTLWEDU_VALIDATE_TOKEN="REPLACE_WITH_BEARER_TOKEN"
 export WOTLWEDU_VALIDATE_ORGANIZATION_ID="org_123"   # optional
 export WOTLWEDU_VALIDATE_USER_ID="user_123"          # optional
+npm run validate:deployed-support
+```
+
+You can also let the script authenticate and auto-discover scope:
+```bash
+export WOTLWEDU_VALIDATE_BASE_URL="https://api.example.com"
+export WOTLWEDU_VALIDATE_EMAIL="admin@example.com"
+export WOTLWEDU_VALIDATE_PASSWORD="REPLACE_WITH_PASSWORD"
+export WOTLWEDU_VALIDATE_OUTPUT="./support-validation.json"   # optional
 npm run validate:deployed-support
 ```
 

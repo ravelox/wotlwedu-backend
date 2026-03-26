@@ -4,6 +4,7 @@ const organizationId = process.env.WOTLWEDU_VALIDATE_ORGANIZATION_ID || "";
 const userId = process.env.WOTLWEDU_VALIDATE_USER_ID || "";
 const email = process.env.WOTLWEDU_VALIDATE_EMAIL || "";
 const password = process.env.WOTLWEDU_VALIDATE_PASSWORD || "";
+const outputPath = process.env.WOTLWEDU_VALIDATE_OUTPUT || "";
 
 if (!baseUrl) {
   console.error("Missing WOTLWEDU_VALIDATE_BASE_URL");
@@ -40,14 +41,30 @@ async function assertOk(label, path, options = {}) {
 
 async function main() {
   let activeToken = token;
+  let resolvedOrganizationId = organizationId;
+  let resolvedUserId = userId;
+  const report = {
+    baseUrl,
+    checks: [],
+    userId: null,
+    organizationId: null,
+  };
+
+  async function runCheck(label, path, options = {}) {
+    const body = await assertOk(label, path, options);
+    report.checks.push({ label, path, ok: true });
+    return body;
+  }
 
   if (!activeToken && email && password) {
-    const login = await assertOk("POST /login", "/login", {
+    const login = await runCheck("POST /login", "/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, auth: password }),
     });
-    activeToken = login?.data?.auth || "";
+    activeToken = login?.data?.authToken || login?.data?.auth || "";
+    resolvedOrganizationId = resolvedOrganizationId || login?.data?.organizationId || "";
+    resolvedUserId = resolvedUserId || login?.data?.userId || "";
     if (!activeToken) {
       throw new Error("POST /login succeeded but did not return an auth token");
     }
@@ -60,27 +77,35 @@ async function main() {
   }
 
   headers.Authorization = `Bearer ${activeToken}`;
+  report.userId = resolvedUserId || null;
+  report.organizationId = resolvedOrganizationId || null;
 
-  await assertOk("GET /ping", "/ping");
-  await assertOk("GET /support/auth/overview", "/support/auth/overview?days=3");
-  await assertOk("GET /support/auth/audit", "/support/auth/audit?page=1&items=10");
+  await runCheck("GET /ping", "/ping");
+  await runCheck("GET /support/auth/overview", "/support/auth/overview?days=3");
+  await runCheck("GET /support/auth/audit", "/support/auth/audit?page=1&items=10");
 
-  if (organizationId) {
-    await assertOk(
+  if (resolvedOrganizationId) {
+    await runCheck(
       "GET /organization/:organizationId/authaudit",
-      `/organization/${encodeURIComponent(organizationId)}/authaudit?page=1&items=10`
+      `/organization/${encodeURIComponent(resolvedOrganizationId)}/authaudit?page=1&items=10`
     );
   }
 
-  if (userId) {
-    await assertOk(
+  if (resolvedUserId) {
+    await runCheck(
       "GET /user/:userId/signin-method",
-      `/user/${encodeURIComponent(userId)}/signin-method`
+      `/user/${encodeURIComponent(resolvedUserId)}/signin-method`
     );
-    await assertOk(
+    await runCheck(
       "GET /user/:userId/authaudit",
-      `/user/${encodeURIComponent(userId)}/authaudit?page=1&items=10`
+      `/user/${encodeURIComponent(resolvedUserId)}/authaudit?page=1&items=10`
     );
+  }
+
+  if (outputPath) {
+    const fs = await import("node:fs/promises");
+    await fs.writeFile(outputPath, JSON.stringify(report, null, 2));
+    console.log(`Wrote validation report to ${outputPath}`);
   }
 
   console.log("Deployed support validation completed.");
