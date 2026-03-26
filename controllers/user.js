@@ -14,6 +14,7 @@ const {
   getStatusIdByName,
   deleteImageFile,
 } = require("../util/helpers");
+const { normalizeOptionalId } = require("../util/idnormalize");
 
 const User = require("../model/user");
 const Friend = require("../model/friend");
@@ -247,7 +248,8 @@ exports.getUserAuthAudit = async (req, res, next) => {
 exports.getAllUser = async (req, res, next) => {
   try {
     let userFilter = req.query.filter;
-    const workgroupId = req.query.workgroupId || null;
+    const workgroupId = normalizeOptionalId(req.query.workgroupId).value;
+    const requestedOrganizationId = normalizeOptionalId(req.query.organizationId).value;
     let page = +req.query.page;
     let itemsPerPage = +req.query.items;
     if (!page) page = 1;
@@ -259,12 +261,10 @@ exports.getAllUser = async (req, res, next) => {
     options.limit = itemsPerPage;
     options.offset = (page - 1) * itemsPerPage;
 
-    let whereCondition = {};
-
-    whereCondition.protected = false;
-    Security.applyOrganizationScope(req, whereCondition);
+    let whereCondition = { protected: false };
     if (userFilter) {
       whereCondition = {
+        protected: false,
         [Op.or]: [
           { firstName: { [Op.like]: "%" + userFilter + "%" } },
           { lastName: { [Op.like]: "%" + userFilter + "%" } },
@@ -272,7 +272,15 @@ exports.getAllUser = async (req, res, next) => {
           { alias: { [Op.like]: "%" + userFilter + "%" } },
         ],
       };
-      Security.applyOrganizationScope(req, whereCondition);
+    }
+
+    if (requestedOrganizationId) {
+      if (req.isAdmin !== true && req.authOrganizationId !== requestedOrganizationId) {
+        return StatusResponse(res, 403, "Not authorized for this organization");
+      }
+      whereCondition.organizationId = requestedOrganizationId;
+    } else if (req.authOrganizationId) {
+      whereCondition.organizationId = req.authOrganizationId;
     }
 
     // Optional workgroup scoping: list users who are members of a given workgroup.

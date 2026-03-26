@@ -21,6 +21,7 @@ const OrganizationInvite = require("../model/organizationinvite");
 const Role = require("../model/role");
 const SocialIdentity = require("../model/socialidentity");
 const User = require("../model/user");
+const Workgroup = require("../model/workgroup");
 const Security = require("../util/security");
 
 let skipReason = null;
@@ -70,6 +71,7 @@ function buildApp() {
   const organizationRoutes = require("../routes/organization");
   const supportRoutes = require("../routes/support");
   const userRoutes = require("../routes/user");
+  const workgroupRoutes = require("../routes/workgroup");
 
   // Mirror app.js protected routes used in tests
   baseApp.use("/login", loginRoutes);
@@ -79,6 +81,7 @@ function buildApp() {
   baseApp.use("/organization", Security.checkAuthentication, organizationRoutes);
   baseApp.use("/support", Security.checkAuthentication, supportRoutes);
   baseApp.use("/user", Security.checkAuthentication, userRoutes);
+  baseApp.use("/workgroup", Security.checkAuthentication, workgroupRoutes);
 
   // Ping route
   baseApp.use(
@@ -162,6 +165,12 @@ module.exports = (addTest) => {
       active: true,
       creator: "user_test",
     });
+    await Organization.create({
+      id: "org_filter",
+      name: "Filter Organization",
+      active: true,
+      creator: "user_test",
+    });
     await Role.create({
       id: "role_default",
       name: "Default Role",
@@ -214,6 +223,33 @@ module.exports = (addTest) => {
       admin: false,
       auth: null,
     });
+    await User.create({
+      id: "user_filter_org",
+      firstName: "Other",
+      lastName: "Org",
+      alias: "filterorg",
+      email: "filter@example.com",
+      organizationId: "org_filter",
+      creator: "user_test",
+      active: true,
+      admin: false,
+    });
+    await Workgroup.create({
+      id: "workgroup_test",
+      name: "Test Workgroup",
+      description: "Primary test workgroup",
+      organizationId: "org_test",
+      creator: "user_test",
+      listType: 0,
+    });
+    await Workgroup.create({
+      id: "workgroup_filter",
+      name: "Filter Workgroup",
+      description: "Filtered test workgroup",
+      organizationId: "org_filter",
+      creator: "user_test",
+      listType: 0,
+    });
 
     Status = require("../model/status");
     Notification = require("../model/notification");
@@ -260,6 +296,24 @@ module.exports = (addTest) => {
     assert.strictEqual(res.status, 200);
     assert.ok(Array.isArray(res.body.data.items));
     assert.ok(res.body.data.items.length >= 1);
+  });
+
+  addTest("list users can be narrowed by organizationId", async () => {
+    const res = await request(server, "GET", "/user?organizationId=org_filter");
+    assert.strictEqual(res.status, 200);
+    const users = res.body?.data?.users || [];
+    assert.strictEqual(users.length, 1);
+    assert.strictEqual(users[0].id, "user_filter_org");
+    assert.strictEqual(users[0].organizationId, "org_filter");
+  });
+
+  addTest("list workgroups can be narrowed by organizationId", async () => {
+    const res = await request(server, "GET", "/workgroup?organizationId=org_filter");
+    assert.strictEqual(res.status, 200);
+    const workgroups = res.body?.data?.workgroups || [];
+    assert.strictEqual(workgroups.length, 1);
+    assert.strictEqual(workgroups[0].id, "workgroup_filter");
+    assert.strictEqual(workgroups[0].organizationId, "org_filter");
   });
 
   addTest("list items ignores placeholder workgroup and paging values", async () => {

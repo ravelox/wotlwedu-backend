@@ -77,6 +77,7 @@ module.exports.getSingleWorkgroup = (req, res, next) => {
 
 module.exports.getAllWorkgroup = (req, res, next) => {
   let userFilter = req.query.filter;
+  const requestedOrganizationId = normalizeOptionalId(req.query.organizationId).value;
   let page = +req.query.page;
   let itemsPerPage = +req.query.items;
   if (!page) page = 1;
@@ -95,7 +96,15 @@ module.exports.getAllWorkgroup = (req, res, next) => {
     };
   }
 
-  Security.applyOrganizationScope(req, whereCondition);
+  if (requestedOrganizationId) {
+    if (req.isAdmin !== true && req.authOrganizationId !== requestedOrganizationId) {
+      return StatusResponse(res, 403, "Not authorized for this organization");
+    }
+    whereCondition.organizationId = requestedOrganizationId;
+  } else if (req.authOrganizationId) {
+    whereCondition.organizationId = req.authOrganizationId;
+  }
+
   const isScopedAdmin =
     Security.getVerdict(req.verdicts, "view").isAdmin ||
     req.isOrganizationAdmin === true ||

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.30 - 2026-03-25
+- Add explicit `organizationId` narrowing support for `GET /user` and `GET /workgroup` to improve admin relation search precision.
+- Add deployed support/auth validation tooling via `npm run validate:deployed-support`.
+- Extend sqlite integration coverage for organization-scoped user/workgroup filtering.
+
 ## 0.0.29 - 2026-03-24
 - Refresh the backend checkpoint to reflect `wotlwedu-admin` as the active operational console.
 - Mark `wotlwedu-browser` and `wotlwedu-minimal` as archived counterparts in current project status.

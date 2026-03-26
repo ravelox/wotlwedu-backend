@@ -26,7 +26,7 @@ Core stack:
 - `Workgroup admin user`: can administer data for one workgroup (`adminWorkgroupId`, legacy `adminGroupId`).
 
 ## Current version
-The backend changes in this repo are documented as **0.0.29** in `CHANGELOG.md`.
+The backend changes in this repo are documented as **0.0.30** in `CHANGELOG.md`.
 
 ## Recent API behavior updates
 - Category IDs are now consistently included on category-enabled resources (`group`, `workgroup`, `image`, `item`, `list`, `election`).
@@ -53,6 +53,7 @@ The backend changes in this repo are documented as **0.0.29** in `CHANGELOG.md`.
 - Organization invite conflicts now return structured diagnostics when the target email already belongs to another organization.
 - Add invite lifecycle controls for org admins: `GET /organization/:organizationId/invite`, `POST /organization/:organizationId/invite/:inviteId/resend`, and `DELETE /organization/:organizationId/invite/:inviteId`.
 - Organization invites now default to a 7-day expiry (`WOTLWEDU_ORG_INVITE_EXPIRY_DAYS`) and retain status history (`pending`, `accepted`, `revoked`, `expired`) for admin review.
+- Admin/scoped-admin collection queries can now narrow `GET /user` and `GET /workgroup` with explicit `organizationId` filters.
 
 ## Prerequisites
 - Node.js and npm
@@ -93,6 +94,15 @@ npm run dev
 Tests:
 ```bash
 npm test
+```
+
+Deployed support/auth validation:
+```bash
+export WOTLWEDU_VALIDATE_BASE_URL="https://api.example.com"
+export WOTLWEDU_VALIDATE_TOKEN="REPLACE_WITH_BEARER_TOKEN"
+export WOTLWEDU_VALIDATE_ORGANIZATION_ID="org_123"   # optional
+export WOTLWEDU_VALIDATE_USER_ID="user_123"          # optional
+npm run validate:deployed-support
 ```
 
 Live notification test (push one real notification through the running API so an active UI session can receive it):
