@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.0.32 - 2026-03-25
+- Remove `CHECKPOINT.md` as part of the cross-repo cleanup.
+
 ## 0.0.31 - 2026-03-25
 - Make deployed support/auth validation scripts accept login credentials, auto-discover user and organization scope, and optionally write JSON reports.
 - Update backend docs and checkpoint guidance to reflect the improved live validation workflow.
