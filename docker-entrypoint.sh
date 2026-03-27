@@ -1,15 +1,4 @@
 #!/bin/bash
-echo "Holding for database server initialisation"
-
-export WOTLWEDU_COUNTER=0
-while [ $WOTLWEDU_COUNTER -le 30 ]
-do
-    echo -n "."
-    export WOTLWEDU_COUNTER=$(( $WOTLWEDU_COUNTER + 2 ))
-    sleep 2
-done
-
-
 if [ -z "$WOTLWEDU_DB_HOST" ]
 then
     export WOTLWEDU_DB_HOST=localhost
@@ -26,11 +15,30 @@ if [ -z "$WOTLWEDU_DB_PASSWORD" ]
 then
     export WOTLWEDU_DB_PASSWORD=wotlwedu
 fi
+if [ -z "$WOTLWEDU_DB_ROOT_USER" ]
+then
+    export WOTLWEDU_DB_ROOT_USER=root
+fi
+if [ -z "$WOTLWEDU_DB_ROOT_PASSWORD" ]
+then
+    export WOTLWEDU_DB_ROOT_PASSWORD=$WOTLWEDU_DB_PASSWORD
+fi
 
-#
-# Install the mariadb-client package for database checking
-#
-apt-get install -y mariadb-client
+echo "Waiting for database readiness"
+export WOTLWEDU_DB_WAIT_TIMEOUT_SECONDS=${WOTLWEDU_DB_WAIT_TIMEOUT_SECONDS:-30}
+export WOTLWEDU_COUNTER=0
+until mariadb-admin ping -h "$WOTLWEDU_DB_HOST" -u "$WOTLWEDU_DB_ROOT_USER" --password="$WOTLWEDU_DB_ROOT_PASSWORD" --silent >/dev/null 2>&1
+do
+    if [ "$WOTLWEDU_COUNTER" -ge "$WOTLWEDU_DB_WAIT_TIMEOUT_SECONDS" ]
+    then
+        echo "Database did not become ready within ${WOTLWEDU_DB_WAIT_TIMEOUT_SECONDS}s"
+        exit 1
+    fi
+    echo -n "."
+    sleep 1
+    export WOTLWEDU_COUNTER=$(( WOTLWEDU_COUNTER + 1 ))
+done
+echo
 
 echo "Checking for database"
 DATABASE_PRESENT=$(mariadb -h $WOTLWEDU_DB_HOST -u ${WOTLWEDU_DB_ROOT_USER} --password="${WOTLWEDU_DB_ROOT_PASSWORD}" <<< "SHOW DATABASES;" | grep ${WOTLWEDU_DB_NAME} | wc -l)

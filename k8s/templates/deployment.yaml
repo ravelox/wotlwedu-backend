@@ -60,6 +60,8 @@ spec:
               value: "{{ ternary "true" "false" .Values.env.dbLogging }}"
             - name: WOTLWEDU_DB_SYNC
               value: "{{ ternary "true" "false" .Values.env.dbSync }}"
+            - name: WOTLWEDU_DB_WAIT_TIMEOUT_SECONDS
+              value: "{{ .Values.env.dbWaitTimeoutSeconds }}"
             - name: WOTLWEDU_HOUSEKEEPING_INTERVAL
               value: "{{ .Values.env.housekeepingInterval }}"
             - name: WOTLWEDU_IMAGE_DIR
@@ -79,16 +81,30 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.secrets.name }}
                   key: jwt-secret
+          startupProbe:
+            httpGet:
+              path: {{ .Values.probes.startup.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.startup.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.startup.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.startup.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.startup.failureThreshold }}
           livenessProbe:
-            tcpSocket:
+            httpGet:
+              path: {{ .Values.probes.liveness.path }}
               port: http
-            initialDelaySeconds: 20
-            periodSeconds: 15
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
           readinessProbe:
-            tcpSocket:
+            httpGet:
+              path: {{ .Values.probes.readiness.path }}
               port: http
-            initialDelaySeconds: 10
-            periodSeconds: 10
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
           volumeMounts:
             {{- if .Values.persistence.enabled }}
             - name: image-store
