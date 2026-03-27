@@ -9,6 +9,12 @@ module.exports.Election = [
   "expiration",
   "categoryId",
   "workgroupId",
+  "publicAccessMode",
+  "publicEnabledAt",
+  "publicDisabledAt",
+  "guestVotingEnabled",
+  "allowPlatformInvites",
+  "abuseStatus",
   "creator"
 ];
 

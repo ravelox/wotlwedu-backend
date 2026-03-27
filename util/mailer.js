@@ -291,3 +291,46 @@ Wotlwedu admin team`;
     resolve("OK");
   });
 };
+
+module.exports.sendPublicPollInviteMessage = (
+  emailAddress,
+  pollName,
+  publicToken,
+  inviteToken = null
+) => {
+  return new Promise((resolve, reject) => {
+    const inviteUrl =
+      `${Config.baseFrontendUrl}/public/election/${encodeURIComponent(publicToken)}` +
+      (inviteToken ? `?invite=${encodeURIComponent(inviteToken)}` : "");
+    const textBody = `Hi there,
+
+You have been invited to participate in the Wotlwedu poll "${pollName}".
+
+Open the poll here:
+
+${inviteUrl}
+
+If you no longer want invites like this, contact ${Config.supportEmail}.
+
+Best regards,
+
+Wotlwedu admin team`;
+
+    const messageDetails = {
+      to: emailAddress,
+      subject: `Invitation to participate in "${pollName}"`,
+      text: textBody,
+      html: wrapHtmlMessage(
+        `You're invited to "${pollName}"`,
+        `<p>You have been invited to participate in the Wotlwedu poll <strong>${pollName}</strong>.</p>
+         <p><a href="${inviteUrl}">${inviteUrl}</a></p>
+         <p>If you no longer want invites like this, contact ${Config.supportEmail}.</p>`
+      ),
+    };
+
+    sendEmail(messageDetails).catch((err) => {
+      reject(new Error("Failed to send public poll invite email: " + err));
+    });
+    resolve("OK");
+  });
+};

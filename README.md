@@ -26,7 +26,7 @@ Core stack:
 - `Workgroup admin user`: can administer data for one workgroup (`adminWorkgroupId`, legacy `adminGroupId`).
 
 ## Current version
-The backend changes in this repo are documented as **0.0.32** in `CHANGELOG.md`.
+The backend changes in this repo are documented as **0.0.33** in `CHANGELOG.md`.
 
 ## Recent API behavior updates
 - Category IDs are now consistently included on category-enabled resources (`group`, `workgroup`, `image`, `item`, `list`, `election`).
@@ -42,6 +42,9 @@ The backend changes in this repo are documented as **0.0.32** in `CHANGELOG.md`.
 - Add post-auth social-link confirmation via `POST /login/google/link` and `POST /login/social/link` when a verified Google/social sign-in matches an existing password-based account.
 - Add organization email invitations via `POST /organization/:organizationId/invite`.
 - Add public invite lookup via `GET /login/invite/:token` so clients can show invite context before Google sign-in.
+- Add public election access via `GET /public/election/:token`, guest session issuance via `POST /public/election/:token/session`, guest voting via `POST /public/election/:token/vote`, and public abuse reporting via `POST /public/election/:token/report`.
+- Add trust-gated public election invite management for authenticated election owners via `GET /election/public/trust`, `POST /election/:electionId/public/enable`, `POST /election/:electionId/public/disable`, `GET /election/:electionId/public/stats`, and `GET/POST/DELETE` invite lifecycle routes under `/election/:electionId/invite`.
+- Add public-poll trust, suppression, invite, participant, vote, and abuse-audit persistence so public links can expand participation without allowing guest-triggered outbound messaging.
 - First-time social sign-in now consumes a pending organization invite only when the supplied invite token matches the Google account email; otherwise it auto-provisions a new organization named `<FirstInitial> <LastInitial>'s Organization`.
 - Matching password-based accounts are not auto-linked before provider authentication. Social login now returns a neutral `linkRequired` confirmation state after verified provider authentication, and linking preserves password login.
 - Social sign-in now refuses to auto-link against an existing non-password account match and returns a manual-support error instead of risking account takeover or duplicate identity state.
@@ -138,6 +141,7 @@ Commonly used settings:
 - TLS: `WOTLWEDU_SSL`, `WOTLWEDU_SSL_KEY`, `WOTLWEDU_SSL_CERT`
 - CORS: `WOTLWEDU_CORS_ORIGINS` (comma-separated allowed origins)
 - Auth rate limits: `WOTLWEDU_RATE_LOGIN_MAX`, `WOTLWEDU_RATE_RESET_MAX`, `WOTLWEDU_RATE_VERIFY2FA_MAX`, `WOTLWEDU_RATE_SOCIAL_LINK_MAX`, `WOTLWEDU_RATE_INVITE_LOOKUP_MAX`, `WOTLWEDU_RATE_INVITE_MANAGE_MAX`, `WOTLWEDU_RATE_WINDOW_MS`
+- Public poll trust/rate limits: `WOTLWEDU_RATE_PUBLIC_POLL_MAX`, `WOTLWEDU_RATE_PUBLIC_VOTE_MAX`, `WOTLWEDU_PUBLIC_TRUST_MIN_ACCOUNT_AGE_HOURS`, `WOTLWEDU_PUBLIC_BASIC_INVITE_QUOTA_DAILY`, `WOTLWEDU_PUBLIC_BASIC_INVITE_QUOTA_HOURLY`, `WOTLWEDU_PUBLIC_BASIC_RECIPIENTS_PER_POLL`, `WOTLWEDU_PUBLIC_INVITE_RESEND_COOLDOWN_HOURS`
 - Observability: `WOTLWEDU_AUTH_AUDIT_STDOUT`
 - URLs: `WOTLWEDU_API_URL`, `WOTLWEDU_FRONTEND_URL`, `WOTLWEDU_IMAGE_URL`
 - Images: `WOTLWEDU_IMAGE_DIR`

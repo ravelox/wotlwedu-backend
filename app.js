@@ -56,6 +56,7 @@ const notificationRoutes = require("./routes/notification");
 const helperRoutes = require("./routes/helper");
 const organizationRoutes = require("./routes/organization");
 const supportRoutes = require("./routes/support");
+const publicElectionRoutes = require("./routes/publicelection");
 
 // Helper middleware and functions
 const Security = require("./util/security");
@@ -131,6 +132,7 @@ app.get("/favicon.ico", (req, res) => res.status(204));
 // Routes that can be accessed without a login
 app.use("/login", Helpers.logComment("Login"), loginRoutes);
 app.use("/register", Helpers.logComment("Register"), registerRoutes);
+app.use("/public/election", Helpers.logComment("Public Election"), publicElectionRoutes);
 
 /* Connection Test */
 app.use(

@@ -24,6 +24,12 @@ const Vote = require("./vote");
 const Metadata = require("./metadata")
 const Preference = require("./preference")
 const SocketInfo = require("./socketinfo")
+const PublicPollParticipant = require("./publicpollparticipant");
+const PublicPollVote = require("./publicpollvote");
+const PublicPollInvite = require("./publicpollinvite");
+const ContactSuppression = require("./contactsuppression");
+const TrustProfile = require("./trustprofile");
+const AbuseAudit = require("./abuseaudit");
 
 let _associationsSetup = false;
 
@@ -100,6 +106,9 @@ module.exports.setup = function () {
   User.hasMany(AuthAudit, { foreignKey: "targetUserId", sourceKey: "id", as: "authAuditTarget" });
   User.hasMany(OrganizationInvite, { foreignKey: "invitedByUserId", sourceKey: "id" });
   User.hasMany(SocialIdentity, { foreignKey: "userId", sourceKey: "id" });
+  User.hasOne(TrustProfile, { foreignKey: "userId", sourceKey: "id" });
+  User.hasMany(PublicPollInvite, { foreignKey: "creatorUserId", sourceKey: "id" });
+  User.hasMany(AbuseAudit, { foreignKey: "actorUserId", sourceKey: "id" });
   User.hasOne(Image, { foreignKey: "id", sourceKey: "imageId" });
   User.hasOne(Organization, { foreignKey: "id", sourceKey: "organizationId" });
 
@@ -147,6 +156,10 @@ module.exports.setup = function () {
   Election.hasOne(Category, { foreignKey: "id", sourceKey: "categoryId" });
   Election.hasOne(Image, { foreignKey: "id", sourceKey: "imageId" });
   Election.hasOne(Status, { foreignKey: "id", sourceKey: "statusId" });
+  Election.hasMany(PublicPollParticipant, { foreignKey: "electionId", sourceKey: "id" });
+  Election.hasMany(PublicPollVote, { foreignKey: "electionId", sourceKey: "id" });
+  Election.hasMany(PublicPollInvite, { foreignKey: "electionId", sourceKey: "id" });
+  Election.hasMany(AbuseAudit, { foreignKey: "electionId", sourceKey: "id" });
 
   Vote.hasOne(Election, { foreignKey: "id", sourceKey: "electionId" });
   Vote.hasOne(User, { foreignKey: "id", sourceKey: "userId" });
@@ -159,6 +172,15 @@ module.exports.setup = function () {
   AuthAudit.hasOne(User, { foreignKey: "id", sourceKey: "actorUserId", as: "actor" });
   AuthAudit.hasOne(User, { foreignKey: "id", sourceKey: "targetUserId", as: "target" });
   AuthAudit.hasOne(Organization, { foreignKey: "id", sourceKey: "organizationId" });
+  PublicPollParticipant.hasOne(Election, { foreignKey: "id", sourceKey: "electionId" });
+  PublicPollVote.hasOne(Election, { foreignKey: "id", sourceKey: "electionId" });
+  PublicPollVote.hasOne(Item, { foreignKey: "id", sourceKey: "itemId" });
+  PublicPollVote.hasOne(PublicPollParticipant, { foreignKey: "id", sourceKey: "participantId" });
+  PublicPollInvite.hasOne(Election, { foreignKey: "id", sourceKey: "electionId" });
+  PublicPollInvite.hasOne(User, { foreignKey: "id", sourceKey: "creatorUserId", as: "creatorUser" });
+  TrustProfile.hasOne(User, { foreignKey: "id", sourceKey: "userId" });
+  AbuseAudit.hasOne(User, { foreignKey: "id", sourceKey: "actorUserId", as: "actor" });
+  AbuseAudit.hasOne(Election, { foreignKey: "id", sourceKey: "electionId" });
 
   Status.hasMany(Notification);
   Status.hasMany(Friend);

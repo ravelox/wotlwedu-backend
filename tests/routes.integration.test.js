@@ -22,6 +22,10 @@ const Role = require("../model/role");
 const SocialIdentity = require("../model/socialidentity");
 const User = require("../model/user");
 const Workgroup = require("../model/workgroup");
+const List = require("../model/list");
+const ListItem = require("../model/listitem");
+const Item = require("../model/item");
+const Election = require("../model/election");
 const Security = require("../util/security");
 
 let skipReason = null;
@@ -69,16 +73,20 @@ function buildApp() {
   const listRoutes = require("../routes/list");
   const notificationRoutes = require("../routes/notification");
   const organizationRoutes = require("../routes/organization");
+  const electionRoutes = require("../routes/election");
+  const publicElectionRoutes = require("../routes/publicelection");
   const supportRoutes = require("../routes/support");
   const userRoutes = require("../routes/user");
   const workgroupRoutes = require("../routes/workgroup");
 
   // Mirror app.js protected routes used in tests
   baseApp.use("/login", loginRoutes);
+  baseApp.use("/public/election", publicElectionRoutes);
   baseApp.use("/item", Security.checkAuthentication, itemRoutes);
   baseApp.use("/list", Security.checkAuthentication, listRoutes);
   baseApp.use("/notification", Security.checkAuthentication, notificationRoutes);
   baseApp.use("/organization", Security.checkAuthentication, organizationRoutes);
+  baseApp.use("/election", Security.checkAuthentication, electionRoutes);
   baseApp.use("/support", Security.checkAuthentication, supportRoutes);
   baseApp.use("/user", Security.checkAuthentication, userRoutes);
   baseApp.use("/workgroup", Security.checkAuthentication, workgroupRoutes);
@@ -150,8 +158,12 @@ module.exports = (addTest) => {
   let Notification;
   let Status;
   let pendingInviteToken;
+  let publicElectionId;
+  let publicListItemId;
+  let publicElectionToken;
 
   Mailer.sendOrganizationInviteMessage = async () => "OK";
+  Mailer.sendPublicPollInviteMessage = async () => "OK";
 
   addTest("setup test database", async () => {
     Associations.setup();
@@ -186,7 +198,9 @@ module.exports = (addTest) => {
       organizationId: "org_test",
       creator: "user_test",
       active: true,
+      verified: true,
       admin: true,
+      createdAt: new Date("2026-03-20T00:00:00Z"),
     });
     await User.create({
       id: "user_sender",
@@ -257,7 +271,39 @@ module.exports = (addTest) => {
     await Status.bulkCreate([
       { id: 100, object: "notification", name: "Unread" },
       { id: 101, object: "notification", name: "Read" },
+      { id: 200, object: "election", name: "Not Started" },
     ]);
+
+    const publicItem = await Item.create({
+      id: "item_public",
+      name: "Public Option",
+      description: "Public item",
+      url: "http://example.com/public",
+      creator: "user_test",
+    });
+    publicListItemId = publicItem.id;
+    const publicList = await List.create({
+      id: "list_public",
+      name: "Public List",
+      description: "List for public poll",
+      creator: "user_test",
+    });
+    await ListItem.create({
+      id: "listitem_public",
+      listId: publicList.id,
+      itemId: publicItem.id,
+      creator: "user_test",
+    });
+    const publicElection = await Election.create({
+      id: "election_public",
+      name: "Public Poll",
+      description: "Election for public testing",
+      listId: publicList.id,
+      expiration: new Date("2026-04-01T00:00:00Z"),
+      statusId: 200,
+      creator: "user_test",
+    });
+    publicElectionId = publicElection.id;
   });
 
   addTest("start test server", async () => {
@@ -741,6 +787,65 @@ module.exports = (addTest) => {
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.body.data.isNewUser, false);
     assert.ok(res.body.data.organizationId);
+  });
+
+  addTest("public poll trust endpoint exposes trust-gated invite limits", async () => {
+    const res = await request(server, "GET", "/election/public/trust");
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.data.trustProfile.trustTier, "basic");
+    assert.strictEqual(res.body.data.trustProfile.canSendExternalInvites, true);
+  });
+
+  addTest("election owner can enable public poll mode", async () => {
+    const res = await request(server, "POST", `/election/${publicElectionId}/public/enable`, {
+      publicAccessMode: "link_vote",
+      guestVotingEnabled: true,
+      allowPlatformInvites: true,
+    });
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.data.publicElection.publicAccessMode, "link_vote");
+    assert.strictEqual(res.body.data.publicElection.guestVotingEnabled, true);
+    assert.strictEqual(res.body.data.publicElection.allowPlatformInvites, true);
+    assert.ok(res.body.data.publicElection.publicToken);
+    publicElectionToken = res.body.data.publicElection.publicToken;
+  });
+
+  addTest("public poll can be viewed and voted through guest session", async () => {
+    const viewRes = await request(server, "GET", `/public/election/${publicElectionToken}`);
+    assert.strictEqual(viewRes.status, 200);
+    assert.strictEqual(viewRes.body.data.election.id, publicElectionId);
+    assert.ok(Array.isArray(viewRes.body.data.election.list.items));
+    assert.strictEqual(viewRes.body.data.election.list.items[0].id, publicListItemId);
+
+    const sessionRes = await request(server, "POST", `/public/election/${publicElectionToken}/session`, {
+      displayName: "Guest User",
+    });
+    assert.strictEqual(sessionRes.status, 200);
+    assert.ok(sessionRes.body.data.sessionToken);
+
+    const voteRes = await request(server, "POST", `/public/election/${publicElectionToken}/vote`, {
+      sessionToken: sessionRes.body.data.sessionToken,
+      itemId: publicListItemId,
+      decision: "yes",
+    });
+    assert.strictEqual(voteRes.status, 200);
+    assert.strictEqual(voteRes.body.data.vote.itemId, publicListItemId);
+    assert.strictEqual(voteRes.body.data.vote.decision, "yes");
+  });
+
+  addTest("trusted election owner can send public poll invite", async () => {
+    const res = await request(server, "POST", `/election/${publicElectionId}/invite`, {
+      email: "public.invited@example.com",
+    });
+    assert.strictEqual(res.status, 200);
+    assert.ok(Array.isArray(res.body.data.results));
+    assert.strictEqual(res.body.data.results[0].status, 200);
+
+    const statsRes = await request(server, "GET", `/election/${publicElectionId}/public/stats`);
+    assert.strictEqual(statsRes.status, 200);
+    assert.strictEqual(statsRes.body.data.statistics.inviteCount, 1);
+    assert.strictEqual(statsRes.body.data.statistics.participantCount, 1);
+    assert.strictEqual(statsRes.body.data.statistics.voteCount, 1);
   });
 
   addTest("teardown server", async () => {

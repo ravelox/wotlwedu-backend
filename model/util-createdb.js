@@ -32,6 +32,12 @@ const Metadata = require("./metadata");
 const Preference = require("./preference");
 const SocketInfo = require("./socketinfo")
 const TestToken = require("./testtoken")
+const PublicPollParticipant = require("./publicpollparticipant");
+const PublicPollVote = require("./publicpollvote");
+const PublicPollInvite = require("./publicpollinvite");
+const ContactSuppression = require("./contactsuppression");
+const TrustProfile = require("./trustprofile");
+const AbuseAudit = require("./abuseaudit");
 
 async function initialiseDatabaseMetadata() {
   await Metadata.sync();

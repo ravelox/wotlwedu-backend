@@ -100,10 +100,24 @@ module.exports.authRateLimitInviteLookupMax =
   +(process.env.WOTLWEDU_RATE_INVITE_LOOKUP_MAX || 30);
 module.exports.authRateLimitInviteManageMax =
   +(process.env.WOTLWEDU_RATE_INVITE_MANAGE_MAX || 20);
+module.exports.authRateLimitPublicPollMax =
+  +(process.env.WOTLWEDU_RATE_PUBLIC_POLL_MAX || 60);
+module.exports.authRateLimitPublicVoteMax =
+  +(process.env.WOTLWEDU_RATE_PUBLIC_VOTE_MAX || 30);
 module.exports.authRateLimitWindowMs =
   +(process.env.WOTLWEDU_RATE_WINDOW_MS || 60 * 1000);
 module.exports.organizationInviteExpiryDays =
   +(process.env.WOTLWEDU_ORG_INVITE_EXPIRY_DAYS || 7);
+module.exports.publicPollTrustMinAccountAgeHours =
+  +(process.env.WOTLWEDU_PUBLIC_TRUST_MIN_ACCOUNT_AGE_HOURS || 72);
+module.exports.publicPollBasicInviteQuotaDaily =
+  +(process.env.WOTLWEDU_PUBLIC_BASIC_INVITE_QUOTA_DAILY || 5);
+module.exports.publicPollBasicInviteQuotaHourly =
+  +(process.env.WOTLWEDU_PUBLIC_BASIC_INVITE_QUOTA_HOURLY || 3);
+module.exports.publicPollBasicRecipientsPerPoll =
+  +(process.env.WOTLWEDU_PUBLIC_BASIC_RECIPIENTS_PER_POLL || 20);
+module.exports.publicPollInviteResendCooldownHours =
+  +(process.env.WOTLWEDU_PUBLIC_INVITE_RESEND_COOLDOWN_HOURS || 72);
 module.exports.authAuditStdout = toBool(
   process.env.WOTLWEDU_AUTH_AUDIT_STDOUT || true
 );

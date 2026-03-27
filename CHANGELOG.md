@@ -1,7 +1,9 @@
 # Changelog
 
-## 0.0.32 - 2026-03-25
+## 0.0.33 - 2026-03-26
 - Remove `CHECKPOINT.md` as part of the cross-repo cleanup.
+- Add public election links with unauthenticated view/session/vote/report endpoints backed by dedicated guest participant and vote tables.
+- Add trust-gated public election invite management, suppression tracking, and abuse-audit persistence so authenticated poll owners cannot fan out messages without passing quota and trust checks.
 
 ## 0.0.31 - 2026-03-25
 - Make deployed support/auth validation scripts accept login credentials, auto-discover user and organization scope, and optionally write JSON reports.
