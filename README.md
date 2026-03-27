@@ -1,7 +1,7 @@
 # wotlwedu-backend
 
 ## What is wotlwedu?
-*wotlwedu* (What'll We Do?) helps groups decide by voting on curated lists (food, places, activities, media, etc.). In the platform, these polls are called **elections**.
+*wotlwedu* (What'll We Do?) helps groups decide by voting on curated lists (food, places, activities, media, etc.). The product language refers to these as **polls**, even where the current API still uses `election` resource names.
 
 ## What is this repository?
 This repository contains the REST API backend for the wotlwedu ecosystem. It is used by clients such as:
