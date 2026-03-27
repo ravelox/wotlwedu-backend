@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+- Add support/public-poll abuse observability endpoints (`GET /support/publicpoll/overview`, `GET /support/publicpoll/audit`) with organization scoping and election/workgroup context.
+- Document ownership-transfer preview/apply endpoints and support/public-poll observability in OpenAPI, curl examples, and README.
+- Add `/support/...` operator aliases for user diagnostics, organization invite remediation, public-poll management, and test-token mint/revoke so admin tooling can move off consumer resource paths.
+
 ## 0.0.33 - 2026-03-26
 - Remove `CHECKPOINT.md` as part of the cross-repo cleanup.
 - Add public election links with unauthenticated view/session/vote/report endpoints backed by dedicated guest participant and vote tables.

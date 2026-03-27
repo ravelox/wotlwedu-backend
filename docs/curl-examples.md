@@ -112,10 +112,28 @@ curl -sS "$API/login/testtoken" \
   -d '{"userId":"user_000","expiresInMinutes":120}'
 ```
 
+Preferred operator alias:
+
+```sh
+curl -sS "$API/support/session/testtoken" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"userId":"user_000","expiresInMinutes":120}'
+```
+
 ### `POST /login/testtoken/revoke` (revoke a previously minted test token; requires auth)
 
 ```sh
 curl -sS "$API/login/testtoken/revoke" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"tokenId":"wotlwedu_000"}'
+```
+
+Preferred operator alias:
+
+```sh
+curl -sS "$API/support/session/testtoken/revoke" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"tokenId":"wotlwedu_000"}'
@@ -191,6 +209,85 @@ curl -sS "$API/organization/$ORG_ID" \
 ```sh
 ORG_ID="org_000"
 curl -sS "$API/organization/$ORG_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
+```
+
+## Support
+
+### `GET /support/auth/overview`
+
+```sh
+curl -sS "$API/support/auth/overview?organizationId=org_000&days=7" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### `GET /support/auth/audit`
+
+```sh
+curl -sS "$API/support/auth/audit?organizationId=org_000&outcome=failure&items=25" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### `GET /support/publicpoll/overview`
+
+```sh
+curl -sS "$API/support/publicpoll/overview?organizationId=org_000&days=7&eventType=public_poll_reported" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### `GET /support/publicpoll/audit`
+
+```sh
+curl -sS "$API/support/publicpoll/audit?organizationId=org_000&items=25&electionId=election_000" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### `GET /support/users/:userId/signin-method`
+
+```sh
+USER_ID="user_000"
+curl -sS "$API/support/users/$USER_ID/signin-method" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### `GET /support/users/:userId/authaudit`
+
+```sh
+USER_ID="user_000"
+curl -sS "$API/support/users/$USER_ID/authaudit?items=25" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### `GET /support/organizations/:organizationId/invite`
+
+```sh
+ORG_ID="org_000"
+curl -sS "$API/support/organizations/$ORG_ID/invite?status=pending" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### `POST /support/organizations/:organizationId/invite`
+
+```sh
+ORG_ID="org_000"
+curl -sS "$API/support/organizations/$ORG_ID/invite" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"person@example.com"}'
+```
+
+### `GET /support/elections/public/trust`
+
+```sh
+curl -sS "$API/support/elections/public/trust" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### `GET /support/elections/:electionId/public/stats`
+
+```sh
+ELECTION_ID="election_000"
+curl -sS "$API/support/elections/$ELECTION_ID/public/stats" \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ---
@@ -415,6 +512,26 @@ curl -sS "$API/user/$USER_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
 USER_ID="user_000"
 OWNER_ID="user_999"
 curl -sS "$API/user/$USER_ID/reassign/$OWNER_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
+```
+
+### `GET /user/:userId/ownership/preview` (inspect owner transfer impact)
+
+```sh
+USER_ID="user_000"
+OWNER_ID="user_999"
+curl -sS "$API/user/$USER_ID/ownership/preview?ownerId=$OWNER_ID&includeLinked=true&resources=lists,elections" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### `POST /user/:userId/ownership/transfer` (apply owner transfer)
+
+```sh
+USER_ID="user_000"
+OWNER_ID="user_999"
+curl -sS "$API/user/$USER_ID/ownership/transfer" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"ownerId":"'"$OWNER_ID"'","includeLinked":true,"resources":["lists","elections"]}'
 ```
 
 ### Friendships

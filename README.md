@@ -49,14 +49,16 @@ The backend changes in this repo are documented as **0.0.33** in `CHANGELOG.md`.
 - Matching password-based accounts are not auto-linked before provider authentication. Social login now returns a neutral `linkRequired` confirmation state after verified provider authentication, and linking preserves password login.
 - Social sign-in now refuses to auto-link against an existing non-password account match and returns a manual-support error instead of risking account takeover or duplicate identity state.
 - Auth and invite operations now emit persistent audit records (`authaudits`) covering password sign-in, social sign-in, deferred link confirmation, invite lookup, invite acceptance, invite creation, resend, and revoke flows.
-- Support/admin observability now includes aggregated support endpoints via `GET /support/auth/overview` and `GET /support/auth/audit`.
+- Support/admin observability now includes aggregated support endpoints via `GET /support/auth/overview`, `GET /support/auth/audit`, `GET /support/publicpoll/overview`, and `GET /support/publicpoll/audit`.
 - Invite lookup, invite management, and deferred social-link confirmation now use dedicated rate limits in addition to the existing password/social login throttles.
 - Add user-level support endpoints for linked sign-in methods and recent auth audit history via `GET /user/:userId/signin-method`, `DELETE /user/:userId/signin-method/:identityId`, and `GET /user/:userId/authaudit`.
+- Add ownership-transfer preview/apply endpoints for support operators via `GET /user/:userId/ownership/preview` and `POST /user/:userId/ownership/transfer`.
 - Add organization-level audit visibility for admins via `GET /organization/:organizationId/authaudit`.
 - Organization invite conflicts now return structured diagnostics when the target email already belongs to another organization.
 - Add invite lifecycle controls for org admins: `GET /organization/:organizationId/invite`, `POST /organization/:organizationId/invite/:inviteId/resend`, and `DELETE /organization/:organizationId/invite/:inviteId`.
 - Organization invites now default to a 7-day expiry (`WOTLWEDU_ORG_INVITE_EXPIRY_DAYS`) and retain status history (`pending`, `accepted`, `revoked`, `expired`) for admin review.
 - Admin/scoped-admin collection queries can now narrow `GET /user` and `GET /workgroup` with explicit `organizationId` filters.
+- Operator-only aliases now live under `/support/...` for admin/support clients. Preferred paths include `/support/users/:userId/*`, `/support/organizations/:organizationId/*`, `/support/elections/:electionId/*`, and `/support/session/testtoken`.
 
 ## Prerequisites
 - Node.js and npm
@@ -198,6 +200,29 @@ Additional tenancy endpoints:
 - `DELETE /organization/:organizationId`
 - `GET /support/auth/overview`
 - `GET /support/auth/audit`
+- `GET /support/users/:userId/signin-method`
+- `GET /support/users/:userId/authaudit`
+- `GET /support/users/:userId/ownership/preview`
+- `POST /support/users/:userId/ownership/transfer`
+- `GET /support/organizations/:organizationId/invite`
+- `GET /support/organizations/:organizationId/authaudit`
+- `POST /support/organizations/:organizationId/invite`
+- `POST /support/organizations/:organizationId/invite/:inviteId/resend`
+- `DELETE /support/organizations/:organizationId/invite/:inviteId`
+- `GET /support/elections/public/trust`
+- `GET /support/elections/:electionId/public/stats`
+- `GET /support/elections/:electionId/invite`
+- `POST /support/elections/:electionId/public/enable`
+- `POST /support/elections/:electionId/public/disable`
+- `POST /support/elections/:electionId/invite`
+- `POST /support/elections/:electionId/invite/:inviteId/resend`
+- `DELETE /support/elections/:electionId/invite/:inviteId`
+- `POST /support/session/testtoken`
+- `POST /support/session/testtoken/revoke`
+- `GET /support/publicpoll/overview`
+- `GET /support/publicpoll/audit`
+- `GET /user/:userId/ownership/preview`
+- `POST /user/:userId/ownership/transfer`
 
 ## Notes for contributors
 - Response format helper: `util/statusresponse.js`

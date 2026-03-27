@@ -26,6 +26,9 @@ const List = require("../model/list");
 const ListItem = require("../model/listitem");
 const Item = require("../model/item");
 const Election = require("../model/election");
+const Image = require("../model/image");
+const PublicPollInvite = require("../model/publicpollinvite");
+const AbuseAudit = require("../model/abuseaudit");
 const Security = require("../util/security");
 
 let skipReason = null;
@@ -47,6 +50,7 @@ Security.checkAuthentication = (req, res, next) => {
   req.authName = "Test User";
   req.verdicts = [];
   req.isAdmin = true;
+  req.isSystemAdmin = true;
   req.isOrganizationAdmin = true;
   req.authOrganizationId = "org_test";
   next();
@@ -54,6 +58,7 @@ Security.checkAuthentication = (req, res, next) => {
 Security.checkCapability = (_objectToCheck, opList) => {
   return (req, res, next) => {
     req.authUserId = "user_test";
+    req.isSystemAdmin = true;
     req.verdicts = (opList || []).map((op) => ({
       op,
       isAuthorized: true,
@@ -248,6 +253,30 @@ module.exports = (addTest) => {
       active: true,
       admin: false,
     });
+    await User.create({
+      id: "user_source_owner",
+      firstName: "Source",
+      lastName: "Owner",
+      alias: "sourceowner",
+      email: "source.owner@example.com",
+      organizationId: "org_test",
+      creator: "user_test",
+      active: true,
+      verified: true,
+      admin: false,
+    });
+    await User.create({
+      id: "user_target_owner",
+      firstName: "Target",
+      lastName: "Owner",
+      alias: "targetowner",
+      email: "target.owner@example.com",
+      organizationId: "org_test",
+      creator: "user_test",
+      active: true,
+      verified: true,
+      admin: false,
+    });
     await Workgroup.create({
       id: "workgroup_test",
       name: "Test Workgroup",
@@ -299,11 +328,56 @@ module.exports = (addTest) => {
       name: "Public Poll",
       description: "Election for public testing",
       listId: publicList.id,
+      workgroupId: "workgroup_test",
       expiration: new Date("2026-04-01T00:00:00Z"),
       statusId: 200,
       creator: "user_test",
     });
     publicElectionId = publicElection.id;
+
+    await Image.create({
+      id: "image_transfer",
+      name: "Transfer Image",
+      description: "Owned image for transfer",
+      creator: "user_source_owner",
+    });
+    await Item.create({
+      id: "item_transfer",
+      name: "Transfer Item",
+      description: "Owned item for transfer",
+      imageId: "image_transfer",
+      creator: "user_source_owner",
+    });
+    await List.create({
+      id: "list_transfer",
+      name: "Transfer List",
+      description: "Owned list for transfer",
+      creator: "user_source_owner",
+    });
+    await ListItem.create({
+      id: "listitem_transfer",
+      listId: "list_transfer",
+      itemId: "item_transfer",
+      creator: "user_source_owner",
+    });
+    await Election.create({
+      id: "election_transfer",
+      name: "Transfer Election",
+      description: "Owned election for transfer",
+      listId: "list_transfer",
+      expiration: new Date("2026-04-05T00:00:00Z"),
+      creator: "user_source_owner",
+    });
+    await PublicPollInvite.create({
+      id: "ppinvite_transfer",
+      electionId: "election_transfer",
+      creatorUserId: "user_source_owner",
+      recipientEmail: "linked.transfer@example.com",
+      recipientEmailHash: "linked-transfer-hash",
+      inviteToken: "linked-transfer-token",
+      status: "pending",
+      creator: "user_source_owner",
+    });
   });
 
   addTest("start test server", async () => {
@@ -713,6 +787,91 @@ module.exports = (addTest) => {
     assert.ok(feedRes.body.data.audits.some((audit) => audit.outcome === "failure"));
   });
 
+  addTest("support public poll overview and feed return scoped abuse data", async () => {
+    await AbuseAudit.create({
+      id: "abuse_support_report",
+      actorType: "guest",
+      electionId: publicElectionId,
+      eventType: "public_poll_reported",
+      outcome: "success",
+      message: "Guest reported offensive content",
+      metadata: JSON.stringify({ reason: "offensive" }),
+      creator: "system",
+    });
+    await AbuseAudit.create({
+      id: "abuse_support_blocked",
+      actorType: "user",
+      actorUserId: "user_test",
+      electionId: publicElectionId,
+      eventType: "public_poll_invite_blocked_trust",
+      outcome: "blocked",
+      message: "Invite blocked for trust tier",
+      creator: "user_test",
+    });
+
+    const overviewRes = await request(
+      server,
+      "GET",
+      `/support/publicpoll/overview?days=7&organizationId=org_test&electionId=${publicElectionId}`
+    );
+    assert.strictEqual(overviewRes.status, 200);
+    assert.strictEqual(overviewRes.body.data.organizationId, "org_test");
+    assert.strictEqual(overviewRes.body.data.totals.reportCount, 1);
+    assert.strictEqual(overviewRes.body.data.totals.blockedCount, 1);
+    assert.ok(Array.isArray(overviewRes.body.data.recentIncidents));
+    assert.strictEqual(overviewRes.body.data.recentIncidents[0].election.id, publicElectionId);
+    assert.strictEqual(
+      overviewRes.body.data.recentIncidents[0].workgroup.organizationId,
+      "org_test"
+    );
+
+    const feedRes = await request(
+      server,
+      "GET",
+      `/support/publicpoll/audit?organizationId=org_test&eventType=public_poll_reported&items=10`
+    );
+    assert.strictEqual(feedRes.status, 200);
+    assert.ok(Array.isArray(feedRes.body.data.audits));
+    assert.ok(
+      feedRes.body.data.audits.some(
+        (audit) =>
+          audit.eventType === "public_poll_reported" &&
+          audit.election?.id === publicElectionId
+      )
+    );
+  });
+
+  addTest("support operator aliases expose remediations under support namespace", async () => {
+    const trustRes = await request(server, "GET", "/support/elections/public/trust");
+    assert.strictEqual(trustRes.status, 200);
+    assert.ok(trustRes.body.data.trustProfile);
+
+    const methodsRes = await request(server, "GET", "/support/users/user_password/signin-method");
+    assert.strictEqual(methodsRes.status, 200);
+    assert.ok(methodsRes.body.data.methods);
+
+    const auditRes = await request(
+      server,
+      "GET",
+      "/support/users/user_password/authaudit?items=5"
+    );
+    assert.strictEqual(auditRes.status, 200);
+    assert.ok(Array.isArray(auditRes.body.data.audits));
+
+    const tokenRes = await request(server, "POST", "/support/session/testtoken", {
+      userId: "user_test",
+      expiresInMinutes: 15,
+    });
+    assert.strictEqual(tokenRes.status, 200);
+    assert.ok(tokenRes.body.data.authToken);
+
+    const revokeRes = await request(server, "POST", "/support/session/testtoken/revoke", {
+      tokenId: tokenRes.body.data.tokenId,
+    });
+    assert.strictEqual(revokeRes.status, 200);
+    assert.ok(revokeRes.body.data.revokedAt);
+  });
+
   addTest("organization invite revoke removes pending invite and invalidates lookup", async () => {
     const inviteRes = await request(server, "POST", "/organization/org_test/invite", {
       email: "revoke.person@example.com",
@@ -846,6 +1005,53 @@ module.exports = (addTest) => {
     assert.strictEqual(statsRes.body.data.statistics.inviteCount, 1);
     assert.strictEqual(statsRes.body.data.statistics.participantCount, 1);
     assert.strictEqual(statsRes.body.data.statistics.voteCount, 1);
+  });
+
+  addTest("ownership transfer preview reports direct and linked objects", async () => {
+    const res = await request(
+      server,
+      "GET",
+      "/user/user_source_owner/ownership/preview?ownerId=user_target_owner&includeLinked=true&resources=lists,elections"
+    );
+    assert.strictEqual(res.status, 200);
+    assert.deepStrictEqual(res.body.data.transfer.resources, ["lists", "elections"]);
+    assert.strictEqual(res.body.data.transfer.direct.lists, 1);
+    assert.strictEqual(res.body.data.transfer.direct.elections, 1);
+    assert.strictEqual(res.body.data.transfer.linked.listEntries, 1);
+    assert.strictEqual(res.body.data.transfer.linked.linkedItems, 1);
+    assert.strictEqual(res.body.data.transfer.linked.linkedImages, 1);
+    assert.strictEqual(res.body.data.transfer.linked.publicPollInvites, 1);
+  });
+
+  addTest("ownership transfer applies direct and linked owner changes", async () => {
+    const res = await request(server, "POST", "/user/user_source_owner/ownership/transfer", {
+      ownerId: "user_target_owner",
+      includeLinked: true,
+      resources: ["lists", "elections"],
+    });
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.data.transfer.changed.lists, 1);
+    assert.strictEqual(res.body.data.transfer.changed.elections, 1);
+    assert.strictEqual(res.body.data.transfer.changed.listEntries, 1);
+    assert.strictEqual(res.body.data.transfer.changed.linkedItems, 1);
+    assert.strictEqual(res.body.data.transfer.changed.linkedImages, 1);
+    assert.strictEqual(res.body.data.transfer.changed.publicPollInvites, 1);
+
+    const [list, listItem, item, image, election, invite] = await Promise.all([
+      List.findByPk("list_transfer"),
+      ListItem.findByPk("listitem_transfer"),
+      Item.findByPk("item_transfer"),
+      Image.findByPk("image_transfer"),
+      Election.findByPk("election_transfer"),
+      PublicPollInvite.findByPk("ppinvite_transfer"),
+    ]);
+    assert.strictEqual(list.creator, "user_target_owner");
+    assert.strictEqual(listItem.creator, "user_target_owner");
+    assert.strictEqual(item.creator, "user_target_owner");
+    assert.strictEqual(image.creator, "user_target_owner");
+    assert.strictEqual(election.creator, "user_target_owner");
+    assert.strictEqual(invite.creator, "user_target_owner");
+    assert.strictEqual(invite.creatorUserId, "user_target_owner");
   });
 
   addTest("teardown server", async () => {

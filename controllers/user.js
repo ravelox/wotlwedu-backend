@@ -15,6 +15,7 @@ const {
   deleteImageFile,
 } = require("../util/helpers");
 const { normalizeOptionalId } = require("../util/idnormalize");
+const OwnershipTransfer = require("../util/ownership-transfer");
 
 const User = require("../model/user");
 const Friend = require("../model/friend");
@@ -73,6 +74,51 @@ function canAccessUserSupportData(req, targetUser) {
   if (!req.authOrganizationId) return false;
   if (targetUser.organizationId !== req.authOrganizationId) return false;
   return req.isOrganizationAdmin === true;
+}
+
+function serializeOwnershipPreview(sourceUserId, targetUserId, plan, includeLinked) {
+  return {
+    sourceUserId,
+    targetUserId,
+    includeLinked: !!includeLinked,
+    resources: plan.resources || [],
+    direct: plan.direct || {},
+    linked: plan.linked || {},
+  };
+}
+
+async function validateOwnershipTransferUsers(req, sourceUserId, targetUserId) {
+  if (!sourceUserId) return { status: 421, message: "No source user ID provided" };
+  if (!targetUserId) return { status: 421, message: "No target owner ID provided" };
+  if (sourceUserId === targetUserId) {
+    return { status: 421, message: "Source and target users must be different" };
+  }
+
+  const [sourceUser, targetUser] = await Promise.all([
+    User.findByPk(sourceUserId),
+    User.findByPk(targetUserId),
+  ]);
+  if (!sourceUser) return { status: 404, message: "Source user not found" };
+  if (!targetUser) return { status: 404, message: "Target user not found" };
+  if (sourceUser.protected === true) return { status: 421, message: "Source user is protected" };
+  if (targetUser.protected === true) return { status: 421, message: "Target user is protected" };
+  if (!targetUser.active) return { status: 421, message: "Target user must be active" };
+  if (sourceUser.organizationId !== targetUser.organizationId) {
+    return { status: 421, message: "Ownership transfers must stay within the same organization" };
+  }
+  if (!Security.isInSameOrganization(req, sourceUser))
+    return { status: 403, message: "Cross-organization access denied" };
+  if (!Security.isInSameOrganization(req, targetUser))
+    return { status: 403, message: "Cross-organization access denied" };
+
+  if (
+    !Security.getVerdict(req.verdicts, "edit").isAdmin &&
+    !Security.isOwner(req.authUserId, sourceUser)
+  ) {
+    return { status: 421, message: "Not owner" };
+  }
+
+  return { sourceUser, targetUser };
 }
 
 function parseAuditMetadata(value) {
@@ -239,6 +285,75 @@ exports.getUserAuthAudit = async (req, res, next) => {
       page,
       itemsPerPage,
       audits: (rows || []).map(serializeAudit),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getOwnershipTransferPreview = async (req, res, next) => {
+  try {
+    const sourceUserId = req.params.userId;
+    const targetUserId = req.query.ownerId || req.query.targetUserId;
+    const includeLinked = req.query.includeLinked === "true";
+    const resources = (req.query.resources || "")
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+
+    const validated = await validateOwnershipTransferUsers(req, sourceUserId, targetUserId);
+    if (!validated.sourceUser) {
+      return StatusResponse(res, validated.status, validated.message);
+    }
+
+    const plan = await OwnershipTransfer.buildTransferPlan(
+      validated.sourceUser.id,
+      resources,
+      includeLinked
+    );
+
+    return StatusResponse(res, 200, "OK", {
+      transfer: serializeOwnershipPreview(
+        validated.sourceUser.id,
+        validated.targetUser.id,
+        { ...plan, resources: OwnershipTransfer.normalizeResourceList(resources) },
+        includeLinked
+      ),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.postOwnershipTransfer = async (req, res, next) => {
+  try {
+    const sourceUserId = req.params.userId;
+    const targetUserId = req.body?.ownerId || req.body?.targetUserId;
+    const includeLinked = req.body?.includeLinked === true;
+    const resources = Array.isArray(req.body?.resources) ? req.body.resources : [];
+
+    const validated = await validateOwnershipTransferUsers(req, sourceUserId, targetUserId);
+    if (!validated.sourceUser) {
+      return StatusResponse(res, validated.status, validated.message);
+    }
+
+    const result = await OwnershipTransfer.executeTransfer(
+      validated.sourceUser.id,
+      validated.targetUser.id,
+      resources,
+      includeLinked
+    );
+
+    return StatusResponse(res, 200, "OK", {
+      transfer: {
+        sourceUserId: validated.sourceUser.id,
+        targetUserId: validated.targetUser.id,
+        includeLinked,
+        resources: result.resources,
+        direct: result.direct,
+        linked: result.linked,
+        changed: result.changed,
+      },
     });
   } catch (err) {
     next(err);
