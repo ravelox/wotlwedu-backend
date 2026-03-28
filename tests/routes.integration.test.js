@@ -22,10 +22,13 @@ const Role = require("../model/role");
 const SocialIdentity = require("../model/socialidentity");
 const User = require("../model/user");
 const Workgroup = require("../model/workgroup");
+const Group = require("../model/group");
+const GroupMember = require("../model/groupmember");
 const List = require("../model/list");
 const ListItem = require("../model/listitem");
 const Item = require("../model/item");
 const Election = require("../model/election");
+const Vote = require("../model/vote");
 const Image = require("../model/image");
 const PublicPollInvite = require("../model/publicpollinvite");
 const AbuseAudit = require("../model/abuseaudit");
@@ -166,6 +169,7 @@ module.exports = (addTest) => {
   let publicElectionId;
   let publicListItemId;
   let publicElectionToken;
+  let participationElectionId;
 
   Mailer.sendOrganizationInviteMessage = async () => "OK";
   Mailer.sendPublicPollInviteMessage = async () => "OK";
@@ -293,6 +297,36 @@ module.exports = (addTest) => {
       creator: "user_test",
       listType: 0,
     });
+    await Group.create({
+      id: "group_participation",
+      name: "Participation Group",
+      description: "Audience for participation summary",
+      organizationId: "org_test",
+      creator: "user_test",
+    });
+    await GroupMember.bulkCreate([
+      {
+        id: "groupmember_participation_1",
+        groupId: "group_participation",
+        userId: "user_test",
+        active: true,
+        creator: "user_test",
+      },
+      {
+        id: "groupmember_participation_2",
+        groupId: "group_participation",
+        userId: "user_sender",
+        active: true,
+        creator: "user_test",
+      },
+      {
+        id: "groupmember_participation_3",
+        groupId: "group_participation",
+        userId: "user_password",
+        active: true,
+        creator: "user_test",
+      },
+    ]);
 
     Status = require("../model/status");
     Notification = require("../model/notification");
@@ -301,6 +335,12 @@ module.exports = (addTest) => {
       { id: 100, object: "notification", name: "Unread" },
       { id: 101, object: "notification", name: "Read" },
       { id: 200, object: "election", name: "Not Started" },
+      { id: 201, object: "election", name: "In Progress" },
+      { id: 202, object: "election", name: "Ended" },
+      { id: 300, object: "vote", name: "Pending" },
+      { id: 301, object: "vote", name: "Yes" },
+      { id: 302, object: "vote", name: "No" },
+      { id: 303, object: "vote", name: "Maybe" },
     ]);
 
     const publicItem = await Item.create({
@@ -334,6 +374,63 @@ module.exports = (addTest) => {
       creator: "user_test",
     });
     publicElectionId = publicElection.id;
+    const participationItem = await Item.create({
+      id: "item_participation",
+      name: "Participation Option",
+      description: "Tracked item",
+      url: "http://example.com/participation",
+      creator: "user_test",
+    });
+    const participationList = await List.create({
+      id: "list_participation",
+      name: "Participation List",
+      description: "List for participation summary",
+      creator: "user_test",
+    });
+    await ListItem.create({
+      id: "listitem_participation",
+      listId: participationList.id,
+      itemId: participationItem.id,
+      creator: "user_test",
+    });
+    const participationElection = await Election.create({
+      id: "election_participation",
+      name: "Participation Poll",
+      description: "Election with audience and vote progress",
+      listId: participationList.id,
+      groupId: "group_participation",
+      workgroupId: "workgroup_test",
+      expiration: new Date("2026-04-10T00:00:00Z"),
+      statusId: 201,
+      creator: "user_test",
+    });
+    participationElectionId = participationElection.id;
+    await Vote.bulkCreate([
+      {
+        id: "vote_participation_user_test",
+        electionId: participationElection.id,
+        userId: "user_test",
+        itemId: participationItem.id,
+        statusId: 301,
+        creator: "user_test",
+      },
+      {
+        id: "vote_participation_user_sender",
+        electionId: participationElection.id,
+        userId: "user_sender",
+        itemId: participationItem.id,
+        statusId: 300,
+        creator: "user_test",
+      },
+      {
+        id: "vote_participation_user_password",
+        electionId: participationElection.id,
+        userId: "user_password",
+        itemId: participationItem.id,
+        statusId: 300,
+        creator: "user_test",
+      },
+    ]);
 
     await Image.create({
       id: "image_transfer",
@@ -616,6 +713,27 @@ module.exports = (addTest) => {
     );
     assert.ok(
       res.body.data.membership.workgroups.some((workgroup) => workgroup.id === "workgroup_test")
+    );
+  });
+
+  addTest("election participation summary exposes audience and progress counts", async () => {
+    const res = await request(server, "GET", `/election/${participationElectionId}/participation`);
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.data.election.id, participationElectionId);
+    assert.strictEqual(res.body.data.audience.group.id, "group_participation");
+    assert.strictEqual(res.body.data.audience.expectedParticipants, 3);
+    assert.strictEqual(res.body.data.participation.expectedParticipants, 3);
+    assert.strictEqual(res.body.data.participation.completedCount, 1);
+    assert.strictEqual(res.body.data.participation.notStartedCount, 2);
+    assert.strictEqual(res.body.data.participation.inProgressCount, 0);
+    assert.strictEqual(res.body.data.participation.followUpCount, 2);
+    assert.strictEqual(res.body.data.participation.castVotes, 1);
+    assert.strictEqual(res.body.data.participation.pendingVotes, 2);
+    assert.ok(
+      Array.isArray(res.body.data.audience.participants) &&
+        res.body.data.audience.participants.some(
+          (participant) => participant.id === "user_test" && participant.state === "completed"
+        )
     );
   });
 

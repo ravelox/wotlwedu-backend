@@ -28,6 +28,11 @@ router.get(
   electionController.getStats
 );
 router.get(
+  "/:electionId/participation",
+  Security.checkCapability("election", ["view"]),
+  electionController.getParticipation
+);
+router.get(
   "/:electionId/public/stats",
   Security.checkCapability("election", ["view"]),
   publicElectionController.getPublicElectionStats

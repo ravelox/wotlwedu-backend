@@ -22,6 +22,7 @@ const Vote = require("../model/vote");
 const Image = require("../model/image");
 const Status = require("../model/status");
 const Workgroup = require("../model/workgroup");
+const GroupMember = require("../model/groupmember");
 
 const Attributes = require("../model/attributes");
 
@@ -110,6 +111,152 @@ async function getWorkgroupOrganizationId(workgroupId) {
   if (!workgroupId) return null;
   const wg = await Workgroup.findByPk(workgroupId, { raw: true });
   return wg ? wg.organizationId || null : null;
+}
+
+function buildAudienceMemberState(totalVotes, pendingVotes) {
+  if (!totalVotes || totalVotes <= 0) return "not_started";
+  if (pendingVotes <= 0) return "completed";
+  if (pendingVotes >= totalVotes) return "not_started";
+  return "in_progress";
+}
+
+async function buildParticipationSummary(election) {
+  if (!election) return null;
+
+  const group = election.groupId
+    ? await Group.findByPk(election.groupId, {
+        attributes: Attributes.Group,
+        raw: true,
+      })
+    : null;
+  const list = election.listId
+    ? await List.findByPk(election.listId, {
+        attributes: Attributes.List,
+        raw: true,
+      })
+    : null;
+
+  let audienceUsers = [];
+  if (group?.id) {
+    const memberships = await GroupMember.findAll({
+      where: { groupId: group.id },
+      attributes: ["userId"],
+      raw: true,
+    });
+    const userIds = [...new Set((memberships || []).map((entry) => entry.userId).filter(Boolean))];
+    if (userIds.length) {
+      audienceUsers = await User.findAll({
+        where: { id: { [Op.in]: userIds } },
+        attributes: [
+          "id",
+          "firstName",
+          "lastName",
+          "alias",
+          "email",
+          "organizationAdmin",
+          "workgroupAdmin",
+        ],
+        order: [["firstName"], ["lastName"], ["email"]],
+        raw: true,
+      });
+    }
+  }
+
+  const pendingStatusId = await getStatusIdByName("Pending");
+  const voteRows = await Vote.findAll({
+    where: { electionId: election.id },
+    attributes: [
+      "userId",
+      [Sequelize.fn("COUNT", Sequelize.col("id")), "totalVotes"],
+      [
+        Sequelize.fn(
+          "SUM",
+          Sequelize.literal(`CASE WHEN statusId = ${Number(pendingStatusId || 0)} THEN 1 ELSE 0 END`)
+        ),
+        "pendingVotes",
+      ],
+    ],
+    group: ["userId"],
+    raw: true,
+  });
+
+  const voteSummaryByUserId = new Map(
+    (voteRows || []).map((row) => [
+      row.userId,
+      {
+        totalVotes: Number(row.totalVotes) || 0,
+        pendingVotes: Number(row.pendingVotes) || 0,
+      },
+    ])
+  );
+
+  const participants = (audienceUsers || []).map((user) => {
+    const voteSummary = voteSummaryByUserId.get(user.id) || {
+      totalVotes: 0,
+      pendingVotes: 0,
+    };
+    const state = buildAudienceMemberState(voteSummary.totalVotes, voteSummary.pendingVotes);
+    return {
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      fullName:
+        [user.firstName || "", user.lastName || ""].filter(Boolean).join(" ").trim() ||
+        user.alias ||
+        user.email ||
+        user.id,
+      alias: user.alias,
+      email: user.email,
+      state,
+      totalVotes: voteSummary.totalVotes,
+      pendingVotes: voteSummary.pendingVotes,
+      castVotes: Math.max(voteSummary.totalVotes - voteSummary.pendingVotes, 0),
+      organizationAdmin: user.organizationAdmin === true,
+      workgroupAdmin: user.workgroupAdmin === true,
+    };
+  });
+
+  const expectedParticipants = participants.length;
+  const notStartedCount = participants.filter((participant) => participant.state === "not_started").length;
+  const inProgressCount = participants.filter((participant) => participant.state === "in_progress").length;
+  const completedCount = participants.filter((participant) => participant.state === "completed").length;
+  const totalVotes = participants.reduce((sum, participant) => sum + participant.totalVotes, 0);
+  const pendingVotes = participants.reduce((sum, participant) => sum + participant.pendingVotes, 0);
+  const castVotes = participants.reduce((sum, participant) => sum + participant.castVotes, 0);
+
+  return {
+    audience: {
+      group: group
+        ? {
+            id: group.id,
+            name: group.name,
+            description: group.description,
+          }
+        : null,
+      list: list
+        ? {
+            id: list.id,
+            name: list.name,
+          }
+        : null,
+      expectedParticipants,
+      participants,
+    },
+    participation: {
+      expectedParticipants,
+      notStartedCount,
+      inProgressCount,
+      completedCount,
+      followUpCount: notStartedCount + inProgressCount,
+      totalVotes,
+      castVotes,
+      pendingVotes,
+      completionRate:
+        expectedParticipants > 0
+          ? Math.round((completedCount / expectedParticipants) * 100)
+          : 0,
+    },
+  };
 }
 
 module.exports.getSingleElection = (req, res, next) => {
@@ -715,4 +862,62 @@ module.exports.getStats = async (req, res, next) => {
         .catch((err) => next(err));
     })
     .catch((err) => next(err));
+};
+
+module.exports.getParticipation = async (req, res, next) => {
+  try {
+    const electionToFind = req.params.electionId;
+    if (!electionToFind) {
+      return StatusResponse(res, 421, "No election Id provided");
+    }
+
+    const foundElection = await Election.findByPk(electionToFind, {
+      attributes: [
+        "id",
+        "name",
+        "description",
+        "expiration",
+        "groupId",
+        "listId",
+        "workgroupId",
+        "creator",
+      ],
+      raw: true,
+    });
+    if (!foundElection) return StatusResponse(res, 404, "Election not found");
+
+    const allowed = await assertCanAccessElection(req, foundElection, "view");
+    if (!allowed) {
+      return StatusResponse(res, 403, "Not authorized for this election");
+    }
+
+    const summary = await buildParticipationSummary(foundElection);
+    return StatusResponse(res, 200, "OK", {
+      election: {
+        id: foundElection.id,
+        name: foundElection.name,
+        description: foundElection.description,
+        expiration: foundElection.expiration,
+        groupId: foundElection.groupId,
+        listId: foundElection.listId,
+        workgroupId: foundElection.workgroupId,
+      },
+      ...(summary || {
+        audience: { group: null, list: null, expectedParticipants: 0, participants: [] },
+        participation: {
+          expectedParticipants: 0,
+          notStartedCount: 0,
+          inProgressCount: 0,
+          completedCount: 0,
+          followUpCount: 0,
+          totalVotes: 0,
+          castVotes: 0,
+          pendingVotes: 0,
+          completionRate: 0,
+        },
+      }),
+    });
+  } catch (err) {
+    next(err);
+  }
 };

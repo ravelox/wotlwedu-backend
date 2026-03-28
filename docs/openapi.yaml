@@ -2459,6 +2459,20 @@ paths:
           description: Successful response
       security:
       - bearerAuth: []
+  /election/:electionId/participation:
+    get:
+      summary: GET /election/:electionId/participation
+      parameters:
+      - name: electionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
   /election/:electionId:
     get:
       summary: GET /election/:electionId
