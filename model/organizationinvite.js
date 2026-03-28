@@ -35,6 +35,16 @@ const OrganizationInvite = database.define(
       allowNull: true,
       defaultValue: null,
     },
+    declinedByUserId: {
+      type: Sequelize.STRING,
+      allowNull: true,
+      defaultValue: null,
+    },
+    declinedAt: {
+      type: Sequelize.DATE,
+      allowNull: true,
+      defaultValue: null,
+    },
     revokedByUserId: {
       type: Sequelize.STRING,
       allowNull: true,
@@ -65,6 +75,7 @@ const OrganizationInvite = database.define(
       { fields: ["email"] },
       { fields: ["token"], unique: true },
       { fields: ["organizationId", "email", "acceptedAt"] },
+      { fields: ["organizationId", "declinedAt"] },
       { fields: ["organizationId", "revokedAt"] },
     ],
   }

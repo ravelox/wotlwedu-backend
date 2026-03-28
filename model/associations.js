@@ -136,6 +136,11 @@ module.exports.setup = function () {
   });
   OrganizationInvite.hasOne(User, {
     foreignKey: "id",
+    sourceKey: "declinedByUserId",
+    as: "declinedBy",
+  });
+  OrganizationInvite.hasOne(User, {
+    foreignKey: "id",
     sourceKey: "revokedByUserId",
     as: "revokedBy",
   });

@@ -557,6 +557,68 @@ module.exports = (addTest) => {
     pendingInviteToken = res.body.data.invite.token;
   });
 
+  addTest("authenticated user can accept matching organization invite", async () => {
+    const invite = await OrganizationInvite.create({
+      id: "orginvite_accept_existing",
+      organizationId: "org_test",
+      email: "test@example.com",
+      token: "orginvite-accept-existing-token",
+      invitedByUserId: "user_test",
+      creator: "user_test",
+    });
+
+    const acceptRes = await request(
+      server,
+      "POST",
+      `/login/invite/${invite.token}/accept`
+    );
+    assert.strictEqual(acceptRes.status, 200);
+    assert.strictEqual(acceptRes.body.data.userId, "user_test");
+    assert.strictEqual(acceptRes.body.data.organizationId, "org_test");
+    assert.ok(acceptRes.body.data.authToken);
+
+    const acceptedInvite = await OrganizationInvite.findByPk(invite.id);
+    assert.ok(acceptedInvite.acceptedAt);
+    assert.strictEqual(acceptedInvite.acceptedByUserId, "user_test");
+  });
+
+  addTest("authenticated user can decline matching organization invite", async () => {
+    const invite = await OrganizationInvite.create({
+      id: "orginvite_decline_existing",
+      organizationId: "org_test",
+      email: "test@example.com",
+      token: "orginvite-decline-existing-token",
+      invitedByUserId: "user_test",
+      creator: "user_test",
+    });
+
+    const declineRes = await request(
+      server,
+      "POST",
+      `/login/invite/${invite.token}/decline`
+    );
+    assert.strictEqual(declineRes.status, 200);
+    assert.strictEqual(declineRes.body.data.status, "declined");
+
+    const declinedInvite = await OrganizationInvite.findByPk(invite.id);
+    assert.ok(declinedInvite.declinedAt);
+    assert.strictEqual(declinedInvite.declinedByUserId, "user_test");
+  });
+
+  addTest("organization membership summary returns members and workgroups", async () => {
+    const res = await request(server, "GET", "/organization/org_test/membership");
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.data.organization.id, "org_test");
+    assert.ok(Array.isArray(res.body.data.membership.members));
+    assert.ok(Array.isArray(res.body.data.membership.workgroups));
+    assert.ok(
+      res.body.data.membership.members.some((member) => member.id === "user_test")
+    );
+    assert.ok(
+      res.body.data.membership.workgroups.some((workgroup) => workgroup.id === "workgroup_test")
+    );
+  });
+
   addTest("social login consumes pending org invite for first-time user", async () => {
     const res = await request(server, "POST", "/login/social", {
       provider: "google",

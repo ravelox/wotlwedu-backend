@@ -14,6 +14,21 @@ const inviteManageRateLimit = createRateLimiter({
 });
 
 router.get(
+  "/:organizationId/invite",
+  Security.checkCapability("organization", ["view"]),
+  organizationController.getOrganizationInvites
+);
+router.get(
+  "/:organizationId/membership",
+  Security.checkCapability("organization", ["view"]),
+  organizationController.getOrganizationMembership
+);
+router.get(
+  "/:organizationId/authaudit",
+  Security.checkCapability("organization", ["view"]),
+  organizationController.getOrganizationAuthAudits
+);
+router.get(
   "/:organizationId",
   Security.checkCapability("organization", ["view"]),
   organizationController.getOrganization
@@ -22,16 +37,6 @@ router.get(
   "/",
   Security.checkCapability("organization", ["view"]),
   organizationController.getAllOrganization
-);
-router.get(
-  "/:organizationId/invite",
-  Security.checkCapability("organization", ["view"]),
-  organizationController.getOrganizationInvites
-);
-router.get(
-  "/:organizationId/authaudit",
-  Security.checkCapability("organization", ["view"]),
-  organizationController.getOrganizationAuthAudits
 );
 router.post(
   "/",

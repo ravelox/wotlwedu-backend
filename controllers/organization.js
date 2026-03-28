@@ -8,12 +8,15 @@ const AuthAudit = require("../util/auth-audit");
 const Organization = require("../model/organization");
 const OrganizationInvite = require("../model/organizationinvite");
 const User = require("../model/user");
+const Workgroup = require("../model/workgroup");
+const WorkgroupMember = require("../model/workgroupmember");
 const Attributes = require("../model/attributes");
 const Config = require("../config/wotlwedu");
 
 function computeInviteStatus(invite, nowValue = Date.now()) {
   if (!invite) return "unknown";
   if (invite.acceptedAt) return "accepted";
+  if (invite.declinedAt) return "declined";
   if (invite.revokedAt) return "revoked";
   if (invite.expiresAt && new Date(invite.expiresAt).getTime() < nowValue) return "expired";
   return "pending";
@@ -40,6 +43,8 @@ function serializeInvite(invite) {
     invitedByUserId: invite.invitedByUserId,
     acceptedAt: invite.acceptedAt,
     acceptedByUserId: invite.acceptedByUserId,
+    declinedAt: invite.declinedAt,
+    declinedByUserId: invite.declinedByUserId,
     revokedByUserId: invite.revokedByUserId,
     revokedAt: invite.revokedAt,
     expiresAt: invite.expiresAt,
@@ -50,6 +55,9 @@ function serializeInvite(invite) {
       : null,
     acceptedByName: invite.acceptedBy
       ? `${invite.acceptedBy.firstName || ""} ${invite.acceptedBy.lastName || ""}`.trim()
+      : null,
+    declinedByName: invite.declinedBy
+      ? `${invite.declinedBy.firstName || ""} ${invite.declinedBy.lastName || ""}`.trim()
       : null,
     revokedByName: invite.revokedBy
       ? `${invite.revokedBy.firstName || ""} ${invite.revokedBy.lastName || ""}`.trim()
@@ -378,6 +386,7 @@ module.exports.getOrganizationInvites = async (req, res, next) => {
         : [
             { model: User, as: "invitedBy", attributes: ["firstName", "lastName"] },
             { model: User, as: "acceptedBy", attributes: ["firstName", "lastName"] },
+            { model: User, as: "declinedBy", attributes: ["firstName", "lastName"] },
             { model: User, as: "revokedBy", attributes: ["firstName", "lastName"] },
           ],
       order: [["createdAt", "DESC"]],
@@ -392,6 +401,120 @@ module.exports.getOrganizationInvites = async (req, res, next) => {
 
     return StatusResponse(res, 200, "OK", {
       invites: filteredInvites.map((invite) => serializeInvite(invite)),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports.getOrganizationMembership = async (req, res, next) => {
+  try {
+    const organizationId = req.params.organizationId;
+    if (!organizationId) return StatusResponse(res, 421, "No organization ID provided");
+    if (!canReadOrg(req, organizationId)) {
+      return StatusResponse(res, 403, "Not authorized for this organization");
+    }
+
+    const foundOrganization = await Organization.findByPk(organizationId, {
+      attributes: Attributes.Organization,
+    });
+    if (!foundOrganization) return StatusResponse(res, 404, "Organization not found");
+
+    const [members, workgroups, pendingInviteCount, workgroupMembers] = await Promise.all([
+      User.findAll({
+        where: { organizationId, active: true },
+        order: [["firstName"], ["lastName"], ["email"]],
+        attributes: [
+          "id",
+          "firstName",
+          "lastName",
+          "alias",
+          "email",
+          "organizationAdmin",
+          "workgroupAdmin",
+          "adminWorkgroupId",
+          "adminGroupId",
+        ],
+      }),
+      Workgroup.findAll({
+        where: { organizationId },
+        order: [["name"]],
+        attributes: Attributes.Workgroup,
+      }),
+      OrganizationInvite.count({
+        where: {
+          organizationId,
+          acceptedAt: null,
+          declinedAt: null,
+          revokedAt: null,
+          [Op.or]: [{ expiresAt: null }, { expiresAt: { [Op.gte]: new Date() } }],
+        },
+      }),
+      WorkgroupMember.findAll({
+        attributes: ["workgroupId", "userId"],
+        where: {
+          workgroupId: {
+            [Op.in]: (await Workgroup.findAll({
+              where: { organizationId },
+              attributes: ["id"],
+              raw: true,
+            })).map((entry) => entry.id),
+          },
+        },
+        raw: true,
+      }),
+    ]);
+
+    const usersById = new Map((members || []).map((member) => [member.id, member]));
+    const workgroupUsers = new Map();
+    for (const membership of workgroupMembers || []) {
+      if (!workgroupUsers.has(membership.workgroupId)) {
+        workgroupUsers.set(membership.workgroupId, []);
+      }
+      const user = usersById.get(membership.userId);
+      if (user) workgroupUsers.get(membership.workgroupId).push(user);
+    }
+
+    return StatusResponse(res, 200, "OK", {
+      organization: foundOrganization,
+      membership: {
+        members: (members || []).map((member) => ({
+          id: member.id,
+          firstName: member.firstName,
+          lastName: member.lastName,
+          fullName:
+            [member.firstName || "", member.lastName || ""].filter(Boolean).join(" ").trim() ||
+            member.alias ||
+            member.email,
+          alias: member.alias,
+          email: member.email,
+          organizationAdmin: member.organizationAdmin === true,
+          workgroupAdmin: member.workgroupAdmin === true,
+          adminWorkgroupId: member.adminWorkgroupId || member.adminGroupId || null,
+        })),
+        workgroups: (workgroups || []).map((workgroup) => {
+          const users = workgroupUsers.get(workgroup.id) || [];
+          return {
+            id: workgroup.id,
+            name: workgroup.name,
+            description: workgroup.description,
+            memberCount: users.length,
+            isMember: users.some((member) => member.id === req.authUserId),
+            users: users.map((member) => ({
+              id: member.id,
+              firstName: member.firstName,
+              lastName: member.lastName,
+              fullName:
+                [member.firstName || "", member.lastName || ""].filter(Boolean).join(" ").trim() ||
+                member.alias ||
+                member.email,
+              alias: member.alias,
+              email: member.email,
+            })),
+          };
+        }),
+        pendingInviteCount,
+      },
     });
   } catch (err) {
     next(err);

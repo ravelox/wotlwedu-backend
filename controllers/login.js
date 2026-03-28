@@ -228,6 +228,85 @@ async function resolveInviteByToken(inviteToken, transaction) {
   return { invite, organization };
 }
 
+async function consumeInviteForExistingUser(req, inviteToken, user, action = "accept", transaction = null) {
+  const resolved = await resolveInviteByToken(inviteToken, transaction);
+  if (!resolved) {
+    await writeAuthAudit(req, "organization_invite_lookup", "blocked", {
+      targetUserId: user?.id,
+      message: "Invite token not found or not active",
+      metadata: { reason: "invite_not_found", action },
+    });
+    throw new Error("Invite not found");
+  }
+
+  const normalizedInviteEmail = normalizeEmail(resolved.invite.email);
+  const normalizedUserEmail = normalizeEmail(user?.email);
+  if (!normalizedUserEmail || normalizedInviteEmail !== normalizedUserEmail) {
+    await writeAuthAudit(req, `organization_invite_${action}`, "blocked", {
+      targetUserId: user?.id,
+      organizationId: resolved.organization.id,
+      inviteId: resolved.invite.id,
+      email: resolved.invite.email,
+      message: "Invite email did not match signed-in user",
+      metadata: { reason: "invite_email_mismatch" },
+    });
+    throw new Error("Invite email does not match signed-in user");
+  }
+
+  if (user?.organizationId && user.organizationId !== resolved.organization.id) {
+    await writeAuthAudit(req, `organization_invite_${action}`, "blocked", {
+      targetUserId: user?.id,
+      organizationId: resolved.organization.id,
+      inviteId: resolved.invite.id,
+      email: resolved.invite.email,
+      message: "Invite target belongs to another organization",
+      metadata: {
+        reason: "belongs_to_another_organization",
+        currentOrganizationId: user.organizationId,
+      },
+    });
+    throw new Error("User already belongs to another organization");
+  }
+
+  if (action === "decline") {
+    resolved.invite.declinedAt = new Date();
+    resolved.invite.declinedByUserId = user.id;
+    await resolved.invite.save({ transaction });
+    await writeAuthAudit(req, "organization_invite_decline", "success", {
+      targetUserId: user.id,
+      organizationId: resolved.organization.id,
+      inviteId: resolved.invite.id,
+      email: resolved.invite.email,
+      message: "Invite declined by signed-in user",
+    }, { transaction });
+    return {
+      invite: resolved.invite,
+      organization: resolved.organization,
+      userChanged: false,
+    };
+  }
+
+  if (!user.organizationId) {
+    user.organizationId = resolved.organization.id;
+    await user.save({ transaction });
+  }
+  resolved.invite.acceptedAt = new Date();
+  resolved.invite.acceptedByUserId = user.id;
+  await resolved.invite.save({ transaction });
+  await writeAuthAudit(req, "organization_invite_accept", "success", {
+    targetUserId: user.id,
+    organizationId: resolved.organization.id,
+    inviteId: resolved.invite.id,
+    email: resolved.invite.email,
+    message: "Invite accepted by signed-in user",
+  }, { transaction });
+  return {
+    invite: resolved.invite,
+    organization: resolved.organization,
+    userChanged: !user.organizationId || user.organizationId === resolved.organization.id,
+  };
+}
+
 function buildSocialLinkToken(payload) {
   return JWT.sign(
     {
@@ -674,6 +753,79 @@ exports.getInviteStatus = async (req, res, next) => {
       },
     });
   } catch (err) {
+    next(err);
+  }
+};
+
+exports.postAcceptInvite = async (req, res, next) => {
+  try {
+    const inviteToken = req.params.token;
+    if (!inviteToken) return StatusResponse(res, 421, "No invite token provided");
+    if (!req.authUserId) return StatusResponse(res, 403, "Authentication required");
+
+    const result = await database.transaction(async (transaction) => {
+      const user = await User.findByPk(req.authUserId, { transaction });
+      if (!user) throw new Error("User not found");
+      return consumeInviteForExistingUser(req, inviteToken, user, "accept", transaction);
+    });
+
+    const refreshedUser = await User.findByPk(req.authUserId);
+    const tokens = await generateJWTAndSave(refreshedUser);
+    return StatusResponse(
+      res,
+      200,
+      "OK",
+      buildAuthResponse(refreshedUser, tokens, {
+        acceptedInviteId: result.invite.id,
+        organizationName: result.organization.name,
+      })
+    );
+  } catch (err) {
+    if (
+      err &&
+      [
+        "Invite not found",
+        "Invite email does not match signed-in user",
+        "User already belongs to another organization",
+        "User not found",
+      ].includes(err.message)
+    ) {
+      return StatusResponse(res, err.message === "Invite not found" ? 404 : 421, err.message);
+    }
+    next(err);
+  }
+};
+
+exports.postDeclineInvite = async (req, res, next) => {
+  try {
+    const inviteToken = req.params.token;
+    if (!inviteToken) return StatusResponse(res, 421, "No invite token provided");
+    if (!req.authUserId) return StatusResponse(res, 403, "Authentication required");
+
+    const result = await database.transaction(async (transaction) => {
+      const user = await User.findByPk(req.authUserId, { transaction });
+      if (!user) throw new Error("User not found");
+      return consumeInviteForExistingUser(req, inviteToken, user, "decline", transaction);
+    });
+
+    return StatusResponse(res, 200, "OK", {
+      inviteId: result.invite.id,
+      organizationId: result.organization.id,
+      organizationName: result.organization.name,
+      status: "declined",
+    });
+  } catch (err) {
+    if (
+      err &&
+      [
+        "Invite not found",
+        "Invite email does not match signed-in user",
+        "User already belongs to another organization",
+        "User not found",
+      ].includes(err.message)
+    ) {
+      return StatusResponse(res, err.message === "Invite not found" ? 404 : 421, err.message);
+    }
     next(err);
   }
 };

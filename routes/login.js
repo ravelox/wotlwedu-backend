@@ -51,6 +51,18 @@ router.post("/google", loginRateLimit, loginController.postGoogleLogin);
 router.post("/google/link", socialLinkRateLimit, loginController.postConfirmSocialLink);
 router.post("/social", loginRateLimit, loginController.postSocialLogin);
 router.post("/social/link", socialLinkRateLimit, loginController.postConfirmSocialLink);
+router.post(
+  "/invite/:token/accept",
+  Security.bypassCheck,
+  Security.checkAuthentication,
+  loginController.postAcceptInvite
+);
+router.post(
+  "/invite/:token/decline",
+  Security.bypassCheck,
+  Security.checkAuthentication,
+  loginController.postDeclineInvite
+);
 
 /* Must be authenticated to enable 2FA */
 router.post("/2fa", Security.checkAuthentication, loginController.enable2FA);
