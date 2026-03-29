@@ -268,6 +268,77 @@ paths:
           description: Successful response
       security:
       - bearerAuth: []
+  /tutorial/poll:
+    get:
+      summary: GET /tutorial/poll
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /tutorial/poll/start:
+    post:
+      summary: POST /tutorial/poll/start
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+  /tutorial/poll/skip:
+    post:
+      summary: POST /tutorial/poll/skip
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /tutorial/poll/enable:
+    post:
+      summary: POST /tutorial/poll/enable
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+  /support/users/{userId}/tutorial/poll/enable:
+    post:
+      summary: POST /support/users/{userId}/tutorial/poll/enable
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
   /support/auth/overview:
     get:
       summary: GET /support/auth/overview

@@ -1125,6 +1125,65 @@ curl -sS "$API/list/accept/$NOTIF_ID" -X POST -H "Authorization: Bearer $TOKEN"
 
 ---
 
+## Tutorial
+
+### `POST /tutorial/poll/start`
+
+```sh
+curl -sS "$API/tutorial/poll/start" \
+  -X POST \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+### `GET /tutorial/poll`
+
+```sh
+curl -sS "$API/tutorial/poll" -H "Authorization: Bearer $TOKEN"
+```
+
+### `POST /tutorial/poll/skip`
+
+```sh
+curl -sS "$API/tutorial/poll/skip" \
+  -X POST \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+### `POST /tutorial/poll/enable`
+
+```sh
+curl -sS "$API/tutorial/poll/enable" \
+  -X POST \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+```sh
+curl -sS "$API/tutorial/poll/enable" \
+  -X POST \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"restart":true}'
+```
+
+### `POST /support/users/:userId/tutorial/poll/enable`
+
+```sh
+USER_ID="user_000"
+curl -sS "$API/support/users/$USER_ID/tutorial/poll/enable" \
+  -X POST \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+---
+
 ## Election
 
 ### `GET /election` (list; optionally `workgroupId`; supports `detail=list,group,category,image`)

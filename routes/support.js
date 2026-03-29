@@ -4,6 +4,7 @@ const Config = require("../config/wotlwedu");
 const createRateLimiter = require("../util/rate-limit");
 
 const supportController = require("../controllers/support");
+const tutorialController = require("../controllers/tutorial");
 const userController = require("../controllers/user");
 const organizationController = require("../controllers/organization");
 const loginController = require("../controllers/login");
@@ -60,6 +61,11 @@ router.post(
   "/users/:userId/ownership/transfer",
   Security.checkCapability("user", ["edit"]),
   userController.postOwnershipTransfer
+);
+router.post(
+  "/users/:userId/tutorial/poll/enable",
+  Security.checkCapability("user", ["edit"]),
+  tutorialController.postEnablePollTutorialForUser
 );
 
 router.get(

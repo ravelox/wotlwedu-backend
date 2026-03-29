@@ -51,6 +51,7 @@ The backend changes in this repo are documented as **0.0.39** in `CHANGELOG.md`.
 - Auth and invite operations now emit persistent audit records (`authaudits`) covering password sign-in, social sign-in, deferred link confirmation, invite lookup, invite acceptance, invite creation, resend, and revoke flows.
 - Support/admin observability now includes aggregated support endpoints via `GET /support/auth/overview`, `GET /support/auth/audit`, `GET /support/publicpoll/overview`, and `GET /support/publicpoll/audit`.
 - Poll participation follow-up now includes `POST /election/:electionId/remind`, and `GET /election/:electionId/participation` now returns reminder counts and last-reminder metadata.
+- Add a real poll tutorial via `POST /tutorial/poll/start` and `GET /tutorial/poll`, which stores tutorial progress per user, suggests exact names for the real list/audience/poll to create in the existing UI, and tracks completion from real items, memberships, votes, and stats.
 - Invite lookup, invite management, and deferred social-link confirmation now use dedicated rate limits in addition to the existing password/social login throttles.
 - Add user-level support endpoints for linked sign-in methods and recent auth audit history via `GET /user/:userId/signin-method`, `DELETE /user/:userId/signin-method/:identityId`, and `GET /user/:userId/authaudit`.
 - Add ownership-transfer preview/apply endpoints for support operators via `GET /user/:userId/ownership/preview` and `POST /user/:userId/ownership/transfer`.
@@ -201,10 +202,15 @@ Additional tenancy endpoints:
 - `DELETE /organization/:organizationId`
 - `GET /support/auth/overview`
 - `GET /support/auth/audit`
+- `GET /tutorial/poll`
+- `POST /tutorial/poll/start`
+- `POST /tutorial/poll/skip`
+- `POST /tutorial/poll/enable`
 - `GET /support/users/:userId/signin-method`
 - `GET /support/users/:userId/authaudit`
 - `GET /support/users/:userId/ownership/preview`
 - `POST /support/users/:userId/ownership/transfer`
+- `POST /support/users/:userId/tutorial/poll/enable`
 - `GET /support/organizations/:organizationId/invite`
 - `GET /support/organizations/:organizationId/authaudit`
 - `POST /support/organizations/:organizationId/invite`

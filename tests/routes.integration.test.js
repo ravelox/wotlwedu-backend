@@ -32,6 +32,7 @@ const Vote = require("../model/vote");
 const Image = require("../model/image");
 const PublicPollInvite = require("../model/publicpollinvite");
 const AbuseAudit = require("../model/abuseaudit");
+const Preference = require("../model/preference");
 const Security = require("../util/security");
 
 let skipReason = null;
@@ -79,11 +80,13 @@ function buildApp() {
   const itemRoutes = require("../routes/item");
   const loginRoutes = require("../routes/login");
   const listRoutes = require("../routes/list");
+  const groupRoutes = require("../routes/group");
   const notificationRoutes = require("../routes/notification");
   const organizationRoutes = require("../routes/organization");
   const electionRoutes = require("../routes/election");
   const publicElectionRoutes = require("../routes/publicelection");
   const supportRoutes = require("../routes/support");
+  const tutorialRoutes = require("../routes/tutorial");
   const userRoutes = require("../routes/user");
   const workgroupRoutes = require("../routes/workgroup");
 
@@ -92,10 +95,12 @@ function buildApp() {
   baseApp.use("/public/election", publicElectionRoutes);
   baseApp.use("/item", Security.checkAuthentication, itemRoutes);
   baseApp.use("/list", Security.checkAuthentication, listRoutes);
+  baseApp.use("/group", Security.checkAuthentication, groupRoutes);
   baseApp.use("/notification", Security.checkAuthentication, notificationRoutes);
   baseApp.use("/organization", Security.checkAuthentication, organizationRoutes);
   baseApp.use("/election", Security.checkAuthentication, electionRoutes);
   baseApp.use("/support", Security.checkAuthentication, supportRoutes);
+  baseApp.use("/tutorial", Security.checkAuthentication, tutorialRoutes);
   baseApp.use("/user", Security.checkAuthentication, userRoutes);
   baseApp.use("/workgroup", Security.checkAuthentication, workgroupRoutes);
 
@@ -170,6 +175,7 @@ module.exports = (addTest) => {
   let publicListItemId;
   let publicElectionToken;
   let participationElectionId;
+  let tutorialElectionId;
 
   Mailer.sendOrganizationInviteMessage = async () => "OK";
   Mailer.sendPublicPollInviteMessage = async () => "OK";
@@ -778,6 +784,180 @@ module.exports = (addTest) => {
     assert.strictEqual(remindedParticipant.reminderCount, 1);
     assert.ok(remindedParticipant.lastReminderAt);
     assert.strictEqual(remindedParticipant.lastReminderSenderId, "user_test");
+  });
+
+  addTest("poll tutorial tracks progress against real created resources", async () => {
+    const startRes = await request(server, "POST", "/tutorial/poll/start", {});
+    assert.strictEqual(startRes.status, 200);
+    assert.ok(startRes.body.data.tutorial.names.listName);
+    assert.strictEqual(startRes.body.data.tutorial.nextStepKey, "create_options_list");
+
+    const tutorialPreference = await Preference.findOne({
+      where: { creator: "user_test", name: "tutorial.poll.create" },
+      raw: true,
+    });
+    assert.ok(tutorialPreference);
+
+    const itemOneRes = await request(server, "POST", "/item", {
+      name: "Tutorial Pizza",
+      description: "First tutorial option",
+      url: "http://example.com/tutorial-pizza",
+    });
+    assert.strictEqual(itemOneRes.status, 200);
+    const itemTwoRes = await request(server, "POST", "/item", {
+      name: "Tutorial Sushi",
+      description: "Second tutorial option",
+      url: "http://example.com/tutorial-sushi",
+    });
+    assert.strictEqual(itemTwoRes.status, 200);
+
+    const listRes = await request(server, "POST", "/list", {
+      name: startRes.body.data.tutorial.names.listName,
+      description: "Tutorial options list",
+    });
+    assert.strictEqual(listRes.status, 200);
+    const tutorialListId = listRes.body.data.list.id;
+
+    await ListItem.create({
+      id: "listitem_tutorial_1",
+      listId: tutorialListId,
+      itemId: itemOneRes.body.data.item.id,
+      creator: "user_test",
+    });
+    await ListItem.create({
+      id: "listitem_tutorial_2",
+      listId: tutorialListId,
+      itemId: itemTwoRes.body.data.item.id,
+      creator: "user_test",
+    });
+
+    const groupRes = await request(server, "POST", "/group", {
+      name: startRes.body.data.tutorial.names.groupName,
+      description: "Tutorial audience",
+    });
+    assert.strictEqual(groupRes.status, 200);
+    const tutorialGroupId = groupRes.body.data.group.id;
+
+    await GroupMember.create({
+      id: "groupmember_tutorial_self",
+      groupId: tutorialGroupId,
+      userId: "user_test",
+      active: true,
+      creator: "user_test",
+    });
+
+    const tutorialElectionRes = await request(server, "POST", "/election", {
+      name: startRes.body.data.tutorial.names.electionName,
+      description: "Tutorial poll",
+      listId: tutorialListId,
+      groupId: tutorialGroupId,
+      expiration: "2026-04-15T00:00:00Z",
+    });
+    assert.strictEqual(tutorialElectionRes.status, 200);
+    tutorialElectionId = tutorialElectionRes.body.data.election.id;
+
+    let tutorialStateRes = await request(server, "GET", "/tutorial/poll");
+    assert.strictEqual(tutorialStateRes.status, 200);
+    assert.strictEqual(tutorialStateRes.body.data.tutorial.progress.listCreated, true);
+    assert.strictEqual(tutorialStateRes.body.data.tutorial.progress.createdItemsAddedCount, 2);
+    assert.strictEqual(tutorialStateRes.body.data.tutorial.progress.selfInAudience, true);
+    assert.strictEqual(tutorialStateRes.body.data.tutorial.progress.electionCreated, true);
+    assert.strictEqual(tutorialStateRes.body.data.tutorial.progress.electionStarted, false);
+    assert.strictEqual(tutorialStateRes.body.data.tutorial.bindings.electionId, tutorialElectionId);
+    assert.strictEqual(tutorialStateRes.body.data.tutorial.nextStepKey, "start_poll");
+
+    await Election.update({ statusId: 201 }, { where: { id: tutorialElectionId } });
+    await Vote.create({
+      id: "vote_tutorial_user_test",
+      electionId: tutorialElectionId,
+      userId: "user_test",
+      itemId: itemOneRes.body.data.item.id,
+      statusId: 301,
+      creator: "user_test",
+    });
+
+    tutorialStateRes = await request(server, "GET", "/tutorial/poll");
+    assert.strictEqual(tutorialStateRes.status, 200);
+    assert.strictEqual(tutorialStateRes.body.data.tutorial.progress.electionStarted, true);
+    assert.strictEqual(tutorialStateRes.body.data.tutorial.progress.castVoteCount, 1);
+    assert.strictEqual(tutorialStateRes.body.data.tutorial.progress.hasStats, true);
+    assert.strictEqual(tutorialStateRes.body.data.tutorial.status, "completed");
+    assert.strictEqual(tutorialStateRes.body.data.tutorial.nextStepKey, null);
+  });
+
+  addTest("poll tutorial can be skipped and re-enabled by the user", async () => {
+    const startRes = await request(server, "POST", "/tutorial/poll/start", {
+      restart: true,
+    });
+    assert.strictEqual(startRes.status, 200);
+    assert.strictEqual(startRes.body.data.tutorial.status, "active");
+
+    const skipRes = await request(server, "POST", "/tutorial/poll/skip", {});
+    assert.strictEqual(skipRes.status, 200);
+    assert.strictEqual(skipRes.body.data.tutorial.status, "skipped");
+    assert.ok(skipRes.body.data.tutorial.skippedAt);
+    assert.strictEqual(skipRes.body.data.tutorial.nextStepKey, null);
+
+    const skippedRes = await request(server, "GET", "/tutorial/poll");
+    assert.strictEqual(skippedRes.status, 200);
+    assert.strictEqual(skippedRes.body.data.tutorial.status, "skipped");
+
+    const enableRes = await request(server, "POST", "/tutorial/poll/enable", {});
+    assert.strictEqual(enableRes.status, 200);
+    assert.strictEqual(enableRes.body.data.tutorial.status, "active");
+    assert.strictEqual(enableRes.body.data.tutorial.skippedAt, null);
+
+    const restartRes = await request(server, "POST", "/tutorial/poll/enable", {
+      restart: true,
+    });
+    assert.strictEqual(restartRes.status, 200);
+    assert.strictEqual(restartRes.body.data.tutorial.status, "active");
+    assert.strictEqual(restartRes.body.data.tutorial.bindings.listId, null);
+    assert.strictEqual(restartRes.body.data.tutorial.bindings.groupId, null);
+    assert.strictEqual(restartRes.body.data.tutorial.bindings.electionId, null);
+  });
+
+  addTest("ops admin can re-enable another user's poll tutorial", async () => {
+    await Preference.create({
+      id: "pref_tutorial_user_password",
+      creator: "user_password",
+      name: "tutorial.poll.create",
+      value: JSON.stringify({
+        version: 1,
+        status: "skipped",
+        startedAt: "2026-03-28T00:00:00.000Z",
+        skippedAt: "2026-03-28T01:00:00.000Z",
+        names: {
+          listName: "Tutorial Options OPS001",
+          groupName: "Tutorial Audience OPS001",
+          electionName: "Tutorial Poll OPS001",
+        },
+        bindings: {
+          listId: null,
+          groupId: null,
+          electionId: null,
+        },
+      }),
+    });
+
+    const enableRes = await request(
+      server,
+      "POST",
+      "/support/users/user_password/tutorial/poll/enable",
+      {}
+    );
+    assert.strictEqual(enableRes.status, 200);
+    assert.strictEqual(enableRes.body.data.userId, "user_password");
+    assert.strictEqual(enableRes.body.data.tutorial.status, "active");
+    assert.strictEqual(enableRes.body.data.tutorial.skippedAt, null);
+
+    const savedPreference = await Preference.findOne({
+      where: { creator: "user_password", name: "tutorial.poll.create" },
+      raw: true,
+    });
+    const parsed = JSON.parse(savedPreference.value);
+    assert.strictEqual(parsed.status, "active");
+    assert.strictEqual(parsed.skippedAt, null);
   });
 
   addTest("social login consumes pending org invite for first-time user", async () => {

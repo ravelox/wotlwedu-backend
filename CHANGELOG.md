@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.0.40 - 2026-03-28
+- Add a real poll-creation tutorial API via `POST /tutorial/poll/start` and `GET /tutorial/poll` that persists per-user tutorial state, suggests exact resource names, binds to the actual list/group/poll created in the existing UI, and computes progress from real items, audience members, votes, and stats.
+- Add tutorial lifecycle controls via `POST /tutorial/poll/skip` and `POST /tutorial/poll/enable`, preserving skipped state until the user explicitly resumes or restarts.
+- Add ops remediation via `POST /support/users/:userId/tutorial/poll/enable` so admins can re-enable or restart a user's tutorial.
 
 ## 0.0.39 - 2026-03-28
 - Add support/public-poll abuse observability endpoints (`GET /support/publicpoll/overview`, `GET /support/publicpoll/audit`) with organization scoping and election/workgroup context.

@@ -57,6 +57,7 @@ const helperRoutes = require("./routes/helper");
 const organizationRoutes = require("./routes/organization");
 const supportRoutes = require("./routes/support");
 const publicElectionRoutes = require("./routes/publicelection");
+const tutorialRoutes = require("./routes/tutorial");
 
 // Helper middleware and functions
 const Security = require("./util/security");
@@ -159,6 +160,12 @@ app.use(
   Helpers.logComment("Support"),
   Security.checkAuthentication,
   supportRoutes
+);
+app.use(
+  "/tutorial",
+  Helpers.logComment("Tutorial"),
+  Security.checkAuthentication,
+  tutorialRoutes
 );
 app.use(
   "/helper",
