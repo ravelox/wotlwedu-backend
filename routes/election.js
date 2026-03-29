@@ -14,6 +14,12 @@ const publicInviteRateLimit = createRateLimiter({
   keyMode: "ip+body",
   message: "Too many public invite management attempts",
 });
+const participationReminderRateLimit = createRateLimiter({
+  max: Config.authRateLimitInviteManageMax,
+  windowMs: Config.authRateLimitWindowMs,
+  keyMode: "ip+body",
+  message: "Too many participation reminder attempts",
+});
 
 // Add election
 router.post(
@@ -31,6 +37,12 @@ router.get(
   "/:electionId/participation",
   Security.checkCapability("election", ["view"]),
   electionController.getParticipation
+);
+router.post(
+  "/:electionId/remind",
+  participationReminderRateLimit,
+  Security.checkCapability("election", ["edit"]),
+  electionController.postParticipationReminder
 );
 router.get(
   "/:electionId/public/stats",

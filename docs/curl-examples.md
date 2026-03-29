@@ -1201,6 +1201,24 @@ ELECTION_ID="election_000"
 curl -sS "$API/election/$ELECTION_ID/stats" -H "Authorization: Bearer $TOKEN"
 ```
 
+### `GET /election/:electionId/participation`
+
+```sh
+ELECTION_ID="election_000"
+curl -sS "$API/election/$ELECTION_ID/participation" -H "Authorization: Bearer $TOKEN"
+```
+
+### `POST /election/:electionId/remind`
+
+```sh
+ELECTION_ID="election_000"
+curl -sS "$API/election/$ELECTION_ID/remind" \
+  -X POST \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"states":["not_started","in_progress"],"message":"Please finish your vote today"}'
+```
+
 ---
 
 ## Vote

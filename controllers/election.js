@@ -23,8 +23,71 @@ const Image = require("../model/image");
 const Status = require("../model/status");
 const Workgroup = require("../model/workgroup");
 const GroupMember = require("../model/groupmember");
+const Notification = require("../model/notification");
 
 const Attributes = require("../model/attributes");
+const PARTICIPATION_REMINDER_STATUS = "Election Participation Reminder";
+
+function normalizeReminderStates(value) {
+  const allowedStates = new Set(["not_started", "in_progress", "completed"]);
+  const rawValues = Array.isArray(value) ? value : value ? [value] : [];
+  const normalized = [...new Set(rawValues
+    .map((entry) => (entry === undefined || entry === null ? null : entry.toString().trim().toLowerCase()))
+    .filter((entry) => entry && allowedStates.has(entry)))];
+
+  return normalized.length ? normalized : ["not_started", "in_progress"];
+}
+
+function normalizeReminderUserIds(value) {
+  const rawValues = Array.isArray(value) ? value : value ? [value] : [];
+  return [...new Set(rawValues
+    .map((entry) => (entry === undefined || entry === null ? null : entry.toString().trim()))
+    .filter(Boolean))];
+}
+
+function buildReminderText(election, senderName, customMessage) {
+  const reminderPrefix = `Reminder from ${senderName || "wotlwedu"}: ${election.name}`;
+  if (!customMessage) return `${reminderPrefix} still needs your response`;
+  return `${reminderPrefix} - ${customMessage}`;
+}
+
+async function buildReminderSummaryByUserId(electionId, userIds) {
+  const empty = new Map();
+  if (!electionId || !userIds || !userIds.length) return empty;
+
+  const reminderTypeId = await getStatusIdByName(PARTICIPATION_REMINDER_STATUS);
+  if (!reminderTypeId || reminderTypeId < 0) return empty;
+
+  const reminders = await Notification.findAll({
+    where: {
+      objectId: electionId,
+      type: reminderTypeId,
+      userId: { [Op.in]: userIds },
+    },
+    attributes: ["id", "userId", "senderId", "createdAt"],
+    order: [["createdAt", "DESC"]],
+    raw: true,
+  });
+
+  const summaryByUserId = new Map();
+  for (const reminder of reminders || []) {
+    if (!summaryByUserId.has(reminder.userId)) {
+      summaryByUserId.set(reminder.userId, {
+        reminderCount: 0,
+        lastReminderAt: null,
+        lastReminderSenderId: null,
+      });
+    }
+    const current = summaryByUserId.get(reminder.userId);
+    current.reminderCount += 1;
+    if (!current.lastReminderAt) {
+      current.lastReminderAt = reminder.createdAt || null;
+      current.lastReminderSenderId = reminder.senderId || null;
+    }
+  }
+
+  return summaryByUserId;
+}
 
 function generateIncludes(details, req) {
   const includes = [];
@@ -215,14 +278,42 @@ async function buildParticipationSummary(election) {
       workgroupAdmin: user.workgroupAdmin === true,
     };
   });
+  const reminderSummaryByUserId = await buildReminderSummaryByUserId(
+    election.id,
+    participants.map((participant) => participant.id).filter(Boolean)
+  );
+  const enrichedParticipants = participants.map((participant) => {
+    const reminderSummary = reminderSummaryByUserId.get(participant.id) || {
+      reminderCount: 0,
+      lastReminderAt: null,
+      lastReminderSenderId: null,
+    };
+    return {
+      ...participant,
+      reminderCount: reminderSummary.reminderCount,
+      lastReminderAt: reminderSummary.lastReminderAt,
+      lastReminderSenderId: reminderSummary.lastReminderSenderId,
+    };
+  });
 
-  const expectedParticipants = participants.length;
-  const notStartedCount = participants.filter((participant) => participant.state === "not_started").length;
-  const inProgressCount = participants.filter((participant) => participant.state === "in_progress").length;
-  const completedCount = participants.filter((participant) => participant.state === "completed").length;
-  const totalVotes = participants.reduce((sum, participant) => sum + participant.totalVotes, 0);
-  const pendingVotes = participants.reduce((sum, participant) => sum + participant.pendingVotes, 0);
-  const castVotes = participants.reduce((sum, participant) => sum + participant.castVotes, 0);
+  const expectedParticipants = enrichedParticipants.length;
+  const notStartedCount = enrichedParticipants.filter((participant) => participant.state === "not_started").length;
+  const inProgressCount = enrichedParticipants.filter((participant) => participant.state === "in_progress").length;
+  const completedCount = enrichedParticipants.filter((participant) => participant.state === "completed").length;
+  const totalVotes = enrichedParticipants.reduce((sum, participant) => sum + participant.totalVotes, 0);
+  const pendingVotes = enrichedParticipants.reduce((sum, participant) => sum + participant.pendingVotes, 0);
+  const castVotes = enrichedParticipants.reduce((sum, participant) => sum + participant.castVotes, 0);
+  const reminderCount = enrichedParticipants.reduce(
+    (sum, participant) => sum + (Number(participant.reminderCount) || 0),
+    0
+  );
+  const remindedCount = enrichedParticipants.filter(
+    (participant) => (Number(participant.reminderCount) || 0) > 0
+  ).length;
+  const lastReminderAt = enrichedParticipants
+    .map((participant) => participant.lastReminderAt)
+    .filter(Boolean)
+    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] || null;
 
   return {
     audience: {
@@ -240,7 +331,7 @@ async function buildParticipationSummary(election) {
           }
         : null,
       expectedParticipants,
-      participants,
+      participants: enrichedParticipants,
     },
     participation: {
       expectedParticipants,
@@ -251,6 +342,9 @@ async function buildParticipationSummary(election) {
       totalVotes,
       castVotes,
       pendingVotes,
+      reminderCount,
+      remindedCount,
+      lastReminderAt,
       completionRate:
         expectedParticipants > 0
           ? Math.round((completedCount / expectedParticipants) * 100)
@@ -916,6 +1010,88 @@ module.exports.getParticipation = async (req, res, next) => {
           completionRate: 0,
         },
       }),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports.postParticipationReminder = async (req, res, next) => {
+  try {
+    const electionToFind = req.params.electionId;
+    if (!electionToFind) return StatusResponse(res, 421, "No election Id provided");
+
+    const foundElection = await Election.findByPk(electionToFind, {
+      attributes: [
+        "id",
+        "name",
+        "description",
+        "expiration",
+        "groupId",
+        "listId",
+        "workgroupId",
+        "creator",
+      ],
+      raw: true,
+    });
+    if (!foundElection) return StatusResponse(res, 404, "Election not found");
+
+    const allowed = await assertCanAccessElection(req, foundElection, "edit");
+    if (!allowed) return StatusResponse(res, 403, "Not authorized for this election");
+
+    const summary = await buildParticipationSummary(foundElection);
+    const participantList = summary?.audience?.participants || [];
+    const requestedStates = normalizeReminderStates(req.body?.states || req.body?.state);
+    const requestedUserIds = normalizeReminderUserIds(req.body?.userIds);
+    const customMessage =
+      req.body?.message === undefined || req.body?.message === null
+        ? null
+        : req.body.message.toString().trim() || null;
+
+    const targets = participantList.filter((participant) => {
+      if (!participant?.id) return false;
+      if (participant.id === req.authUserId) return false;
+      if (!requestedStates.includes(participant.state)) return false;
+      if (requestedUserIds.length && !requestedUserIds.includes(participant.id)) return false;
+      return true;
+    });
+
+    const reminderTypeId = await getStatusIdByName(PARTICIPATION_REMINDER_STATUS);
+    if (!reminderTypeId || reminderTypeId < 0) {
+      return StatusResponse(res, 500, "Election participation reminder status is not configured");
+    }
+
+    const results = [];
+    for (const participant of targets) {
+      const text = buildReminderText(foundElection, req.authName, customMessage);
+      await Notify.sendNotification(
+        req.authUserId,
+        participant.id,
+        reminderTypeId,
+        foundElection.id,
+        text
+      );
+      results.push({
+        userId: participant.id,
+        state: participant.state,
+        status: 200,
+        message: "Reminder sent",
+      });
+    }
+
+    return StatusResponse(res, 200, "OK", {
+      election: {
+        id: foundElection.id,
+        name: foundElection.name,
+      },
+      reminder: {
+        targetStates: requestedStates,
+        targetUserIds: requestedUserIds,
+        customMessage,
+        targetCount: targets.length,
+        sentCount: results.length,
+      },
+      results,
     });
   } catch (err) {
     next(err);

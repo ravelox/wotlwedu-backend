@@ -2473,6 +2473,27 @@ paths:
           description: Successful response
       security:
       - bearerAuth: []
+  /election/:electionId/remind:
+    post:
+      summary: POST /election/:electionId/remind
+      parameters:
+      - name: electionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
   /election/:electionId:
     get:
       summary: GET /election/:electionId

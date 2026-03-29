@@ -26,7 +26,7 @@ Core stack:
 - `Workgroup admin user`: can administer data for one workgroup (`adminWorkgroupId`, legacy `adminGroupId`).
 
 ## Current version
-The backend changes in this repo are documented as **0.0.33** in `CHANGELOG.md`.
+The backend changes in this repo are documented as **0.0.39** in `CHANGELOG.md`.
 
 ## Recent API behavior updates
 - Category IDs are now consistently included on category-enabled resources (`group`, `workgroup`, `image`, `item`, `list`, `election`).
@@ -50,6 +50,7 @@ The backend changes in this repo are documented as **0.0.33** in `CHANGELOG.md`.
 - Social sign-in now refuses to auto-link against an existing non-password account match and returns a manual-support error instead of risking account takeover or duplicate identity state.
 - Auth and invite operations now emit persistent audit records (`authaudits`) covering password sign-in, social sign-in, deferred link confirmation, invite lookup, invite acceptance, invite creation, resend, and revoke flows.
 - Support/admin observability now includes aggregated support endpoints via `GET /support/auth/overview`, `GET /support/auth/audit`, `GET /support/publicpoll/overview`, and `GET /support/publicpoll/audit`.
+- Poll participation follow-up now includes `POST /election/:electionId/remind`, and `GET /election/:electionId/participation` now returns reminder counts and last-reminder metadata.
 - Invite lookup, invite management, and deferred social-link confirmation now use dedicated rate limits in addition to the existing password/social login throttles.
 - Add user-level support endpoints for linked sign-in methods and recent auth audit history via `GET /user/:userId/signin-method`, `DELETE /user/:userId/signin-method/:identityId`, and `GET /user/:userId/authaudit`.
 - Add ownership-transfer preview/apply endpoints for support operators via `GET /user/:userId/ownership/preview` and `POST /user/:userId/ownership/transfer`.
@@ -210,6 +211,7 @@ Additional tenancy endpoints:
 - `POST /support/organizations/:organizationId/invite/:inviteId/resend`
 - `DELETE /support/organizations/:organizationId/invite/:inviteId`
 - `GET /support/elections/public/trust`
+- `POST /election/:electionId/remind`
 - `GET /support/elections/:electionId/public/stats`
 - `GET /support/elections/:electionId/invite`
 - `POST /support/elections/:electionId/public/enable`

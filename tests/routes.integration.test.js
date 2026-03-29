@@ -334,6 +334,7 @@ module.exports = (addTest) => {
     await Status.bulkCreate([
       { id: 100, object: "notification", name: "Unread" },
       { id: 101, object: "notification", name: "Read" },
+      { id: 110, object: "notification", name: "Election Participation Reminder" },
       { id: 200, object: "election", name: "Not Started" },
       { id: 201, object: "election", name: "In Progress" },
       { id: 202, object: "election", name: "Ended" },
@@ -735,6 +736,48 @@ module.exports = (addTest) => {
           (participant) => participant.id === "user_test" && participant.state === "completed"
         )
     );
+    assert.strictEqual(res.body.data.participation.reminderCount, 0);
+    assert.strictEqual(res.body.data.participation.remindedCount, 0);
+  });
+
+  addTest("election participation reminder sends notifications to incomplete participants", async () => {
+    const remindRes = await request(server, "POST", `/election/${participationElectionId}/remind`, {
+      states: ["not_started"],
+      message: "Please vote today",
+    });
+    assert.strictEqual(remindRes.status, 200);
+    assert.strictEqual(remindRes.body.data.reminder.targetCount, 2);
+    assert.strictEqual(remindRes.body.data.reminder.sentCount, 2);
+    assert.ok(Array.isArray(remindRes.body.data.results));
+    assert.ok(remindRes.body.data.results.every((result) => result.status === 200));
+
+    const notifications = await Notification.findAll({
+      where: {
+        objectId: participationElectionId,
+        type: 110,
+      },
+      order: [["userId", "ASC"]],
+      raw: true,
+    });
+    assert.strictEqual(notifications.length, 2);
+    assert.deepStrictEqual(
+      notifications.map((notification) => notification.userId),
+      ["user_password", "user_sender"]
+    );
+
+    const summaryRes = await request(server, "GET", `/election/${participationElectionId}/participation`);
+    assert.strictEqual(summaryRes.status, 200);
+    assert.strictEqual(summaryRes.body.data.participation.reminderCount, 2);
+    assert.strictEqual(summaryRes.body.data.participation.remindedCount, 2);
+    assert.ok(summaryRes.body.data.participation.lastReminderAt);
+
+    const remindedParticipant = summaryRes.body.data.audience.participants.find(
+      (participant) => participant.id === "user_sender"
+    );
+    assert.ok(remindedParticipant);
+    assert.strictEqual(remindedParticipant.reminderCount, 1);
+    assert.ok(remindedParticipant.lastReminderAt);
+    assert.strictEqual(remindedParticipant.lastReminderSenderId, "user_test");
   });
 
   addTest("social login consumes pending org invite for first-time user", async () => {
