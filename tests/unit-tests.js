@@ -5,6 +5,8 @@ const statusResponse = require("../util/statusresponse");
 const Helpers = require("../util/helpers");
 const Security = require("../util/security");
 const LoginController = require("../controllers/login");
+const Mailer = require("../util/mailer");
+const Config = require("../config/wotlwedu");
 
 module.exports = (addTest) => {
   addTest("mini-uuid applies prefix and produces unique values", () => {
@@ -95,5 +97,121 @@ module.exports = (addTest) => {
   addTest("login org-name builder uses initials", () => {
     const build = LoginController._buildProvisionedOrganizationName;
     assert.strictEqual(build("John", "Smith"), "J S's Organization");
+  });
+
+  addTest("mailer confirmation payload uses configured support email and confirmation link", () => {
+    const previousSupportEmail = Config.supportEmail;
+    const previousConfirmationBaseUrl = Config.confirmationLinkBaseUrl;
+    try {
+      Config.supportEmail = "support@test.example";
+      Config.confirmationLinkBaseUrl = "https://accounts.example";
+
+      const message = Mailer._buildEmailConfirmMessage(
+        "user@example.com",
+        "confirm-token"
+      );
+
+      assert.strictEqual(message.to, "user@example.com");
+      assert.strictEqual(message.subject, "Wotlwedu registration confirmation");
+      assert.ok(message.text.includes("https://accounts.example/confirm/confirm-token"));
+      assert.ok(message.html.includes("https://accounts.example/confirm/confirm-token"));
+      assert.ok(message.text.includes("support@test.example"));
+      assert.ok(message.html.includes("support@test.example"));
+    } finally {
+      Config.supportEmail = previousSupportEmail;
+      Config.confirmationLinkBaseUrl = previousConfirmationBaseUrl;
+    }
+  });
+
+  addTest("mailer reset payload falls back to provided frontend URL when config is unset", () => {
+    const previousSupportEmail = Config.supportEmail;
+    const previousPasswordResetBaseUrl = Config.passwordResetLinkBaseUrl;
+    try {
+      Config.supportEmail = "support@test.example";
+      Config.passwordResetLinkBaseUrl = "";
+
+      const message = Mailer._buildPasswordResetMessage(
+        "user@example.com",
+        "user_123",
+        "reset-token",
+        "https://fallback.example"
+      );
+
+      assert.ok(message.text.includes("https://fallback.example/pwdreset/user_123/reset-token"));
+      assert.ok(message.html.includes("https://fallback.example/pwdreset/user_123/reset-token"));
+      assert.ok(message.text.includes("support@test.example"));
+    } finally {
+      Config.supportEmail = previousSupportEmail;
+      Config.passwordResetLinkBaseUrl = previousPasswordResetBaseUrl;
+    }
+  });
+
+  addTest("mailer organization invite payload falls back to provided frontend URL and includes expiry", () => {
+    const previousSupportEmail = Config.supportEmail;
+    const previousInviteBaseUrl = Config.inviteLinkBaseUrl;
+    try {
+      Config.supportEmail = "support@test.example";
+      Config.inviteLinkBaseUrl = "";
+
+      const expiresAt = "2026-04-09T12:34:56.000Z";
+      const message = Mailer._buildOrganizationInviteMessage(
+        "invitee@example.com",
+        "Test Org",
+        "orginvite token",
+        "https://ui.example",
+        expiresAt
+      );
+
+      assert.strictEqual(message.to, "invitee@example.com");
+      assert.ok(
+        message.text.includes(
+          "https://ui.example/login?invite=orginvite%20token"
+        )
+      );
+      assert.ok(
+        message.html.includes(
+          "https://ui.example/login?invite=orginvite%20token"
+        )
+      );
+      assert.ok(message.text.includes("This invitation expires on"));
+      assert.ok(message.html.includes("This invitation expires on"));
+      assert.ok(message.text.includes("support@test.example"));
+    } finally {
+      Config.supportEmail = previousSupportEmail;
+      Config.inviteLinkBaseUrl = previousInviteBaseUrl;
+    }
+  });
+
+  addTest("mailer public poll invite payload includes invite token and support email", () => {
+    const previousSupportEmail = Config.supportEmail;
+    const previousBaseFrontendUrl = Config.baseFrontendUrl;
+    try {
+      Config.supportEmail = "support@test.example";
+      Config.baseFrontendUrl = "https://ui.example";
+
+      const message = Mailer._buildPublicPollInviteMessage(
+        "invitee@example.com",
+        "Friday Lunch",
+        "public token",
+        "invite token"
+      );
+
+      assert.strictEqual(message.subject, 'Invitation to participate in "Friday Lunch"');
+      assert.ok(
+        message.text.includes(
+          "https://ui.example/public/election/public%20token?invite=invite%20token"
+        )
+      );
+      assert.ok(
+        message.html.includes(
+          "https://ui.example/public/election/public%20token?invite=invite%20token"
+        )
+      );
+      assert.ok(message.text.includes("support@test.example"));
+      assert.ok(message.html.includes("support@test.example"));
+    } finally {
+      Config.supportEmail = previousSupportEmail;
+      Config.baseFrontendUrl = previousBaseFrontendUrl;
+    }
   });
 };

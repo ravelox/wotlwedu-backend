@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.42 - 2026-04-08
+- Refactor mail payload generation into deterministic internal builders so invite, confirmation, password-reset, email-change, and public-poll mail content can be tested directly.
+- Add unit coverage for configured deep links, frontend URL fallback behavior, support email copy, invite expiry text, and public-poll invite URL encoding.
+- Harden release verification around mailer and invite flows without changing API contracts.
+
 ## 0.0.41 - 2026-04-08
 - Add support auth observability via `GET /support/auth/overview` and `GET /support/auth/audit`, including scoped aggregate metrics and paged audit feeds for admin/support workflows.
 - Add structured stdout auth-audit logging behind `WOTLWEDU_AUTH_AUDIT_STDOUT` so deployed environments can forward auth/invite events into log pipelines without bypassing database persistence.

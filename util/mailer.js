@@ -66,22 +66,21 @@ function buildSupportCopy() {
   return `If you did not request this change or need help, contact ${Config.supportEmail}.`;
 }
 
-module.exports.sendEmailConfirmMessage = (
-  emailAddress,
-  confirmationToken,
-  frontendUrl
-) => {
-  return new Promise((resolve, reject) => {
-    const textBody =
-      `Hi there,
+function resolveLinkBase(configuredValue, fallbackValue) {
+  return configuredValue || fallbackValue || Config.baseFrontendUrl;
+}
+
+function buildEmailConfirmMessage(emailAddress, confirmationToken, frontendUrl) {
+  const confirmationBaseUrl = resolveLinkBase(
+    Config.confirmationLinkBaseUrl,
+    frontendUrl
+  );
+  const confirmationUrl = `${confirmationBaseUrl}/confirm/${confirmationToken}`;
+  const textBody = `Hi there,
 
 Your email address has been registered with Wotlwedu. To confirm, please follow the link below:
 
-` +
-      Config.confirmationLinkBaseUrl +
-      `/confirm/` +
-      confirmationToken +
-      `
+${confirmationUrl}
 
 ${buildSupportCopy()}
 
@@ -89,17 +88,209 @@ Best regards,
 
 Wotlwedu admin team`;
 
-    const messageDetails = {
-      to: emailAddress,
-      subject: "Wotlwedu registration confirmation",
-      text: textBody,
-      html: wrapHtmlMessage(
-        "Confirm your Wotlwedu registration",
-        `<p>Your email address has been registered with Wotlwedu. Confirm it here:</p>
-         <p><a href="${Config.confirmationLinkBaseUrl}/confirm/${confirmationToken}">${Config.confirmationLinkBaseUrl}/confirm/${confirmationToken}</a></p>
+  return {
+    to: emailAddress,
+    subject: "Wotlwedu registration confirmation",
+    text: textBody,
+    html: wrapHtmlMessage(
+      "Confirm your Wotlwedu registration",
+      `<p>Your email address has been registered with Wotlwedu. Confirm it here:</p>
+         <p><a href="${confirmationUrl}">${confirmationUrl}</a></p>
          <p>${buildSupportCopy()}</p>`
-      ),
-    };
+    ),
+  };
+}
+
+function buildPasswordResetMessage(emailAddress, userId, resetToken, frontendUrl) {
+  const passwordResetBaseUrl = resolveLinkBase(
+    Config.passwordResetLinkBaseUrl,
+    frontendUrl
+  );
+  const passwordResetUrl = `${passwordResetBaseUrl}/pwdreset/${userId}/${resetToken}`;
+  const textBody = `Hi there,
+  
+We have received a request to reset your password. To proceed, please follow the link below and enter the verification code provided:
+
+${passwordResetUrl}
+
+${buildSupportCopy()}
+
+Best regards,
+
+Wotlwedu admin team`;
+
+  return {
+    to: emailAddress,
+    subject: "Wotlwedu password reset",
+    text: textBody,
+    html: wrapHtmlMessage(
+      "Reset your Wotlwedu password",
+      `<p>We received a request to reset your password. Continue here:</p>
+         <p><a href="${passwordResetUrl}">${passwordResetUrl}</a></p>
+         <p>${buildSupportCopy()}</p>`
+    ),
+  };
+}
+
+function buildEmailChangeMessage(
+  changeFromEmail,
+  changeToEmail,
+  confirmationToken,
+  frontendUrl
+) {
+  const confirmationBaseUrl = resolveLinkBase(
+    Config.confirmationLinkBaseUrl,
+    frontendUrl
+  );
+  const confirmationUrl = `${confirmationBaseUrl}/confirm/${confirmationToken}`;
+  const textBody = `Hi there,
+
+Your email address is being changed from ${changeFromEmail} to ${changeToEmail}. To confirm, please follow the link below:
+
+${confirmationUrl}
+
+${buildSupportCopy()}
+
+Best regards,
+
+Wotlwedu admin team`;
+
+  return {
+    to: changeFromEmail,
+    subject: "Wotlwedu email address change",
+    text: textBody,
+    html: wrapHtmlMessage(
+      "Confirm your Wotlwedu email change",
+      `<p>Your Wotlwedu email is being changed from ${changeFromEmail} to ${changeToEmail}.</p>
+         <p>Confirm it here:</p>
+         <p><a href="${confirmationUrl}">${confirmationUrl}</a></p>
+         <p>${buildSupportCopy()}</p>`
+    ),
+  };
+}
+
+function buildEmailChangeCompleteMessage(emailAddress) {
+  const textBody = `Hi there,
+
+Your email address at Wotlwedu is now being used by a user.
+${buildSupportCopy()}
+
+Best regards,
+
+Wotlwedu admin team`;
+
+  return {
+    to: emailAddress,
+    subject: "Wotlwedu email address change complete",
+    text: textBody,
+    html: wrapHtmlMessage(
+      "Your Wotlwedu email change is complete",
+      `<p>Your email address at Wotlwedu is now being used by a user.</p>
+         <p>${buildSupportCopy()}</p>`
+    ),
+  };
+}
+
+function buildOrganizationInviteMessage(
+  emailAddress,
+  organizationName,
+  inviteToken,
+  frontendUrl,
+  expiresAt
+) {
+  const inviteBaseUrl = resolveLinkBase(Config.inviteLinkBaseUrl, frontendUrl);
+  const inviteUrl =
+    inviteBaseUrl + `/login?invite=` + encodeURIComponent(inviteToken);
+  const expiryText = expiresAt
+    ? `This invitation expires on ${new Date(expiresAt).toLocaleString()}.`
+    : "This invitation does not currently have an expiration date.";
+  const textBody = `Hi there,
+
+You have been invited to join ${organizationName} on Wotlwedu.
+
+If you already use a social sign-in provider with this email address, sign in with that provider and Wotlwedu will place you in the invited organization automatically.
+
+You can start here:
+
+${inviteUrl}
+
+${expiryText}
+
+If you did not expect this invitation, you can ignore this email. ${buildSupportCopy()}
+
+Best regards,
+
+Wotlwedu admin team`;
+
+  return {
+    to: emailAddress,
+    subject: "Wotlwedu organization invitation",
+    text: textBody,
+    html: wrapHtmlMessage(
+      `You're invited to join ${organizationName}`,
+      `<p>You have been invited to join <strong>${organizationName}</strong> on Wotlwedu.</p>
+         <p>If you already use Google sign-in with this email address, continue here:</p>
+         <p><a href="${inviteUrl}">${inviteUrl}</a></p>
+         <p>${expiryText}</p>
+         <p>If you did not expect this invitation, you can ignore this email. ${buildSupportCopy()}</p>`
+    ),
+  };
+}
+
+function buildPublicPollInviteMessage(
+  emailAddress,
+  pollName,
+  publicToken,
+  inviteToken = null
+) {
+  const inviteUrl =
+    `${Config.baseFrontendUrl}/public/election/${encodeURIComponent(publicToken)}` +
+    (inviteToken ? `?invite=${encodeURIComponent(inviteToken)}` : "");
+  const textBody = `Hi there,
+
+You have been invited to participate in the Wotlwedu poll "${pollName}".
+
+Open the poll here:
+
+${inviteUrl}
+
+If you no longer want invites like this, contact ${Config.supportEmail}.
+
+Best regards,
+
+Wotlwedu admin team`;
+
+  return {
+    to: emailAddress,
+    subject: `Invitation to participate in "${pollName}"`,
+    text: textBody,
+    html: wrapHtmlMessage(
+      `You're invited to "${pollName}"`,
+      `<p>You have been invited to participate in the Wotlwedu poll <strong>${pollName}</strong>.</p>
+         <p><a href="${inviteUrl}">${inviteUrl}</a></p>
+         <p>If you no longer want invites like this, contact ${Config.supportEmail}.</p>`
+    ),
+  };
+}
+
+module.exports._buildEmailConfirmMessage = buildEmailConfirmMessage;
+module.exports._buildPasswordResetMessage = buildPasswordResetMessage;
+module.exports._buildEmailChangeMessage = buildEmailChangeMessage;
+module.exports._buildEmailChangeCompleteMessage = buildEmailChangeCompleteMessage;
+module.exports._buildOrganizationInviteMessage = buildOrganizationInviteMessage;
+module.exports._buildPublicPollInviteMessage = buildPublicPollInviteMessage;
+
+module.exports.sendEmailConfirmMessage = (
+  emailAddress,
+  confirmationToken,
+  frontendUrl
+) => {
+  return new Promise((resolve, reject) => {
+    const messageDetails = buildEmailConfirmMessage(
+      emailAddress,
+      confirmationToken,
+      frontendUrl
+    );
     sendEmail(messageDetails).catch((err) => {
       reject(new Error("Failed to send confirmation email: " + err));
     });
@@ -114,36 +305,12 @@ module.exports.sendPasswordResetMessage = (
   frontendUrl
 ) => {
   return new Promise((resolve, reject) => {
-    const textBody =
-      `Hi there,
-  
-We have received a request to reset your password. To proceed, please follow the link below and enter the verification code provided:
-
-` +
-      Config.passwordResetLinkBaseUrl +
-      `/pwdreset/` +
-      userId +
-      `/` +
-      resetToken +
-      `
-
-${buildSupportCopy()}
-
-Best regards,
-
-Wotlwedu admin team`;
-
-    const messageDetails = {
-      to: emailAddress,
-      subject: "Wotlwedu password reset",
-      text: textBody,
-      html: wrapHtmlMessage(
-        "Reset your Wotlwedu password",
-        `<p>We received a request to reset your password. Continue here:</p>
-         <p><a href="${Config.passwordResetLinkBaseUrl}/pwdreset/${userId}/${resetToken}">${Config.passwordResetLinkBaseUrl}/pwdreset/${userId}/${resetToken}</a></p>
-         <p>${buildSupportCopy()}</p>`
-      ),
-    };
+    const messageDetails = buildPasswordResetMessage(
+      emailAddress,
+      userId,
+      resetToken,
+      frontendUrl
+    );
     sendEmail(messageDetails).catch((err) => {
       reject(new Error("Failed to send password reset email: " + err));
     });
@@ -158,39 +325,12 @@ module.exports.sendEmailChangeMessage = (
   frontendUrl
 ) => {
   return new Promise((resolve, reject) => {
-    const textBody =
-      `Hi there,
-
-Your email address is being changed from ` +
-      changeFromEmail +
-      ` to ` +
-      changeToEmail +
-      `. To confirm, please follow the link below:
-
-` +
-      Config.confirmationLinkBaseUrl +
-      `/confirm/` +
-      confirmationToken +
-      `
-
-${buildSupportCopy()}
-
-Best regards,
-
-Wotlwedu admin team`;
-
-    const messageDetails = {
-      to: changeFromEmail,
-      subject: "Wotlwedu email address change",
-      text: textBody,
-      html: wrapHtmlMessage(
-        "Confirm your Wotlwedu email change",
-        `<p>Your Wotlwedu email is being changed from ${changeFromEmail} to ${changeToEmail}.</p>
-         <p>Confirm it here:</p>
-         <p><a href="${Config.confirmationLinkBaseUrl}/confirm/${confirmationToken}">${Config.confirmationLinkBaseUrl}/confirm/${confirmationToken}</a></p>
-         <p>${buildSupportCopy()}</p>`
-      ),
-    };
+    const messageDetails = buildEmailChangeMessage(
+      changeFromEmail,
+      changeToEmail,
+      confirmationToken,
+      frontendUrl
+    );
     sendEmail(messageDetails).catch((err) => {
       reject(new Error("Failed to send email address change message: " + err));
     });
@@ -200,25 +340,7 @@ Wotlwedu admin team`;
 
 module.exports.sendEmailChangeCompleteMessage = (emailAddress, frontendUrl) => {
   return new Promise((resolve, reject) => {
-    const textBody = `Hi there,
-
-Your email address at Wotlwedu is now being used by a user.
-${buildSupportCopy()}
-
-Best regards,
-
-Wotlwedu admin team`;
-
-    const messageDetails = {
-      to: emailAddress,
-      subject: "Wotlwedu email address change complete",
-      text: textBody,
-      html: wrapHtmlMessage(
-        "Your Wotlwedu email change is complete",
-        `<p>Your email address at Wotlwedu is now being used by a user.</p>
-         <p>${buildSupportCopy()}</p>`
-      ),
-    };
+    const messageDetails = buildEmailChangeCompleteMessage(emailAddress, frontendUrl);
     sendEmail(messageDetails).catch((err) => {
       reject(
         new Error(
@@ -238,53 +360,13 @@ module.exports.sendOrganizationInviteMessage = (
   expiresAt
 ) => {
   return new Promise((resolve, reject) => {
-    const inviteUrl =
-      (Config.inviteLinkBaseUrl || frontendUrl) +
-      `/login?invite=` +
-      encodeURIComponent(inviteToken);
-    const expiryText = expiresAt
-      ? `This invitation expires on ${new Date(expiresAt).toLocaleString()}.`
-      : "This invitation does not currently have an expiration date.";
-    const textBody =
-      `Hi there,
-
-You have been invited to join ` +
-      organizationName +
-      ` on Wotlwedu.
-
-If you already use a social sign-in provider with this email address, sign in with that provider and Wotlwedu will place you in the invited organization automatically.
-
-You can start here:
-
-` +
-      inviteUrl +
-      `
-
-` +
-      expiryText +
-      `
-
-If you did not expect this invitation, you can ignore this email. ` +
-      buildSupportCopy() +
-      `
-
-Best regards,
-
-Wotlwedu admin team`;
-
-    const messageDetails = {
-      to: emailAddress,
-      subject: "Wotlwedu organization invitation",
-      text: textBody,
-      html: wrapHtmlMessage(
-        `You're invited to join ${organizationName}`,
-        `<p>You have been invited to join <strong>${organizationName}</strong> on Wotlwedu.</p>
-         <p>If you already use Google sign-in with this email address, continue here:</p>
-         <p><a href="${inviteUrl}">${inviteUrl}</a></p>
-         <p>${expiryText}</p>
-         <p>If you did not expect this invitation, you can ignore this email. ${buildSupportCopy()}</p>`
-      ),
-    };
+    const messageDetails = buildOrganizationInviteMessage(
+      emailAddress,
+      organizationName,
+      inviteToken,
+      frontendUrl,
+      expiresAt
+    );
     sendEmail(messageDetails).catch((err) => {
       reject(new Error("Failed to send organization invite email: " + err));
     });
@@ -299,34 +381,12 @@ module.exports.sendPublicPollInviteMessage = (
   inviteToken = null
 ) => {
   return new Promise((resolve, reject) => {
-    const inviteUrl =
-      `${Config.baseFrontendUrl}/public/election/${encodeURIComponent(publicToken)}` +
-      (inviteToken ? `?invite=${encodeURIComponent(inviteToken)}` : "");
-    const textBody = `Hi there,
-
-You have been invited to participate in the Wotlwedu poll "${pollName}".
-
-Open the poll here:
-
-${inviteUrl}
-
-If you no longer want invites like this, contact ${Config.supportEmail}.
-
-Best regards,
-
-Wotlwedu admin team`;
-
-    const messageDetails = {
-      to: emailAddress,
-      subject: `Invitation to participate in "${pollName}"`,
-      text: textBody,
-      html: wrapHtmlMessage(
-        `You're invited to "${pollName}"`,
-        `<p>You have been invited to participate in the Wotlwedu poll <strong>${pollName}</strong>.</p>
-         <p><a href="${inviteUrl}">${inviteUrl}</a></p>
-         <p>If you no longer want invites like this, contact ${Config.supportEmail}.</p>`
-      ),
-    };
+    const messageDetails = buildPublicPollInviteMessage(
+      emailAddress,
+      pollName,
+      publicToken,
+      inviteToken
+    );
 
     sendEmail(messageDetails).catch((err) => {
       reject(new Error("Failed to send public poll invite email: " + err));
