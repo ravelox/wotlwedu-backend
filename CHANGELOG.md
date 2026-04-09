@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.41 - 2026-04-08
+- Add support auth observability via `GET /support/auth/overview` and `GET /support/auth/audit`, including scoped aggregate metrics and paged audit feeds for admin/support workflows.
+- Add structured stdout auth-audit logging behind `WOTLWEDU_AUTH_AUDIT_STDOUT` so deployed environments can forward auth/invite events into log pipelines without bypassing database persistence.
+- Add linked sign-in method visibility and unlink support plus user/organization auth-audit query endpoints for admin/support tooling.
+- Return structured organization-invite conflict diagnostics when an invite target already belongs to another organization.
+- Add support email and deep-link configuration for invite/password-reset/confirmation email templates, ship HTML mail output, and document the corresponding environment variables in `.env.example`.
+- Reconcile release metadata so the documented backend version matches the shipped auth/support feature set.
+
 ## 0.0.40 - 2026-03-28
 - Add a real poll-creation tutorial API via `POST /tutorial/poll/start` and `GET /tutorial/poll` that persists per-user tutorial state, suggests exact resource names, binds to the actual list/group/poll created in the existing UI, and computes progress from real items, audience members, votes, and stats.
 - Add tutorial lifecycle controls via `POST /tutorial/poll/skip` and `POST /tutorial/poll/enable`, preserving skipped state until the user explicitly resumes or restarts.
@@ -39,13 +47,6 @@
 - Add persistent `authaudits` records for password sign-in, social sign-in, deferred link confirmation, invite lookup, invite acceptance, invite create/resend/revoke flows, and blocked auth edge cases.
 - Add dedicated rate limits for invite lookup, invite management, and deferred social-link confirmation on top of the existing auth throttles.
 - Refuse automatic social linking when a verified social sign-in matches an existing non-password account, returning a manual-support path instead of risking ambiguous account state.
-
-## Unreleased
-- Add support observability endpoints for aggregated auth/invite metrics and paged support audit feeds.
-- Add structured stdout auth-audit logging via `WOTLWEDU_AUTH_AUDIT_STDOUT`.
-- Add linked sign-in method visibility/unlink support at the user level, plus user/org auth audit query endpoints for admin/support tooling.
-- Return structured organization-invite conflict diagnostics when an invite target already belongs to another organization.
-- Add support email and deep-link configuration for invite/password-reset/confirmation email templates, plus HTML mail output and `.env.example`.
 
 ## 0.0.24 - 2026-03-24
 - Add organization invite default expiry policy via `WOTLWEDU_ORG_INVITE_EXPIRY_DAYS` and retain invite history with derived statuses for pending, accepted, revoked, and expired records.

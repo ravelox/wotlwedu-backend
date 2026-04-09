@@ -1,6 +1,6 @@
 {
   "name": "wotlwedu-backend",
-  "version": "0.0.40",
+  "version": "0.0.41",
   "description": "Puts important decisions to a vote",
   "main": "app.js",
   "scripts": {
