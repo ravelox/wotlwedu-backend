@@ -5,6 +5,7 @@ const statusResponse = require("../util/statusresponse");
 const Helpers = require("../util/helpers");
 const Security = require("../util/security");
 const LoginController = require("../controllers/login");
+const AdminController = require("../controllers/admin");
 const Mailer = require("../util/mailer");
 const Config = require("../config/wotlwedu");
 
@@ -97,6 +98,26 @@ module.exports = (addTest) => {
   addTest("login org-name builder uses initials", () => {
     const build = LoginController._buildProvisionedOrganizationName;
     assert.strictEqual(build("John", "Smith"), "J S's Organization");
+  });
+
+  addTest("admin config snapshot redacts sensitive values and serializes functions", () => {
+    const redacted = AdminController._redactConfig({
+      jwtSecret: "super-secret",
+      db_password: "database-secret",
+      mailgunApiKey: "mail-api-secret",
+      passwordResetLinkBaseUrl: "https://reset.example",
+      app_port: 9876,
+      corsOrigin: ["http://localhost:5173"],
+      mailerProvider: { sendEmail() {} },
+    });
+
+    assert.strictEqual(redacted.jwtSecret, "[redacted]");
+    assert.strictEqual(redacted.db_password, "[redacted]");
+    assert.strictEqual(redacted.mailgunApiKey, "[redacted]");
+    assert.strictEqual(redacted.passwordResetLinkBaseUrl, "https://reset.example");
+    assert.strictEqual(redacted.app_port, 9876);
+    assert.deepStrictEqual(redacted.corsOrigin, ["http://localhost:5173"]);
+    assert.strictEqual(redacted.mailerProvider.sendEmail, "[function]");
   });
 
   addTest("mailer confirmation payload uses configured support email and confirmation link", () => {

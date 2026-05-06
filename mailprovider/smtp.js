@@ -2,15 +2,20 @@ const nodemailer = require("nodemailer");
 const Config = require("../config/wotlwedu");
 const toBool = require("../util/tobool");
 
-const transport = nodemailer.createTransport({
+const transportOptions = {
   host: process.env.WOTLWEDU_SMTP_HOST || "localhost",
   port: process.env.WOTLWEDU_SMTP_PORT || 465,
   secure: toBool(process.env.WOTLWEDU_SMTP_SECURE || false),
-  auth: {
-    user: process.env.WOTLWEDU_SMTP_USER || "user",
-    pass: process.env.WOTLWEDU_SMTP_PASSWORD || "password",
-  },
-});
+};
+
+if (process.env.WOTLWEDU_SMTP_USER || process.env.WOTLWEDU_SMTP_PASSWORD) {
+  transportOptions.auth = {
+    user: process.env.WOTLWEDU_SMTP_USER || "",
+    pass: process.env.WOTLWEDU_SMTP_PASSWORD || "",
+  };
+}
+
+const transport = nodemailer.createTransport(transportOptions);
 
 function sendEmail(messageDetails) {
   return new Promise((resolve, reject) => {

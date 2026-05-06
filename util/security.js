@@ -279,6 +279,11 @@ module.exports.canAccessWorkgroup = async (req, workgroupOrId) => {
   return await module.exports.isMemberOfWorkgroup(req.authUserId, workgroup.id);
 };
 
+module.exports.checkSystemAdmin = (req, res, next) => {
+  if (req.isSystemAdmin === true) return next();
+  return StatusResponse(res, 403, "System administrator access required");
+};
+
 module.exports.checkCapability = function (objectToCheck, opList) {
   return async function (req, res, next) {
     const userId = req.authUserId;
