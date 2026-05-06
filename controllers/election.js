@@ -411,6 +411,7 @@ module.exports.getAllElection = async (req, res, next) => {
     whereCondition = {
       ...whereCondition,
       [Op.or]: [
+        { id: { [Op.like]: "%" + userFilter + "%" } },
         { name: { [Op.like]: "%" + userFilter + "%" } },
         { description: { [Op.like]: "%" + userFilter + "%" } },
       ],

@@ -145,7 +145,10 @@ module.exports.getAllOrganization = async (req, res, next) => {
     const whereCondition = {};
     if (req.isAdmin !== true) whereCondition.id = req.authOrganizationId;
     if (req.query.filter) {
-      whereCondition[Op.or] = [{ name: { [Op.like]: "%" + req.query.filter + "%" } }];
+      whereCondition[Op.or] = [
+        { id: { [Op.like]: "%" + req.query.filter + "%" } },
+        { name: { [Op.like]: "%" + req.query.filter + "%" } },
+      ];
     }
 
     const { count, rows } = await Organization.findAndCountAll({

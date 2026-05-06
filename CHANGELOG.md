@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.0.44 - 2026-05-05
+- Allow list filters to match resource IDs across backend collection endpoints.
+
 ## 0.0.43 - 2026-05-05
 - Rename persisted terminology tables to `people`, `circles`, `pictures`, `spaces`, `polls`, and matching join-table names via update module `update-0019`.
 - Update poll notification status copy from election/picture terminology to poll/picture terminology.

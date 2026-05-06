@@ -68,7 +68,10 @@ module.exports.getAllCapability = (req, res, next) => {
 
   if (userFilter) {
     whereCondition = {
-      [Op.or]: [{ name: { [Op.like]: "%" + userFilter + "%" } }],
+      [Op.or]: [
+        { id: { [Op.like]: "%" + userFilter + "%" } },
+        { name: { [Op.like]: "%" + userFilter + "%" } },
+      ],
     };
   }
   options.where = whereCondition;

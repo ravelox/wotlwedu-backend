@@ -135,6 +135,10 @@ module.exports.getAllVote = (req, res, next) => {
   if (userFilter) {
     whereCondition = {
       [Op.or]: [
+        { id: { [Op.like]: "%" + userFilter + "%" } },
+        { electionId: { [Op.like]: "%" + userFilter + "%" } },
+        { itemId: { [Op.like]: "%" + userFilter + "%" } },
+        { userId: { [Op.like]: "%" + userFilter + "%" } },
         { "$election.name$": { [Op.like]: "%" + userFilter + "%" } },
         { "$item.name$": { [Op.like]: "%" + userFilter + "%" } },
       ],

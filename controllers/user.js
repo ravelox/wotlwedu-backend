@@ -381,6 +381,7 @@ exports.getAllUser = async (req, res, next) => {
       whereCondition = {
         protected: false,
         [Op.or]: [
+          { id: { [Op.like]: "%" + userFilter + "%" } },
           { firstName: { [Op.like]: "%" + userFilter + "%" } },
           { lastName: { [Op.like]: "%" + userFilter + "%" } },
           { email: { [Op.like]: "%" + userFilter + "%" } },
