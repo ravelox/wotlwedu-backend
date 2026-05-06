@@ -9,7 +9,7 @@ const voteController = require("../controllers/vote");
 // Get all the next available votes (for the logged in user)
 router.get("/next/all", Security.checkCapability("vote",["view"]), voteController.getNextElectionVote)
 // Get votes for a specific election
-router.get("/election/:electionId", Security.checkCapability("vote",["view"]),voteController.getAllVote);
+router.get("/poll/:electionId", Security.checkCapability("vote",["view"]),voteController.getAllVote);
 // Get the next available vote ( for the logged in user ) for a specific election
 router.get("/:electionId/next", Security.checkCapability("vote",["view"]), voteController.getNextElectionVote)
 // View single vote or all votes

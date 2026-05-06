@@ -47,6 +47,7 @@ const Image = database.define("image", {
   },
 },
 {
+  tableName: "pictures",
   indexes: [{ fields: ["creator"] }, { fields: ["workgroupId"] }],
 });
 

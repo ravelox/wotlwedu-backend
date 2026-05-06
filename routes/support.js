@@ -38,32 +38,32 @@ router.post(
 );
 
 router.get(
-  "/users/:userId/signin-method",
+  "/people/:userId/signin-method",
   Security.checkCapability("user", ["view"]),
   userController.getUserSignInMethods
 );
 router.delete(
-  "/users/:userId/signin-method/:identityId",
+  "/people/:userId/signin-method/:identityId",
   Security.checkCapability("user", ["edit"]),
   userController.deleteUserSignInMethod
 );
 router.get(
-  "/users/:userId/authaudit",
+  "/people/:userId/authaudit",
   Security.checkCapability("user", ["view"]),
   userController.getUserAuthAudit
 );
 router.get(
-  "/users/:userId/ownership/preview",
+  "/people/:userId/ownership/preview",
   Security.checkCapability("user", ["edit"]),
   userController.getOwnershipTransferPreview
 );
 router.post(
-  "/users/:userId/ownership/transfer",
+  "/people/:userId/ownership/transfer",
   Security.checkCapability("user", ["edit"]),
   userController.postOwnershipTransfer
 );
 router.post(
-  "/users/:userId/tutorial/poll/enable",
+  "/people/:userId/tutorial/poll/enable",
   Security.checkCapability("user", ["edit"]),
   tutorialController.postEnablePollTutorialForUser
 );
@@ -98,44 +98,44 @@ router.delete(
 );
 
 router.get(
-  "/elections/public/trust",
+  "/polls/public/trust",
   Security.checkCapability("election", ["view"]),
   publicElectionController.getPublicPollTrustProfile
 );
 router.get(
-  "/elections/:electionId/public/stats",
+  "/polls/:electionId/public/stats",
   Security.checkCapability("election", ["view"]),
   publicElectionController.getPublicElectionStats
 );
 router.get(
-  "/elections/:electionId/invite",
+  "/polls/:electionId/invite",
   Security.checkCapability("election", ["view"]),
   publicElectionController.getPublicElectionInvites
 );
 router.post(
-  "/elections/:electionId/public/enable",
+  "/polls/:electionId/public/enable",
   Security.checkCapability("election", ["edit"]),
   publicElectionController.postEnablePublicElection
 );
 router.post(
-  "/elections/:electionId/public/disable",
+  "/polls/:electionId/public/disable",
   Security.checkCapability("election", ["edit"]),
   publicElectionController.postDisablePublicElection
 );
 router.post(
-  "/elections/:electionId/invite",
+  "/polls/:electionId/invite",
   publicInviteRateLimit,
   Security.checkCapability("election", ["edit"]),
   publicElectionController.postPublicElectionInvite
 );
 router.post(
-  "/elections/:electionId/invite/:inviteId/resend",
+  "/polls/:electionId/invite/:inviteId/resend",
   publicInviteRateLimit,
   Security.checkCapability("election", ["edit"]),
   publicElectionController.postResendPublicElectionInvite
 );
 router.delete(
-  "/elections/:electionId/invite/:inviteId",
+  "/polls/:electionId/invite/:inviteId",
   publicInviteRateLimit,
   Security.checkCapability("election", ["edit"]),
   publicElectionController.deletePublicElectionInvite

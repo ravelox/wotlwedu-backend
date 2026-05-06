@@ -1,4 +1,6 @@
 const Config = require("../config/wotlwedu")
+const FS = require("fs");
+const Path = require("path");
 const database = require("../util/database")
 const {
   DATABASE_VERSION_METADATA_KEY,
@@ -38,6 +40,9 @@ const PublicPollInvite = require("./publicpollinvite");
 const ContactSuppression = require("./contactsuppression");
 const TrustProfile = require("./trustprofile");
 const AbuseAudit = require("./abuseaudit");
+const TerminologyUpdate = require("../updates/update-0019");
+
+let createdFreshSchema = false;
 
 async function initialiseDatabaseMetadata() {
   await Metadata.sync();
@@ -56,9 +61,50 @@ async function initialiseDatabaseMetadata() {
   }
 }
 
-database.sync({force: Config.db_force_sync})
+async function migrateLegacyTerminologyTables() {
+  if (Config.db_force_sync) {
+    createdFreshSchema = true;
+    return;
+  }
+
+  const queryInterface = database.getQueryInterface();
+  const tables = await queryInterface.showAllTables();
+  createdFreshSchema = tables.length === 0;
+
+  TerminologyUpdate.init(queryInterface);
+  await TerminologyUpdate.renameTerminologyTables(queryInterface);
+}
+
+async function backfillAppliedUpdateMetadataForFreshSchema() {
+  if (!createdFreshSchema) {
+    return;
+  }
+
+  const updatePath = Path.join(__dirname, "..", "updates");
+  const updateFiles = FS.readdirSync(updatePath)
+    .filter((entry) => /^update-\d+\.js$/.test(entry))
+    .sort();
+
+  for (const fileName of updateFiles) {
+    const updateModule = require(Path.join(updatePath, fileName));
+    if (!updateModule.id) continue;
+
+    const existing = await Metadata.findByPk(updateModule.id);
+    if (existing) continue;
+
+    await Metadata.create({
+      name: updateModule.id,
+      value: "applied",
+      comment: updateModule.comment || null,
+    });
+  }
+}
+
+migrateLegacyTerminologyTables()
+  .then(() => database.sync({force: Config.db_force_sync}))
   .then(async () => {
     await initialiseDatabaseMetadata();
+    await backfillAppliedUpdateMetadataForFreshSchema();
     console.log("Done")
   })
   .catch(err => console.log(err));

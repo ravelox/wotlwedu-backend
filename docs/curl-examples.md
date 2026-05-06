@@ -7,8 +7,9 @@ This document provides copy/paste `curl` examples for every HTTP endpoint mounte
 Set these once in your shell:
 
 ```sh
-API="http://localhost:9876"
-TOKEN="REPLACE_ME"   # Bearer token from /login
+ORIGIN="http://localhost:9876"
+API="/v1"
+TOKEN="REPLACE_ME"   # Bearer token from /v1/login
 ```
 
 Authenticated requests use:
@@ -20,7 +21,7 @@ curl -H "Authorization: Bearer $TOKEN" ...
 Notes:
 - Unless stated otherwise, endpoints require authentication (the server mounts most routers behind `Security.checkAuthentication` in `app.js`).
 - `StatusResponse` payloads look like: `{ "status": 200, "message": "OK", "data": { ... } }`.
-- **Workgroup scoping** (items/images/lists/elections): admins can target a workgroup by passing `workgroupId` in the JSON body (create/update) or query string (list). The organization is implied by the workgroup.
+- **Space scoping** (items/pictures/lists/polls): admins can target a space by passing `spaceId` in the JSON body (create/update) or query string (list). The organization is implied by the space.
 - **Category ownership**: `categoryId` must reference a category created by the authenticated user.
 - **Collapsible category grouping**: collection endpoints for category-enabled resources support `?collapsible=true`, returning an additional grouped `menu` field.
 
@@ -31,24 +32,24 @@ Notes:
 ### `GET /favicon.ico`
 
 ```sh
-curl -i "$API/favicon.ico"
+curl -i "$ORIGIN/favicon.ico"
 ```
 
 ### `GET /docs` (static docs directory)
 
 ```sh
-curl -sS "$API/docs/openapi.yaml" | head
+curl -sS "$ORIGIN/docs/openapi.yaml" | head
 ```
 
 ```sh
-curl -sS "$API/docs/index.html" | head
+curl -sS "$ORIGIN/docs/index.html" | head
 ```
 
 ---
 
 ## Ping
 
-### `GET /ping`
+### `GET /v1/ping`
 
 ```sh
 curl -sS "$API/ping" -H "Authorization: Bearer $TOKEN"
@@ -58,7 +59,7 @@ curl -sS "$API/ping" -H "Authorization: Bearer $TOKEN"
 
 ## Login
 
-### `POST /login` (get authToken + refreshToken)
+### `POST /v1/login` (get authToken + refreshToken)
 
 ```sh
 curl -sS "$API/login" \
@@ -66,7 +67,7 @@ curl -sS "$API/login" \
   -d '{"email":"root@localhost.localdomain","password":"REPLACE_ME"}'
 ```
 
-### `POST /login/refresh` (refresh authToken)
+### `POST /v1/login/refresh` (refresh authToken)
 
 ```sh
 curl -sS "$API/login/refresh" \
@@ -74,7 +75,7 @@ curl -sS "$API/login/refresh" \
   -d '{"refreshToken":"REPLACE_ME"}'
 ```
 
-### `POST /login/resetreq` (request password reset email)
+### `POST /v1/login/resetreq` (request password reset email)
 
 ```sh
 curl -sS "$API/login/resetreq" \
@@ -82,7 +83,7 @@ curl -sS "$API/login/resetreq" \
   -d '{"email":"user@example.com"}'
 ```
 
-### `PUT /login/password/:userid` (complete password reset)
+### `PUT /v1/login/password/:userid` (complete password reset)
 
 ```sh
 USER_ID="user_000"
@@ -91,19 +92,19 @@ curl -sS "$API/login/password/$USER_ID" \
   -d '{"token":"REPLACE_ME","password":"NewPasswordHere"}'
 ```
 
-### `POST /login/2fa` (enable 2FA; requires auth)
+### `POST /v1/login/2fa` (enable 2FA; requires auth)
 
 ```sh
 curl -sS "$API/login/2fa" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `POST /login/gentoken` (generate 2FA verification token; requires auth)
+### `POST /v1/login/gentoken` (generate 2FA verification token; requires auth)
 
 ```sh
 curl -sS "$API/login/gentoken" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `POST /login/testtoken` (system-admin testing token mint; requires auth)
+### `POST /v1/login/testtoken` (system-admin testing token mint; requires auth)
 
 ```sh
 curl -sS "$API/login/testtoken" \
@@ -121,7 +122,7 @@ curl -sS "$API/support/session/testtoken" \
   -d '{"userId":"user_000","expiresInMinutes":120}'
 ```
 
-### `POST /login/testtoken/revoke` (revoke a previously minted test token; requires auth)
+### `POST /v1/login/testtoken/revoke` (revoke a previously minted test token; requires auth)
 
 ```sh
 curl -sS "$API/login/testtoken/revoke" \
@@ -139,7 +140,7 @@ curl -sS "$API/support/session/testtoken/revoke" \
   -d '{"tokenId":"wotlwedu_000"}'
 ```
 
-### `POST /login/verify2fa` (verify 2FA)
+### `POST /v1/login/verify2fa` (verify 2FA)
 
 This route is mounted with `Security.bypassCheck` and can be called without an Authorization header.
 
@@ -153,7 +154,7 @@ curl -sS "$API/login/verify2fa" \
 
 ## Register
 
-### `POST /register` (request registration)
+### `POST /v1/register` (request registration)
 
 ```sh
 curl -sS "$API/register" \
@@ -161,7 +162,7 @@ curl -sS "$API/register" \
   -d '{"email":"new.user@example.com","firstName":"New","lastName":"User","password":"REPLACE_ME"}'
 ```
 
-### `POST /register/confirm/:tokenId` (confirm registration)
+### `POST /v1/register/confirm/:tokenId` (confirm registration)
 
 ```sh
 TOKEN_ID="wotlwedu_000"
@@ -172,20 +173,20 @@ curl -sS "$API/register/confirm/$TOKEN_ID" -X POST
 
 ## Organization
 
-### `GET /organization`
+### `GET /v1/organization`
 
 ```sh
 curl -sS "$API/organization" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /organization/:organizationId`
+### `GET /v1/organization/:organizationId`
 
 ```sh
 ORG_ID="org_000"
 curl -sS "$API/organization/$ORG_ID" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `POST /organization`
+### `POST /v1/organization`
 
 ```sh
 curl -sS "$API/organization" \
@@ -194,7 +195,7 @@ curl -sS "$API/organization" \
   -d '{"name":"Example Org","description":"Example"}'
 ```
 
-### `PUT /organization/:organizationId`
+### `PUT /v1/organization/:organizationId`
 
 ```sh
 ORG_ID="org_000"
@@ -204,7 +205,7 @@ curl -sS "$API/organization/$ORG_ID" \
   -d '{"name":"Renamed Org"}'
 ```
 
-### `DELETE /organization/:organizationId`
+### `DELETE /v1/organization/:organizationId`
 
 ```sh
 ORG_ID="org_000"
@@ -213,51 +214,51 @@ curl -sS "$API/organization/$ORG_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
 
 ## Support
 
-### `GET /support/auth/overview`
+### `GET /v1/support/auth/overview`
 
 ```sh
 curl -sS "$API/support/auth/overview?organizationId=org_000&days=7" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /support/auth/audit`
+### `GET /v1/support/auth/audit`
 
 ```sh
 curl -sS "$API/support/auth/audit?organizationId=org_000&outcome=failure&items=25" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /support/publicpoll/overview`
+### `GET /v1/support/publicpoll/overview`
 
 ```sh
 curl -sS "$API/support/publicpoll/overview?organizationId=org_000&days=7&eventType=public_poll_reported" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /support/publicpoll/audit`
+### `GET /v1/support/publicpoll/audit`
 
 ```sh
 curl -sS "$API/support/publicpoll/audit?organizationId=org_000&items=25&electionId=election_000" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /support/users/:userId/signin-method`
+### `GET /v1/support/people/:userId/signin-method`
 
 ```sh
 USER_ID="user_000"
-curl -sS "$API/support/users/$USER_ID/signin-method" \
+curl -sS "$API/support/people/$USER_ID/signin-method" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /support/users/:userId/authaudit`
+### `GET /v1/support/people/:userId/authaudit`
 
 ```sh
 USER_ID="user_000"
-curl -sS "$API/support/users/$USER_ID/authaudit?items=25" \
+curl -sS "$API/support/people/$USER_ID/authaudit?items=25" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /support/organizations/:organizationId/invite`
+### `GET /v1/support/organizations/:organizationId/invite`
 
 ```sh
 ORG_ID="org_000"
@@ -265,7 +266,7 @@ curl -sS "$API/support/organizations/$ORG_ID/invite?status=pending" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-### `POST /support/organizations/:organizationId/invite`
+### `POST /v1/support/organizations/:organizationId/invite`
 
 ```sh
 ORG_ID="org_000"
@@ -275,18 +276,18 @@ curl -sS "$API/support/organizations/$ORG_ID/invite" \
   -d '{"email":"person@example.com"}'
 ```
 
-### `GET /support/elections/public/trust`
+### `GET /v1/support/polls/public/trust`
 
 ```sh
-curl -sS "$API/support/elections/public/trust" \
+curl -sS "$API/support/polls/public/trust" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /support/elections/:electionId/public/stats`
+### `GET /v1/support/polls/:electionId/public/stats`
 
 ```sh
 ELECTION_ID="election_000"
-curl -sS "$API/support/elections/$ELECTION_ID/public/stats" \
+curl -sS "$API/support/polls/$ELECTION_ID/public/stats" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -294,331 +295,331 @@ curl -sS "$API/support/elections/$ELECTION_ID/public/stats" \
 
 ## Workgroup
 
-### `GET /workgroup` (supports `filter`, paging, and `detail=user,category`)
+### `GET /v1/space` (supports `filter`, paging, and `detail=user,category`)
 
 ```sh
-curl -sS "$API/workgroup?filter=Team&page=1&items=50&detail=user,category" \
+curl -sS "$API/space?filter=Team&page=1&items=50&detail=user,category" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /workgroup/:workgroupId`
+### `GET /v1/space/:spaceId`
 
 ```sh
-WORKGROUP_ID="workgroup_000"
-curl -sS "$API/workgroup/$WORKGROUP_ID?detail=user,category" -H "Authorization: Bearer $TOKEN"
+WORKGROUP_ID="space_000"
+curl -sS "$API/space/$WORKGROUP_ID?detail=user,category" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `POST /workgroup` (organization admin or system admin)
+### `POST /v1/space` (organization admin or system admin)
 
 System admins can specify `organizationId` explicitly; org admins typically omit it and use their own org context.
 
 ```sh
-curl -sS "$API/workgroup" \
+curl -sS "$API/space" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"name":"Workgroup A","description":"Example","organizationId":"org_000"}'
 ```
 
-### `PUT /workgroup/:workgroupId`
+### `PUT /v1/space/:spaceId`
 
 ```sh
-WORKGROUP_ID="workgroup_000"
-curl -sS "$API/workgroup/$WORKGROUP_ID" \
+WORKGROUP_ID="space_000"
+curl -sS "$API/space/$WORKGROUP_ID" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"description":"Updated description"}'
 ```
 
-### `DELETE /workgroup/:workgroupId`
+### `DELETE /v1/space/:spaceId`
 
 ```sh
-WORKGROUP_ID="workgroup_000"
-curl -sS "$API/workgroup/$WORKGROUP_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
+WORKGROUP_ID="space_000"
+curl -sS "$API/space/$WORKGROUP_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
 ```
 
-### `PUT /workgroup/:workgroupId/user/:userId` (add user to workgroup)
+### `PUT /v1/space/:spaceId/person/:userId` (add user to space)
 
 ```sh
-WORKGROUP_ID="workgroup_000"
+WORKGROUP_ID="space_000"
 USER_ID="user_000"
-curl -sS "$API/workgroup/$WORKGROUP_ID/user/$USER_ID" \
+curl -sS "$API/space/$WORKGROUP_ID/person/$USER_ID" \
   -X PUT \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-### `DELETE /workgroup/:workgroupId/user/:userId` (remove user from workgroup)
+### `DELETE /v1/space/:spaceId/person/:userId` (remove user from space)
 
 ```sh
-WORKGROUP_ID="workgroup_000"
+WORKGROUP_ID="space_000"
 USER_ID="user_000"
-curl -sS "$API/workgroup/$WORKGROUP_ID/user/$USER_ID" \
+curl -sS "$API/space/$WORKGROUP_ID/person/$USER_ID" \
   -X DELETE \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-### `PUT /workgroup/:workgroupId/bulkuseradd` (bulk add users)
+### `PUT /v1/space/:spaceId/bulkpersonadd` (bulk add people)
 
 ```sh
-WORKGROUP_ID="workgroup_000"
-curl -sS "$API/workgroup/$WORKGROUP_ID/bulkuseradd" \
+WORKGROUP_ID="space_000"
+curl -sS "$API/space/$WORKGROUP_ID/bulkpersonadd" \
   -X PUT \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"users":["user_001","user_002"]}'
+  -d '{"personList":["user_001","user_002"]}'
 ```
 
-### `PUT /workgroup/:workgroupId/bulkuserdel` (bulk remove users)
+### `PUT /v1/space/:spaceId/bulkpersondel` (bulk remove people)
 
 ```sh
-WORKGROUP_ID="workgroup_000"
-curl -sS "$API/workgroup/$WORKGROUP_ID/bulkuserdel" \
+WORKGROUP_ID="space_000"
+curl -sS "$API/space/$WORKGROUP_ID/bulkpersondel" \
   -X PUT \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"users":["user_001","user_002"]}'
+  -d '{"personList":["user_001","user_002"]}'
 ```
 
 ---
 
 ## Group (Election Audience Groups)
 
-Groups are collections of users used to select election voters (separate from workgroups).
+Circles are collections of people used to select poll voters (separate from spaces).
 
-### `GET /group`
+### `GET /v1/circle`
 
 ```sh
-curl -sS "$API/group?page=1&items=50" -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/circle?page=1&items=50" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /group/:groupId`
+### `GET /v1/circle/:groupId`
 
 ```sh
 GROUP_ID="group_000"
-curl -sS "$API/group/$GROUP_ID?detail=user,category" -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/circle/$GROUP_ID?detail=user,category" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `POST /group`
+### `POST /v1/circle`
 
 ```sh
-curl -sS "$API/group" \
+curl -sS "$API/circle" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"name":"Voters","description":"Audience","organizationId":"org_000"}'
 ```
 
-### `PUT /group/:groupId`
+### `PUT /v1/circle/:groupId`
 
 ```sh
 GROUP_ID="group_000"
-curl -sS "$API/group/$GROUP_ID" \
+curl -sS "$API/circle/$GROUP_ID" \
   -X PUT \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"description":"Updated"}'
 ```
 
-### `DELETE /group/:groupId`
+### `DELETE /v1/circle/:groupId`
 
 ```sh
 GROUP_ID="group_000"
-curl -sS "$API/group/$GROUP_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/circle/$GROUP_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
 ```
 
-### `PUT /group/:groupId/user/:userId` (add user to group)
+### `PUT /v1/circle/:groupId/person/:userId` (add user to group)
 
 ```sh
 GROUP_ID="group_000"
 USER_ID="user_000"
-curl -sS "$API/group/$GROUP_ID/user/$USER_ID" -X PUT -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/circle/$GROUP_ID/person/$USER_ID" -X PUT -H "Authorization: Bearer $TOKEN"
 ```
 
-### `DELETE /group/:groupId/user/:userId` (remove user from group)
+### `DELETE /v1/circle/:groupId/person/:userId` (remove user from group)
 
 ```sh
 GROUP_ID="group_000"
 USER_ID="user_000"
-curl -sS "$API/group/$GROUP_ID/user/$USER_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/circle/$GROUP_ID/person/$USER_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
 ```
 
-### `PUT /group/:groupId/bulkuseradd` (bulk add users)
+### `PUT /v1/circle/:groupId/bulkpersonadd` (bulk add people)
 
 ```sh
 GROUP_ID="group_000"
-curl -sS "$API/group/$GROUP_ID/bulkuseradd" \
+curl -sS "$API/circle/$GROUP_ID/bulkpersonadd" \
   -X PUT \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"users":["user_001","user_002"]}'
+  -d '{"personList":["user_001","user_002"]}'
 ```
 
-### `PUT /group/:groupId/bulkuserdel` (bulk remove users)
+### `PUT /v1/circle/:groupId/bulkpersondel` (bulk remove people)
 
 ```sh
 GROUP_ID="group_000"
-curl -sS "$API/group/$GROUP_ID/bulkuserdel" \
+curl -sS "$API/circle/$GROUP_ID/bulkpersondel" \
   -X PUT \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"users":["user_001","user_002"]}'
+  -d '{"personList":["user_001","user_002"]}'
 ```
 
 ---
 
 ## User
 
-### `GET /user` (list users)
+### `GET /v1/person` (list users)
 
 ```sh
-curl -sS "$API/user?page=1&items=50" -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/person?page=1&items=50" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /user/:userId`
+### `GET /v1/person/:userId`
 
 ```sh
 USER_ID="user_000"
-curl -sS "$API/user/$USER_ID" -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/person/$USER_ID" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `POST /user` (add user)
+### `POST /v1/person` (add user)
 
 ```sh
-curl -sS "$API/user" \
+curl -sS "$API/person" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"email":"user@example.com","firstName":"A","lastName":"User","password":"REPLACE_ME","organizationId":"org_000"}'
 ```
 
-### `PUT /user/:userId` (update user)
+### `PUT /v1/person/:userId` (update user)
 
 ```sh
 USER_ID="user_000"
-curl -sS "$API/user/$USER_ID" \
+curl -sS "$API/person/$USER_ID" \
   -X PUT \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"organizationAdmin":true}'
 ```
 
-### `DELETE /user/:userId` (delete user)
+### `DELETE /v1/person/:userId` (delete user)
 
 ```sh
 USER_ID="user_000"
-curl -sS "$API/user/$USER_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/person/$USER_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
 ```
 
-### `DELETE /user/:userId/reassign/:ownerId` (delete + reassign ownership)
+### `DELETE /v1/person/:userId/reassign/:ownerId` (delete + reassign ownership)
 
 ```sh
 USER_ID="user_000"
 OWNER_ID="user_999"
-curl -sS "$API/user/$USER_ID/reassign/$OWNER_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/person/$USER_ID/reassign/$OWNER_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /user/:userId/ownership/preview` (inspect owner transfer impact)
+### `GET /v1/person/:userId/ownership/preview` (inspect owner transfer impact)
 
 ```sh
 USER_ID="user_000"
 OWNER_ID="user_999"
-curl -sS "$API/user/$USER_ID/ownership/preview?ownerId=$OWNER_ID&includeLinked=true&resources=lists,elections" \
+curl -sS "$API/person/$USER_ID/ownership/preview?ownerId=$OWNER_ID&includeLinked=true&resources=lists,polls" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-### `POST /user/:userId/ownership/transfer` (apply owner transfer)
+### `POST /v1/person/:userId/ownership/transfer` (apply owner transfer)
 
 ```sh
 USER_ID="user_000"
 OWNER_ID="user_999"
-curl -sS "$API/user/$USER_ID/ownership/transfer" \
+curl -sS "$API/person/$USER_ID/ownership/transfer" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"ownerId":"'"$OWNER_ID"'","includeLinked":true,"resources":["lists","elections"]}'
+  -d '{"ownerId":"'"$OWNER_ID"'","includeLinked":true,"resources":["lists","polls"]}'
 ```
 
 ### Friendships
 
-#### `GET /user/friend` (friends for current user)
+#### `GET /v1/person/friend` (friends for current user)
 
 ```sh
-curl -sS "$API/user/friend" -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/person/friend" -H "Authorization: Bearer $TOKEN"
 ```
 
-#### `GET /user/:userId/friend` (friends for specific user)
+#### `GET /v1/person/:userId/friend` (friends for specific user)
 
 ```sh
 USER_ID="user_000"
-curl -sS "$API/user/$USER_ID/friend" -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/person/$USER_ID/friend" -H "Authorization: Bearer $TOKEN"
 ```
 
-#### `POST /user/request` (send friend request using body)
+#### `POST /v1/person/request` (send friend request using body)
 
 ```sh
-curl -sS "$API/user/request" \
+curl -sS "$API/person/request" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"friendId":"user_123"}'
 ```
 
-#### `POST /user/request/:friendId` (send friend request using path)
+#### `POST /v1/person/request/:friendId` (send friend request using path)
 
 ```sh
 FRIEND_ID="user_123"
-curl -sS "$API/user/request/$FRIEND_ID" -X POST -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/person/request/$FRIEND_ID" -X POST -H "Authorization: Bearer $TOKEN"
 ```
 
-#### `PUT /user/:userId/friend/:friendId` (add friend)
+#### `PUT /v1/person/:userId/friend/:friendId` (add friend)
 
 ```sh
 USER_ID="user_000"
 FRIEND_ID="user_123"
-curl -sS "$API/user/$USER_ID/friend/$FRIEND_ID" -X PUT -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/person/$USER_ID/friend/$FRIEND_ID" -X PUT -H "Authorization: Bearer $TOKEN"
 ```
 
-#### `POST /user/accept/:tokenId` (accept friend request)
+#### `POST /v1/person/accept/:tokenId` (accept friend request)
 
 ```sh
 TOKEN_ID="wotlwedu_000"
-curl -sS "$API/user/accept/$TOKEN_ID" -X POST -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/person/accept/$TOKEN_ID" -X POST -H "Authorization: Bearer $TOKEN"
 ```
 
-#### `DELETE /user/friend/:friendId` (delete relationship)
+#### `DELETE /v1/person/friend/:friendId` (delete relationship)
 
 ```sh
 FRIEND_ID="user_123"
-curl -sS "$API/user/friend/$FRIEND_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/person/friend/$FRIEND_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
 ```
 
-#### `DELETE /user/relationship/:relationshipId` (delete relationship by id)
+#### `DELETE /v1/person/relationship/:relationshipId` (delete relationship by id)
 
 ```sh
 REL_ID="rel_000"
-curl -sS "$API/user/relationship/$REL_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/person/relationship/$REL_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
 ```
 
-#### `PUT /user/block/:blockUser` (block user)
+#### `PUT /v1/person/block/:blockUser` (block user)
 
 ```sh
 BLOCK_USER_ID="user_123"
-curl -sS "$API/user/block/$BLOCK_USER_ID" -X PUT -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/person/block/$BLOCK_USER_ID" -X PUT -H "Authorization: Bearer $TOKEN"
 ```
 
 ---
 
 ## Role
 
-### `GET /role`
+### `GET /v1/role`
 
 ```sh
 curl -sS "$API/role?page=1&items=50" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /role/:roleId`
+### `GET /v1/role/:roleId`
 
 ```sh
 ROLE_ID="role_000"
 curl -sS "$API/role/$ROLE_ID" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `POST /role`
+### `POST /v1/role`
 
 ```sh
 curl -sS "$API/role" \
@@ -627,7 +628,7 @@ curl -sS "$API/role" \
   -d '{"name":"Example Role","description":"Example"}'
 ```
 
-### `PUT /role/:roleId`
+### `PUT /v1/role/:roleId`
 
 ```sh
 ROLE_ID="role_000"
@@ -638,7 +639,7 @@ curl -sS "$API/role/$ROLE_ID" \
   -d '{"description":"Updated"}'
 ```
 
-### `DELETE /role/:roleId`
+### `DELETE /v1/role/:roleId`
 
 ```sh
 ROLE_ID="role_000"
@@ -647,7 +648,7 @@ curl -sS "$API/role/$ROLE_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
 
 ### Manage capabilities on role
 
-#### `PUT /role/:roleId/cap/:capabilityId`
+#### `PUT /v1/role/:roleId/cap/:capabilityId`
 
 ```sh
 ROLE_ID="role_000"
@@ -655,7 +656,7 @@ CAP_ID="capa_000"
 curl -sS "$API/role/$ROLE_ID/cap/$CAP_ID" -X PUT -H "Authorization: Bearer $TOKEN"
 ```
 
-#### `DELETE /role/:roleId/cap/:capabilityId`
+#### `DELETE /v1/role/:roleId/cap/:capabilityId`
 
 ```sh
 ROLE_ID="role_000"
@@ -663,7 +664,7 @@ CAP_ID="capa_000"
 curl -sS "$API/role/$ROLE_ID/cap/$CAP_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
 ```
 
-#### `PUT /role/:roleId/bulkcapadd`
+#### `PUT /v1/role/:roleId/bulkcapadd`
 
 ```sh
 ROLE_ID="role_000"
@@ -674,7 +675,7 @@ curl -sS "$API/role/$ROLE_ID/bulkcapadd" \
   -d '{"capabilities":["capability.view.admin","item.add.owner"]}'
 ```
 
-#### `PUT /role/:roleId/bulkcapdel`
+#### `PUT /v1/role/:roleId/bulkcapdel`
 
 ```sh
 ROLE_ID="role_000"
@@ -687,62 +688,62 @@ curl -sS "$API/role/$ROLE_ID/bulkcapdel" \
 
 ### Manage users on role
 
-#### `PUT /role/:roleId/user/:userId`
+#### `PUT /v1/role/:roleId/person/:userId`
 
 ```sh
 ROLE_ID="role_000"
 USER_ID="user_000"
-curl -sS "$API/role/$ROLE_ID/user/$USER_ID" -X PUT -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/role/$ROLE_ID/person/$USER_ID" -X PUT -H "Authorization: Bearer $TOKEN"
 ```
 
-#### `DELETE /role/:roleId/user/:userId`
+#### `DELETE /v1/role/:roleId/person/:userId`
 
 ```sh
 ROLE_ID="role_000"
 USER_ID="user_000"
-curl -sS "$API/role/$ROLE_ID/user/$USER_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/role/$ROLE_ID/person/$USER_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
 ```
 
-#### `PUT /role/:roleId/bulkuseradd`
+#### `PUT /v1/role/:roleId/bulkpersonadd`
 
 ```sh
 ROLE_ID="role_000"
-curl -sS "$API/role/$ROLE_ID/bulkuseradd" \
+curl -sS "$API/role/$ROLE_ID/bulkpersonadd" \
   -X PUT \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"users":["user_001","user_002"]}'
+  -d '{"personList":["user_001","user_002"]}'
 ```
 
-#### `PUT /role/:roleId/bulkuserdel`
+#### `PUT /v1/role/:roleId/bulkpersondel`
 
 ```sh
 ROLE_ID="role_000"
-curl -sS "$API/role/$ROLE_ID/bulkuserdel" \
+curl -sS "$API/role/$ROLE_ID/bulkpersondel" \
   -X PUT \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"users":["user_001","user_002"]}'
+  -d '{"personList":["user_001","user_002"]}'
 ```
 
 ---
 
 ## Capability
 
-### `GET /capability`
+### `GET /v1/capability`
 
 ```sh
 curl -sS "$API/capability?page=1&items=50" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /capability/:capId`
+### `GET /v1/capability/:capId`
 
 ```sh
 CAP_ID="capa_000"
 curl -sS "$API/capability/$CAP_ID" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `POST /capability`
+### `POST /v1/capability`
 
 ```sh
 curl -sS "$API/capability" \
@@ -751,7 +752,7 @@ curl -sS "$API/capability" \
   -d '{"name":"item.view.owner","comment":"Example"}'
 ```
 
-### `PUT /capability/:capId`
+### `PUT /v1/capability/:capId`
 
 ```sh
 CAP_ID="capa_000"
@@ -762,7 +763,7 @@ curl -sS "$API/capability/$CAP_ID" \
   -d '{"comment":"Updated"}'
 ```
 
-### `DELETE /capability/:capId`
+### `DELETE /v1/capability/:capId`
 
 ```sh
 CAP_ID="capa_000"
@@ -773,20 +774,20 @@ curl -sS "$API/capability/$CAP_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
 
 ## Category
 
-### `GET /category`
+### `GET /v1/category`
 
 ```sh
 curl -sS "$API/category?page=1&items=50" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /category/:categoryId`
+### `GET /v1/category/:categoryId`
 
 ```sh
 CATEGORY_ID="cat_000"
 curl -sS "$API/category/$CATEGORY_ID" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `POST /category`
+### `POST /v1/category`
 
 ```sh
 curl -sS "$API/category" \
@@ -795,7 +796,7 @@ curl -sS "$API/category" \
   -d '{"name":"Food","object":"item","creator":"user_000"}'
 ```
 
-### `PUT /category/:categoryId`
+### `PUT /v1/category/:categoryId`
 
 ```sh
 CATEGORY_ID="cat_000"
@@ -806,7 +807,7 @@ curl -sS "$API/category/$CATEGORY_ID" \
   -d '{"name":"Updated"}'
 ```
 
-### `DELETE /category/:categoryId`
+### `DELETE /v1/category/:categoryId`
 
 ```sh
 CATEGORY_ID="cat_000"
@@ -817,25 +818,25 @@ curl -sS "$API/category/$CATEGORY_ID" -X DELETE -H "Authorization: Bearer $TOKEN
 
 ## Item
 
-### `GET /item` (list; supports `filter`, paging; optionally `workgroupId`)
+### `GET /v1/item` (list; supports `filter`, paging; optionally `spaceId`)
 
 ```sh
 curl -sS "$API/item?filter=Pizza&page=1&items=50" -H "Authorization: Bearer $TOKEN"
 ```
 
 ```sh
-WORKGROUP_ID="workgroup_000"
-curl -sS "$API/item?workgroupId=$WORKGROUP_ID&page=1&items=50" -H "Authorization: Bearer $TOKEN"
+WORKGROUP_ID="space_000"
+curl -sS "$API/item?spaceId=$WORKGROUP_ID&page=1&items=50" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /item/:itemId`
+### `GET /v1/item/:itemId`
 
 ```sh
 ITEM_ID="item_000"
 curl -sS "$API/item/$ITEM_ID" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /item/:itemId/notif/:notificationId` (bypass via notification)
+### `GET /v1/item/:itemId/notif/:notificationId` (bypass via notification)
 
 ```sh
 ITEM_ID="item_000"
@@ -843,7 +844,7 @@ NOTIF_ID="notif_000"
 curl -sS "$API/item/$ITEM_ID/notif/$NOTIF_ID" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `POST /item` (create; optionally for a workgroup)
+### `POST /v1/item` (create; optionally for a space)
 
 ```sh
 curl -sS "$API/item" \
@@ -853,14 +854,14 @@ curl -sS "$API/item" \
 ```
 
 ```sh
-WORKGROUP_ID="workgroup_000"
+WORKGROUP_ID="space_000"
 curl -sS "$API/item" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"name":"WG Item","description":"Example","workgroupId":"workgroup_000"}'
+  -d '{"name":"WG Item","description":"Example","spaceId":"space_000"}'
 ```
 
-### `PUT /item/:itemId` (update; can set `workgroupId` if authorized)
+### `PUT /v1/item/:itemId` (update; can set `spaceId` if authorized)
 
 ```sh
 ITEM_ID="item_000"
@@ -871,7 +872,7 @@ curl -sS "$API/item/$ITEM_ID" \
   -d '{"description":"Updated"}'
 ```
 
-### `DELETE /item/:itemId`
+### `DELETE /v1/item/:itemId`
 
 ```sh
 ITEM_ID="item_000"
@@ -880,7 +881,7 @@ curl -sS "$API/item/$ITEM_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
 
 ### Sharing
 
-#### `POST /item/share/:itemId/recipient/:recipient`
+#### `POST /v1/item/share/:itemId/recipient/:recipient`
 
 ```sh
 ITEM_ID="item_000"
@@ -890,7 +891,7 @@ curl -sS "$API/item/share/$ITEM_ID/recipient/$RECIPIENT_USER_ID" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-#### `POST /item/accept/:notificationId`
+#### `POST /v1/item/accept/:notificationId`
 
 ```sh
 NOTIF_ID="notif_000"
@@ -901,129 +902,129 @@ curl -sS "$API/item/accept/$NOTIF_ID" -X POST -H "Authorization: Bearer $TOKEN"
 
 ## Image
 
-### `GET /image` (list; optionally `workgroupId`)
+### `GET /v1/picture` (list; optionally `spaceId`)
 
 ```sh
-curl -sS "$API/image?page=1&items=50" -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/picture?page=1&items=50" -H "Authorization: Bearer $TOKEN"
 ```
 
 ```sh
-WORKGROUP_ID="workgroup_000"
-curl -sS "$API/image?workgroupId=$WORKGROUP_ID&page=1&items=50" -H "Authorization: Bearer $TOKEN"
+WORKGROUP_ID="space_000"
+curl -sS "$API/picture?spaceId=$WORKGROUP_ID&page=1&items=50" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /image/:imageId`
+### `GET /v1/picture/:imageId`
 
 ```sh
 IMAGE_ID="image_000"
-curl -sS "$API/image/$IMAGE_ID" -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/picture/$IMAGE_ID" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /image/:imageId/notif/:notificationId` (bypass via notification)
+### `GET /v1/picture/:imageId/notif/:notificationId` (bypass via notification)
 
 ```sh
 IMAGE_ID="image_000"
 NOTIF_ID="notif_000"
-curl -sS "$API/image/$IMAGE_ID/notif/$NOTIF_ID" -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/picture/$IMAGE_ID/notif/$NOTIF_ID" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `POST /image` (create image record; optionally for a workgroup)
+### `POST /v1/picture` (create image record; optionally for a space)
 
 ```sh
-curl -sS "$API/image" \
+curl -sS "$API/picture" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"name":"Example Image","description":"Example"}'
 ```
 
 ```sh
-WORKGROUP_ID="workgroup_000"
-curl -sS "$API/image" \
+WORKGROUP_ID="space_000"
+curl -sS "$API/picture" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"name":"WG Image","description":"Example","workgroupId":"workgroup_000"}'
+  -d '{"name":"WG Image","description":"Example","spaceId":"space_000"}'
 ```
 
-### `POST /image/file/:imageId` (upload image bytes)
+### `POST /v1/picture/file/:imageId` (upload image bytes)
 
 This is a multipart upload. The field name must be `imageUpload`.
 
 ```sh
 IMAGE_ID="image_000"
-curl -sS "$API/image/file/$IMAGE_ID" \
+curl -sS "$API/picture/file/$IMAGE_ID" \
   -X POST \
   -H "Authorization: Bearer $TOKEN" \
   -F "fileextension=jpg" \
-  -F "imageUpload=@/path/to/image.jpg"
+  -F "imageUpload=@/path/to/picture.jpg"
 ```
 
-### `PUT /image/:imageId` (update metadata; can set `workgroupId` if authorized)
+### `PUT /v1/picture/:imageId` (update metadata; can set `spaceId` if authorized)
 
 ```sh
 IMAGE_ID="image_000"
-curl -sS "$API/image/$IMAGE_ID" \
+curl -sS "$API/picture/$IMAGE_ID" \
   -X PUT \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"description":"Updated"}'
 ```
 
-### `DELETE /image/file/:imageId` (delete stored file)
+### `DELETE /v1/picture/file/:imageId` (delete stored file)
 
 ```sh
 IMAGE_ID="image_000"
-curl -sS "$API/image/file/$IMAGE_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/picture/file/$IMAGE_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
 ```
 
-### `DELETE /image/:imageId` (delete record)
+### `DELETE /v1/picture/:imageId` (delete record)
 
 ```sh
 IMAGE_ID="image_000"
-curl -sS "$API/image/$IMAGE_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/picture/$IMAGE_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
 ```
 
 ### Sharing
 
-#### `POST /image/share/:imageId/recipient/:recipient`
+#### `POST /v1/picture/share/:imageId/recipient/:recipient`
 
 ```sh
 IMAGE_ID="image_000"
 RECIPIENT_USER_ID="user_123"
-curl -sS "$API/image/share/$IMAGE_ID/recipient/$RECIPIENT_USER_ID" \
+curl -sS "$API/picture/share/$IMAGE_ID/recipient/$RECIPIENT_USER_ID" \
   -X POST \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-#### `POST /image/accept/:notificationId`
+#### `POST /v1/picture/accept/:notificationId`
 
 ```sh
 NOTIF_ID="notif_000"
-curl -sS "$API/image/accept/$NOTIF_ID" -X POST -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/picture/accept/$NOTIF_ID" -X POST -H "Authorization: Bearer $TOKEN"
 ```
 
 ---
 
 ## List
 
-### `GET /list` (list; optionally `workgroupId`)
+### `GET /v1/list` (list; optionally `spaceId`)
 
 ```sh
 curl -sS "$API/list?page=1&items=50" -H "Authorization: Bearer $TOKEN"
 ```
 
 ```sh
-WORKGROUP_ID="workgroup_000"
-curl -sS "$API/list?workgroupId=$WORKGROUP_ID&page=1&items=50" -H "Authorization: Bearer $TOKEN"
+WORKGROUP_ID="space_000"
+curl -sS "$API/list?spaceId=$WORKGROUP_ID&page=1&items=50" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /list/:listId` (supports `detail=item,category,image`)
+### `GET /v1/list/:listId` (supports `detail=item,category,image`)
 
 ```sh
 LIST_ID="list_000"
 curl -sS "$API/list/$LIST_ID?detail=item,category,image" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /list/:listId/notif/:notificationId` (bypass via notification)
+### `GET /v1/list/:listId/notif/:notificationId` (bypass via notification)
 
 ```sh
 LIST_ID="list_000"
@@ -1031,7 +1032,7 @@ NOTIF_ID="notif_000"
 curl -sS "$API/list/$LIST_ID/notif/$NOTIF_ID?detail=item,category,image" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `POST /list` (create; optionally for a workgroup)
+### `POST /v1/list` (create; optionally for a space)
 
 ```sh
 curl -sS "$API/list" \
@@ -1041,14 +1042,14 @@ curl -sS "$API/list" \
 ```
 
 ```sh
-WORKGROUP_ID="workgroup_000"
+WORKGROUP_ID="space_000"
 curl -sS "$API/list" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"name":"WG List","description":"Example","workgroupId":"workgroup_000"}'
+  -d '{"name":"WG List","description":"Example","spaceId":"space_000"}'
 ```
 
-### `PUT /list/:listId` (update; can set `workgroupId` if authorized)
+### `PUT /v1/list/:listId` (update; can set `spaceId` if authorized)
 
 ```sh
 LIST_ID="list_000"
@@ -1059,7 +1060,7 @@ curl -sS "$API/list/$LIST_ID" \
   -d '{"description":"Updated"}'
 ```
 
-### `DELETE /list/:listId`
+### `DELETE /v1/list/:listId`
 
 ```sh
 LIST_ID="list_000"
@@ -1068,7 +1069,7 @@ curl -sS "$API/list/$LIST_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
 
 ### Manage list items
 
-#### `PUT /list/:listId/item/:itemId` (add item)
+#### `PUT /v1/list/:listId/item/:itemId` (add item)
 
 ```sh
 LIST_ID="list_000"
@@ -1076,7 +1077,7 @@ ITEM_ID="item_000"
 curl -sS "$API/list/$LIST_ID/item/$ITEM_ID" -X PUT -H "Authorization: Bearer $TOKEN"
 ```
 
-#### `DELETE /list/:listId/item/:itemId` (remove item)
+#### `DELETE /v1/list/:listId/item/:itemId` (remove item)
 
 ```sh
 LIST_ID="list_000"
@@ -1084,7 +1085,7 @@ ITEM_ID="item_000"
 curl -sS "$API/list/$LIST_ID/item/$ITEM_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
 ```
 
-#### `POST /list/:listId/bulkitemadd`
+#### `POST /v1/list/:listId/bulkitemadd`
 
 ```sh
 LIST_ID="list_000"
@@ -1095,7 +1096,7 @@ curl -sS "$API/list/$LIST_ID/bulkitemadd" \
   -d '{"items":["item_001","item_002"]}'
 ```
 
-#### `POST /list/:listId/bulkitemdel`
+#### `POST /v1/list/:listId/bulkitemdel`
 
 ```sh
 LIST_ID="list_000"
@@ -1108,7 +1109,7 @@ curl -sS "$API/list/$LIST_ID/bulkitemdel" \
 
 ### Sharing
 
-#### `POST /list/share/:listId/recipient/:recipient`
+#### `POST /v1/list/share/:listId/recipient/:recipient`
 
 ```sh
 LIST_ID="list_000"
@@ -1116,7 +1117,7 @@ RECIPIENT_USER_ID="user_123"
 curl -sS "$API/list/share/$LIST_ID/recipient/$RECIPIENT_USER_ID" -X POST -H "Authorization: Bearer $TOKEN"
 ```
 
-#### `POST /list/accept/:notificationId`
+#### `POST /v1/list/accept/:notificationId`
 
 ```sh
 NOTIF_ID="notif_000"
@@ -1127,7 +1128,7 @@ curl -sS "$API/list/accept/$NOTIF_ID" -X POST -H "Authorization: Bearer $TOKEN"
 
 ## Tutorial
 
-### `POST /tutorial/poll/start`
+### `POST /v1/tutorial/poll/start`
 
 ```sh
 curl -sS "$API/tutorial/poll/start" \
@@ -1137,13 +1138,13 @@ curl -sS "$API/tutorial/poll/start" \
   -d '{}'
 ```
 
-### `GET /tutorial/poll`
+### `GET /v1/tutorial/poll`
 
 ```sh
 curl -sS "$API/tutorial/poll" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `POST /tutorial/poll/skip`
+### `POST /v1/tutorial/poll/skip`
 
 ```sh
 curl -sS "$API/tutorial/poll/skip" \
@@ -1153,7 +1154,7 @@ curl -sS "$API/tutorial/poll/skip" \
   -d '{}'
 ```
 
-### `POST /tutorial/poll/enable`
+### `POST /v1/tutorial/poll/enable`
 
 ```sh
 curl -sS "$API/tutorial/poll/enable" \
@@ -1171,11 +1172,11 @@ curl -sS "$API/tutorial/poll/enable" \
   -d '{"restart":true}'
 ```
 
-### `POST /support/users/:userId/tutorial/poll/enable`
+### `POST /v1/support/people/:userId/tutorial/poll/enable`
 
 ```sh
 USER_ID="user_000"
-curl -sS "$API/support/users/$USER_ID/tutorial/poll/enable" \
+curl -sS "$API/support/people/$USER_ID/tutorial/poll/enable" \
   -X POST \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
@@ -1186,92 +1187,92 @@ curl -sS "$API/support/users/$USER_ID/tutorial/poll/enable" \
 
 ## Election
 
-### `GET /election` (list; optionally `workgroupId`; supports `detail=list,group,category,image`)
+### `GET /v1/poll` (list; optionally `spaceId`; supports `detail=list,group,category,image`)
 
 ```sh
-curl -sS "$API/election?page=1&items=50" -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/poll?page=1&items=50" -H "Authorization: Bearer $TOKEN"
 ```
 
 ```sh
-WORKGROUP_ID="workgroup_000"
-curl -sS "$API/election?workgroupId=$WORKGROUP_ID&page=1&items=50&detail=list,group" -H "Authorization: Bearer $TOKEN"
+WORKGROUP_ID="space_000"
+curl -sS "$API/poll?spaceId=$WORKGROUP_ID&page=1&items=50&detail=list,group" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /election/:electionId`
+### `GET /v1/poll/:electionId`
 
 ```sh
 ELECTION_ID="election_000"
-curl -sS "$API/election/$ELECTION_ID?detail=list,group,category,image" -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/poll/$ELECTION_ID?detail=list,group,category,image" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `POST /election` (create; optionally for a workgroup)
+### `POST /v1/poll` (create; optionally for a space)
 
 ```sh
-curl -sS "$API/election" \
+curl -sS "$API/poll" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"name":"Example Election","description":"Example","listId":"list_000","groupId":"group_000"}'
 ```
 
 ```sh
-WORKGROUP_ID="workgroup_000"
-curl -sS "$API/election" \
+WORKGROUP_ID="space_000"
+curl -sS "$API/poll" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"name":"WG Election","description":"Example","workgroupId":"workgroup_000","listId":"list_000","groupId":"group_000"}'
+  -d '{"name":"WG Election","description":"Example","spaceId":"space_000","listId":"list_000","groupId":"group_000"}'
 ```
 
-### `PUT /election/:electionId` (update; can set `workgroupId` if authorized)
+### `PUT /v1/poll/:electionId` (update; can set `spaceId` if authorized)
 
 ```sh
 ELECTION_ID="election_000"
-curl -sS "$API/election/$ELECTION_ID" \
+curl -sS "$API/poll/$ELECTION_ID" \
   -X PUT \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"description":"Updated"}'
 ```
 
-### `DELETE /election/:electionId`
+### `DELETE /v1/poll/:electionId`
 
 ```sh
 ELECTION_ID="election_000"
-curl -sS "$API/election/$ELECTION_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/poll/$ELECTION_ID" -X DELETE -H "Authorization: Bearer $TOKEN"
 ```
 
-### `POST /election/:electionId/start`
+### `POST /v1/poll/:electionId/start`
 
 ```sh
 ELECTION_ID="election_000"
-curl -sS "$API/election/$ELECTION_ID/start" -X POST -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/poll/$ELECTION_ID/start" -X POST -H "Authorization: Bearer $TOKEN"
 ```
 
-### `POST /election/:electionId/stop`
+### `POST /v1/poll/:electionId/stop`
 
 ```sh
 ELECTION_ID="election_000"
-curl -sS "$API/election/$ELECTION_ID/stop" -X POST -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/poll/$ELECTION_ID/stop" -X POST -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /election/:electionId/stats`
+### `GET /v1/poll/:electionId/stats`
 
 ```sh
 ELECTION_ID="election_000"
-curl -sS "$API/election/$ELECTION_ID/stats" -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/poll/$ELECTION_ID/stats" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /election/:electionId/participation`
+### `GET /v1/poll/:electionId/participation`
 
 ```sh
 ELECTION_ID="election_000"
-curl -sS "$API/election/$ELECTION_ID/participation" -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/poll/$ELECTION_ID/participation" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `POST /election/:electionId/remind`
+### `POST /v1/poll/:electionId/remind`
 
 ```sh
 ELECTION_ID="election_000"
-curl -sS "$API/election/$ELECTION_ID/remind" \
+curl -sS "$API/poll/$ELECTION_ID/remind" \
   -X POST \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
@@ -1282,40 +1283,40 @@ curl -sS "$API/election/$ELECTION_ID/remind" \
 
 ## Vote
 
-### `GET /vote` (list votes)
+### `GET /v1/vote` (list votes)
 
 ```sh
 curl -sS "$API/vote?page=1&items=50" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /vote/:voteId`
+### `GET /v1/vote/:voteId`
 
 ```sh
 VOTE_ID="vote_000"
 curl -sS "$API/vote/$VOTE_ID" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /vote/election/:electionId` (all votes for election)
+### `GET /v1/vote/poll/:electionId` (all votes for election)
 
 ```sh
 ELECTION_ID="election_000"
-curl -sS "$API/vote/election/$ELECTION_ID" -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/vote/poll/$ELECTION_ID" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /vote/:electionId/next` (next available vote for election)
+### `GET /v1/vote/:electionId/next` (next available vote for election)
 
 ```sh
 ELECTION_ID="election_000"
 curl -sS "$API/vote/$ELECTION_ID/next" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /vote/next/all` (all next votes)
+### `GET /v1/vote/next/all` (all next votes)
 
 ```sh
 curl -sS "$API/vote/next/all" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `POST /vote` (add vote)
+### `POST /v1/vote` (add vote)
 
 ```sh
 curl -sS "$API/vote" \
@@ -1325,7 +1326,7 @@ curl -sS "$API/vote" \
   -d '{"electionId":"election_000","itemId":"item_000","userId":"user_000"}'
 ```
 
-### `PUT /vote/:voteId` (update vote)
+### `PUT /v1/vote/:voteId` (update vote)
 
 ```sh
 VOTE_ID="vote_000"
@@ -1340,7 +1341,7 @@ curl -sS "$API/vote/$VOTE_ID" \
 
 ## Cast (Vote Decision)
 
-### `POST /cast/:voteId/decision` (cast a vote)
+### `POST /v1/cast/:voteId/decision` (cast a vote)
 
 ```sh
 VOTE_ID="vote_000"
@@ -1355,7 +1356,7 @@ curl -sS "$API/cast/$VOTE_ID/decision" \
 
 ## Notification
 
-### `GET /notification` (list notifications)
+### `GET /v1/notification` (list notifications)
 
 ```sh
 curl -sS "$API/notification?page=1&items=50" -H "Authorization: Bearer $TOKEN"
@@ -1363,7 +1364,7 @@ curl -sS "$API/notification?page=1&items=50" -H "Authorization: Bearer $TOKEN"
 
 Response data includes `notifications`, `page`, `total`, and `itemsPerPage`, ordered by newest first.
 
-### `GET /notification/unreadcount`
+### `GET /v1/notification/unreadcount`
 
 ```sh
 curl -sS "$API/notification/unreadcount" -H "Authorization: Bearer $TOKEN"
@@ -1371,14 +1372,14 @@ curl -sS "$API/notification/unreadcount" -H "Authorization: Bearer $TOKEN"
 
 Response data includes `unread`.
 
-### `GET /notification/:notificationId`
+### `GET /v1/notification/:notificationId`
 
 ```sh
 NOTIF_ID="notif_000"
 curl -sS "$API/notification/$NOTIF_ID" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `POST /notification` (create notification)
+### `POST /v1/notification` (create notification)
 
 ```sh
 curl -sS "$API/notification" \
@@ -1388,7 +1389,7 @@ curl -sS "$API/notification" \
   -d '{"userId":"user_123","senderId":"user_456","statusId":100,"type":109,"objectId":"item_000","text":"Example"}'
 ```
 
-### `PUT /notification/:notificationId` (update notification)
+### `PUT /v1/notification/:notificationId` (update notification)
 
 ```sh
 NOTIF_ID="notif_000"
@@ -1399,7 +1400,7 @@ curl -sS "$API/notification/$NOTIF_ID" \
   -d '{"text":"Updated","objectId":"item_001"}'
 ```
 
-### `PUT /notification/status/:notificationId/:statusId` (set status)
+### `PUT /v1/notification/status/:notificationId/:statusId` (set status)
 
 ```sh
 NOTIF_ID="notif_000"
@@ -1407,7 +1408,7 @@ STATUS_ID="101"
 curl -sS "$API/notification/status/$NOTIF_ID/$STATUS_ID" -X PUT -H "Authorization: Bearer $TOKEN"
 ```
 
-### `DELETE /notification/:notificationId`
+### `DELETE /v1/notification/:notificationId`
 
 ```sh
 NOTIF_ID="notif_000"
@@ -1418,19 +1419,19 @@ curl -sS "$API/notification/$NOTIF_ID" -X DELETE -H "Authorization: Bearer $TOKE
 
 ## Preference
 
-### `GET /preference` (list)
+### `GET /v1/preference` (list)
 
 ```sh
 curl -sS "$API/preference" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /preference/:preferenceName`
+### `GET /v1/preference/:preferenceName`
 
 ```sh
 curl -sS "$API/preference/ui.theme" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `POST /preference`
+### `POST /v1/preference`
 
 ```sh
 curl -sS "$API/preference" \
@@ -1440,7 +1441,7 @@ curl -sS "$API/preference" \
   -d '{"name":"ui.theme","value":"light","comment":"Example"}'
 ```
 
-### `PUT /preference/:preferenceName`
+### `PUT /v1/preference/:preferenceName`
 
 ```sh
 curl -sS "$API/preference/ui.theme" \
@@ -1450,7 +1451,7 @@ curl -sS "$API/preference/ui.theme" \
   -d '{"value":"dark"}'
 ```
 
-### `DELETE /preference/:preferenceName`
+### `DELETE /v1/preference/:preferenceName`
 
 ```sh
 curl -sS "$API/preference/ui.theme" -X DELETE -H "Authorization: Bearer $TOKEN"
@@ -1460,25 +1461,25 @@ curl -sS "$API/preference/ui.theme" -X DELETE -H "Authorization: Bearer $TOKEN"
 
 ## Helper
 
-### `GET /helper/status` (all status names)
+### `GET /v1/helper/status` (all status names)
 
 ```sh
 curl -sS "$API/helper/status" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /helper/status/object` (all objects)
+### `GET /v1/helper/status/object` (all objects)
 
 ```sh
 curl -sS "$API/helper/status/object" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /helper/status/object/:objectName`
+### `GET /v1/helper/status/object/:objectName`
 
 ```sh
-curl -sS "$API/helper/status/object/election" -H "Authorization: Bearer $TOKEN"
+curl -sS "$API/helper/status/object/poll" -H "Authorization: Bearer $TOKEN"
 ```
 
-### `GET /helper/status/id/:statusName`
+### `GET /v1/helper/status/id/:statusName`
 
 ```sh
 curl -sS "$API/helper/status/id/In%20Progress" -H "Authorization: Bearer $TOKEN"

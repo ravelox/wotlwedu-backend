@@ -199,12 +199,12 @@ module.exports = (addTest) => {
       assert.strictEqual(message.subject, 'Invitation to participate in "Friday Lunch"');
       assert.ok(
         message.text.includes(
-          "https://ui.example/public/election/public%20token?invite=invite%20token"
+          "https://ui.example/public/poll/public%20token?invite=invite%20token"
         )
       );
       assert.ok(
         message.html.includes(
-          "https://ui.example/public/election/public%20token?invite=invite%20token"
+          "https://ui.example/public/poll/public%20token?invite=invite%20token"
         )
       );
       assert.ok(message.text.includes("support@test.example"));

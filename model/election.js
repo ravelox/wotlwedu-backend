@@ -113,6 +113,7 @@ const Election = database.define("election", {
   },
 },
 {
+  tableName: "polls",
   indexes: [{ fields: ["creator"] }, { fields: ["workgroupId"] }, { fields: ["publicToken"] }],
 });
 

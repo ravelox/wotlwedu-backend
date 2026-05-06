@@ -31,6 +31,7 @@ const WorkgroupMember = database.define(
     },
   },
   {
+    tableName: "spacemembers",
     indexes: [{ fields: ["creator"] }],
   }
 );

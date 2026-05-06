@@ -29,6 +29,7 @@ const GroupMember = database.define("groupmember", {
   },
 },
 {
+  tableName: "circlemembers",
   indexes: [{ fields: ["creator"]}],
 });
 

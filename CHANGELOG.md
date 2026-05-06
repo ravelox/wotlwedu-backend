@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.43 - 2026-05-05
+- Rename persisted terminology tables to `people`, `circles`, `pictures`, `spaces`, `polls`, and matching join-table names via update module `update-0019`.
+- Update poll notification status copy from election/picture terminology to poll/picture terminology.
+- Widen preference values to `TEXT` via update module `update-0020` so tutorial state can be stored without truncation.
+- Update tutorial copy and generated tutorial list names from Options to Ideas.
+- Remove legacy terminology endpoint aliases so clean installs expose only Person, Circle, Picture, Space, and Poll routes.
+- Add `/v1` API route versioning across backend endpoints.
+
 ## 0.0.42 - 2026-04-08
 - Refactor mail payload generation into deterministic internal builders so invite, confirmation, password-reset, email-change, and public-poll mail content can be tested directly.
 - Add unit coverage for configured deep links, frontend URL fallback behavior, support email copy, invite expiry text, and public-poll invite URL encoding.
@@ -14,16 +22,16 @@
 - Reconcile release metadata so the documented backend version matches the shipped auth/support feature set.
 
 ## 0.0.40 - 2026-03-28
-- Add a real poll-creation tutorial API via `POST /tutorial/poll/start` and `GET /tutorial/poll` that persists per-user tutorial state, suggests exact resource names, binds to the actual list/group/poll created in the existing UI, and computes progress from real items, audience members, votes, and stats.
+- Add a real poll-creation tutorial API via `POST /tutorial/poll/start` and `GET /tutorial/poll` that persists per-user tutorial state, suggests exact resource names, binds to the actual list/circle/poll created in the existing UI, and computes progress from real items, audience members, votes, and stats.
 - Add tutorial lifecycle controls via `POST /tutorial/poll/skip` and `POST /tutorial/poll/enable`, preserving skipped state until the user explicitly resumes or restarts.
-- Add ops remediation via `POST /support/users/:userId/tutorial/poll/enable` so admins can re-enable or restart a user's tutorial.
+- Add ops remediation via `POST /support/people/:userId/tutorial/poll/enable` so admins can re-enable or restart a user's tutorial.
 
 ## 0.0.39 - 2026-03-28
-- Add support/public-poll abuse observability endpoints (`GET /support/publicpoll/overview`, `GET /support/publicpoll/audit`) with organization scoping and election/workgroup context.
+- Add support/public-poll abuse observability endpoints (`GET /support/publicpoll/overview`, `GET /support/publicpoll/audit`) with organization scoping and election/space context.
 - Document ownership-transfer preview/apply endpoints and support/public-poll observability in OpenAPI, curl examples, and README.
 - Add `/support/...` operator aliases for user diagnostics, organization invite remediation, public-poll management, and test-token mint/revoke so admin tooling can move off consumer resource paths.
 - Remove the fixed backend container startup sleep and switch Kubernetes backend probes to HTTP readiness on `/docs/openapi.yaml`, with a configurable DB wait timeout for faster startup.
-- Add poll participation follow-up via `POST /election/:electionId/remind`, persisting reminder notifications and exposing reminder counts/last-reminder metadata in `GET /election/:electionId/participation`.
+- Add poll participation follow-up via `POST /poll/:electionId/remind`, persisting reminder notifications and exposing reminder counts/last-reminder metadata in `GET /poll/:electionId/participation`.
 
 ## 0.0.33 - 2026-03-26
 - Remove `CHECKPOINT.md` as part of the cross-repo cleanup.
@@ -35,9 +43,9 @@
 - Update backend docs and checkpoint guidance to reflect the improved live validation workflow.
 
 ## 0.0.30 - 2026-03-25
-- Add explicit `organizationId` narrowing support for `GET /user` and `GET /workgroup` to improve admin relation search precision.
+- Add explicit `organizationId` narrowing support for `GET /person` and `GET /space` to improve admin relation search precision.
 - Add deployed support/auth validation tooling via `npm run validate:deployed-support`.
-- Extend sqlite integration coverage for organization-scoped user/workgroup filtering.
+- Extend sqlite integration coverage for organization-scoped user/space filtering.
 
 ## 0.0.29 - 2026-03-24
 - Refresh the backend checkpoint to reflect `wotlwedu-admin` as the active operational console.
@@ -97,7 +105,7 @@
 - Add optional per-environment Helm service/ingress overrides via `environment` and `environments.<name>.*` values.
 - Make notification listing paginated and newest-first, and make unread counts use a database count instead of loading all unread rows.
 - Clean up notification API response payloads to return `notification` consistently for create/update/status operations.
-- Make item/list/image share acceptance re-check friendship and execute the copy/delete flow through a transaction-aware code path.
+- Make item/list/picture share acceptance re-check friendship and execute the copy/delete flow through a transaction-aware code path.
 - Emit structured notification socket payloads (`kind`, `notificationId`, `unreadCount`, optional `notification`) for client-side delta updates instead of only firing a bare invalidation signal.
 
 ## 0.0.15 - 2026-02-27
@@ -116,10 +124,10 @@
 - Normalize workgroup/organization ID inputs (`""`, `"undefined"`, `"null"`) to avoid false `421` errors from frontend placeholder values.
 
 ## 0.0.12 - 2026-02-14
-- Support workgroup-scoped user listing via `GET /user?workgroupId=...` (used by the browser console when a workgroup scope is selected).
+- Support workgroup-scoped user listing via `GET /person?workgroupId=...` (used by the browser console when a workgroup scope is selected).
 
 ## 0.0.11 - 2026-02-14
-- Make DB update modules safer/idempotent: avoid destructive `sync({ force: true })` and guard role/capability/user-role assignments against duplicates.
+- Make DB update modules safer/idempotent: avoid destructive `sync({ force: true })` and guard role/capability/person-role assignments against duplicates.
 - Update README to reflect the actual DB update runner behavior (metadata-per-update-id + optional physical checks), not `database.version` gating.
 
 ## 0.0.10 - 2026-02-14
@@ -133,17 +141,17 @@
 ## 0.0.8 - 2026-02-14
 - Make DB updates more resilient on partially migrated databases (re-apply when metadata exists but schema changes are missing).
 - Ensure startup fails fast if database updates fail (docker entrypoint checks `util-updatedb` exit code).
-- Prevent unhandled promise rejection in `/workgroup` listing when the table is missing.
+- Prevent unhandled promise rejection in `/space` listing when the table is missing.
 
 ## 0.0.7 - 2026-02-14
 - Fix DB update runner startup crash when the database exists but is missing newer columns (avoid global `sequelize.sync()` before updates).
 
 ## 0.0.6 - 2026-02-14
 - Add dedicated workgroup model/API (separate from election audience groups) and org-scoped access controls.
-- Add organization/workgroup capabilities and grant them to the Root Role via `update-0008`.
+- Add organization/space capabilities and grant them to the Root Role via `update-0008`.
 - Add workgroup-scoped administration for items/images/lists/elections (admins can target a workgroup).
 - Harden DB update runner to apply only `update-\\d+.js` and backfill metadata when updates are already applied.
-- Add comprehensive curl examples for key endpoints (including organization/workgroup and scoped resources).
+- Add comprehensive curl examples for key endpoints (including organization/space and scoped resources).
 
 ## 0.0.5 - 2026-02-13
 - Add multi-tenant foundations with organizations and organization-scoped workgroups.

@@ -4,7 +4,10 @@ const https = require("https");
 
 function getConfig() {
   const enabled = process.env.WOTLWEDU_LIVE_NOTIFICATION === "1";
-  const apiBase = process.env.WOTLWEDU_LIVE_API || "http://localhost:9876";
+  const configuredApiBase = process.env.WOTLWEDU_LIVE_API || "http://localhost:9876";
+  const apiBase = /\/v\d+\/?$/.test(configuredApiBase)
+    ? configuredApiBase
+    : `${configuredApiBase.replace(/\/+$/, "")}/v1`;
   const token = process.env.WOTLWEDU_LIVE_TOKEN;
   const userId = process.env.WOTLWEDU_LIVE_NOTIFICATION_USER_ID;
   const senderId = process.env.WOTLWEDU_LIVE_NOTIFICATION_SENDER_ID || userId;
@@ -87,7 +90,7 @@ module.exports = (addTest) => {
       throw new Error("integration skipped: set WOTLWEDU_LIVE_NOTIFICATION_USER_ID");
     }
 
-    const createUrl = new URL("/notification", cfg.apiBase).toString();
+    const createUrl = new URL("notification", `${cfg.apiBase}/`).toString();
     const res = await requestJson("POST", createUrl, cfg.token, cfg.payload);
 
     assert.strictEqual(

@@ -313,7 +313,7 @@ module.exports.putUserInWorkgroup = (req, res, next) => {
         return StatusResponse(res, 403, "Not authorized for this workgroup");
 
       const userWhere = {
-        id: userToFind,
+        id: personToFind,
         organizationId: foundWorkgroup.organizationId,
       };
 
@@ -357,7 +357,7 @@ module.exports.deleteUserFromWorkgroup = (req, res, next) => {
         return StatusResponse(res, 403, "Not authorized for this workgroup");
 
       User.findOne({
-        where: { id: userToFind, organizationId: foundWorkgroup.organizationId },
+        where: { id: personToFind, organizationId: foundWorkgroup.organizationId },
       })
         .then((userFound) => {
           if (!userFound) return StatusResponse(res, 404, "User not found");
@@ -409,10 +409,10 @@ module.exports.deleteWorkgroup = (req, res, next) => {
 
 module.exports.putBulkAddUserToWorkgroup = (req, res, next) => {
   const workgroupToFind = req.params.workgroupId;
-  const userList = req.body.userList;
+  const personList = req.body.personList;
   if (!workgroupToFind)
     return StatusResponse(res, 421, "No workgroup ID provided");
-  if (!userList) return StatusResponse(res, 421, "No user list provided");
+  if (!personList) return StatusResponse(res, 421, "No person list provided");
 
   let whereCondition = { id: workgroupToFind };
   Security.applyOrganizationScope(req, whereCondition);
@@ -424,16 +424,16 @@ module.exports.putBulkAddUserToWorkgroup = (req, res, next) => {
       return StatusResponse(res, 403, "Not authorized for this workgroup");
 
     const results = [];
-    for (const userToFind of userList) {
+    for (const personToFind of personList) {
       await User.findOne({
-        where: { id: userToFind, organizationId: foundWorkgroup.organizationId },
+        where: { id: personToFind, organizationId: foundWorkgroup.organizationId },
       })
         .then(async (userFound) => {
           if (!userFound) {
             results.push({
-              id: userToFind,
+              id: personToFind,
               status: 404,
-              message: "User not found",
+              message: "Person not found",
             });
           } else {
             await foundWorkgroup
@@ -443,12 +443,12 @@ module.exports.putBulkAddUserToWorkgroup = (req, res, next) => {
               .then((addedUser) => {
                 if (!addedUser) {
                   results.push({
-                    id: userToFind,
+                    id: personToFind,
                     status: 500,
-                    message: "Cannot add user to workgroup",
+                    message: "Cannot add person to workgroup",
                   });
                 } else {
-                  results.push({ id: userToFind, status: 200, message: "OK" });
+                  results.push({ id: personToFind, status: 200, message: "OK" });
                 }
               })
               .catch((err) => next(err));
@@ -462,10 +462,10 @@ module.exports.putBulkAddUserToWorkgroup = (req, res, next) => {
 
 module.exports.deleteBulkUserFromWorkgroup = (req, res, next) => {
   const workgroupToFind = req.params.workgroupId;
-  const userList = req.body.userList;
+  const personList = req.body.personList;
   if (!workgroupToFind)
     return StatusResponse(res, 421, "No workgroup ID provided");
-  if (!userList) return StatusResponse(res, 421, "No user list provided");
+  if (!personList) return StatusResponse(res, 421, "No person list provided");
 
   let whereCondition = { id: workgroupToFind };
   Security.applyOrganizationScope(req, whereCondition);
@@ -478,16 +478,16 @@ module.exports.deleteBulkUserFromWorkgroup = (req, res, next) => {
         return StatusResponse(res, 403, "Not authorized for this workgroup");
 
       const results = [];
-      for (const userToFind of userList) {
+      for (const personToFind of personList) {
         await User.findOne({
-          where: { id: userToFind, organizationId: foundWorkgroup.organizationId },
+          where: { id: personToFind, organizationId: foundWorkgroup.organizationId },
         })
           .then(async (userFound) => {
             if (!userFound) {
               results.push({
-                id: userToFind,
+                id: personToFind,
                 status: 404,
-                message: "User not found",
+                message: "Person not found",
               });
             } else {
               await foundWorkgroup
@@ -495,12 +495,12 @@ module.exports.deleteBulkUserFromWorkgroup = (req, res, next) => {
                 .then((removedUser) => {
                   if (!removedUser) {
                     results.push({
-                      id: userToFind,
+                      id: personToFind,
                       status: 500,
-                      message: "Cannot delete user from workgroup",
+                      message: "Cannot delete person from workgroup",
                     });
                   } else {
-                    results.push({ id: userToFind, status: 200, message: "OK" });
+                    results.push({ id: personToFind, status: 200, message: "OK" });
                   }
                 })
                 .catch((err) => next(err));

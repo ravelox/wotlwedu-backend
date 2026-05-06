@@ -48,6 +48,7 @@ const Workgroup = database.define(
     },
   },
   {
+    tableName: "spaces",
     indexes: [{ fields: ["creator"] }, { fields: ["organizationId"] }],
   }
 );

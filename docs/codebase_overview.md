@@ -26,7 +26,7 @@ Key settings:
 - DB settings and adapter selection (`WOTLWEDU_DB_*`, `WOTLWEDU_DB_TYPE`)
 - JWT auth secret (`WOTLWEDU_JWT_SECRET`)
 - SSL enablement and cert/key paths (`WOTLWEDU_SSL`, `WOTLWEDU_SSL_KEY`, `WOTLWEDU_SSL_CERT`)
-- API/frontend/image URLs
+- API/frontend/picture URLs
 - Housekeeping interval
 - Mail provider configuration
 
@@ -50,7 +50,7 @@ Unauthenticated routes:
 - `/register`
 
 Authenticated route groups (all behind `Security.checkAuthentication`):
-- `/ping`, `/helper`, `/user`, `/role`, `/capability`, `/item`, `/list`, `/group`, `/image`, `/category`, `/election`, `/vote`, `/preference`, `/cast`, `/notification`
+- `/ping`, `/helper`, `/person`, `/role`, `/capability`, `/item`, `/list`, `/circle`, `/picture`, `/category`, `/poll`, `/vote`, `/preference`, `/cast`, `/notification`
 
 Response payloads typically use [`util/statusresponse.js`](../util/statusresponse.js):
 ```json

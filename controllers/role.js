@@ -504,19 +504,19 @@ module.exports.deleteBulkCapFromRole = (req, res, next) => {
 
 module.exports.putBulkAddUserToRole = (req, res, next) => {
   const roleToFind = req.params.roleId;
-  const initialUserList = req.body.userList;
-  let userList;
+  const initialPersonList = req.body.personList;
+  let personList;
 
   if (!roleToFind) return StatusResponse(res, 421, "No role ID provided");
-  if (!initialUserList)
-    return StatusResponse(res, 421, "No user list provided");
+  if (!initialPersonList)
+    return StatusResponse(res, 421, "No person list provided");
 
-  userList = Array.isArray(initialUserList)
-    ? initialUserList
-    : [initialUserList];
+  personList = Array.isArray(initialPersonList)
+    ? initialPersonList
+    : [initialPersonList];
 
-  if (!Array.isArray(userList))
-    return StatusResponse(res, 421, "userList is not an array");
+  if (!Array.isArray(personList))
+    return StatusResponse(res, 421, "personList is not an array");
 
   let whereCondition = { id: roleToFind };
   if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
@@ -536,14 +536,14 @@ module.exports.putBulkAddUserToRole = (req, res, next) => {
             return StatusResponse(res, 421, "Cannot update own capabilities");
 
           const results = [];
-          for (const user of userList) {
-            await User.findByPk(user)
+          for (const person of personList) {
+            await User.findByPk(person)
               .then(async (foundUser) => {
                 if (!foundUser) {
                   results.push({
-                    id: user,
+                    id: person,
                     status: 404,
-                    message: "User not found",
+                    message: "Person not found",
                   });
                 } else {
                   User.belongsToMany(Role, { through: UserRole });
@@ -555,12 +555,12 @@ module.exports.putBulkAddUserToRole = (req, res, next) => {
                     .then((addedUser) => {
                       if (!addedUser) {
                         results.push({
-                          id: user,
+                          id: person,
                           status: 500,
-                          message: "Cannot add user to role",
+                          message: "Cannot add person to role",
                         });
                       } else {
-                        results.push({ id: user, status: 200, message: "OK" });
+                        results.push({ id: person, status: 200, message: "OK" });
                       }
                     })
                     .catch((err) => next(err));
@@ -577,9 +577,9 @@ module.exports.putBulkAddUserToRole = (req, res, next) => {
 
 module.exports.deleteBulkUserFromRole = (req, res, next) => {
   const roleToFind = req.params.roleId;
-  const userList = req.body.userList;
+  const personList = req.body.personList;
   if (!roleToFind) return StatusResponse(res, 421, "No role ID provided");
-  if (!userList) return StatusResponse(res, 421, "No user list provided");
+  if (!personList) return StatusResponse(res, 421, "No person list provided");
 
   let whereCondition = { id: roleToFind };
   if (!Security.getVerdict(req.verdicts, "edit").isAdmin) {
@@ -592,14 +592,14 @@ module.exports.deleteBulkUserFromRole = (req, res, next) => {
 
       const results = [];
 
-      for (const user of userList) {
-        await User.findByPk(user)
+      for (const person of personList) {
+        await User.findByPk(person)
           .then(async (foundUser) => {
             if (!foundUser) {
               results.push({
-                id: user,
+                id: person,
                 status: 404,
-                message: "User not found",
+                message: "Person not found",
               });
             } else {
               User.belongsToMany(Role, { through: UserRole });
@@ -608,12 +608,12 @@ module.exports.deleteBulkUserFromRole = (req, res, next) => {
                 .then((removedUser) => {
                   if (!removedUser) {
                     results.push({
-                      id: user,
+                      id: person,
                       status: 500,
-                      message: "Cannot delete user freom role",
+                      message: "Cannot delete person from role",
                     });
                   } else {
-                    results.push({ id: user, status: 200, message: "OK" });
+                    results.push({ id: person, status: 200, message: "OK" });
                   }
                 })
                 .catch((err) => next(err));

@@ -33,24 +33,24 @@ router.put(
 
 // Manage Users on the Workgroup
 router.put(
-  "/:workgroupId/user/:userId",
+  "/:workgroupId/person/:userId",
   Security.checkCapability("workgroup", ["edit"]),
   workgroupController.putUserInWorkgroup
 );
 router.delete(
-  "/:workgroupId/user/:userId",
+  "/:workgroupId/person/:userId",
   Security.checkCapability("workgroup", ["edit"]),
   workgroupController.deleteUserFromWorkgroup
 );
 
 // Bulk add/delete
 router.put(
-  "/:workgroupId/bulkuseradd",
+  "/:workgroupId/bulkpersonadd",
   Security.checkCapability("workgroup", ["edit"]),
   workgroupController.putBulkAddUserToWorkgroup
 );
 router.put(
-  "/:workgroupId/bulkuserdel",
+  "/:workgroupId/bulkpersondel",
   Security.checkCapability("workgroup", ["edit"]),
   workgroupController.deleteBulkUserFromWorkgroup
 );

@@ -13,7 +13,7 @@ const Preference = database.define("preference", {
     allowNull: false,
   },
   value: {
-    type: Sequelize.STRING,
+    type: Sequelize.TEXT,
   },
   creator: {
     type: Sequelize.STRING,

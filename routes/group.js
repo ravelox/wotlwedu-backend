@@ -16,12 +16,12 @@ router.get("/", Security.checkCapability("group", ["view"]),groupController.getA
 router.put("/:groupId", Security.checkCapability("group", ["edit"]),groupController.postUpdateGroup);
 
 // Manage Users on the Group
-router.put("/:groupId/user/:userId", Security.checkCapability("group", ["edit"]),groupController.putUserInGroup);
-router.delete("/:groupId/user/:userId",Security.checkCapability("group", ["edit"]), groupController.deleteUserFromGroup);
+router.put("/:groupId/person/:userId", Security.checkCapability("group", ["edit"]),groupController.putUserInGroup);
+router.delete("/:groupId/person/:userId",Security.checkCapability("group", ["edit"]), groupController.deleteUserFromGroup);
 
 // Bulk add/delete
-router.put("/:groupId/bulkuseradd", Security.checkCapability("group",["edit"]), groupController.putBulkAddUserToRole);
-router.put("/:groupId/bulkuserdel", Security.checkCapability("group",["edit"]), groupController.deleteBulkUserFromGroup);
+router.put("/:groupId/bulkpersonadd", Security.checkCapability("group",["edit"]), groupController.putBulkAddUserToRole);
+router.put("/:groupId/bulkpersondel", Security.checkCapability("group",["edit"]), groupController.deleteBulkUserFromGroup);
 
 // Delete a Group
 router.delete("/:groupId", Security.checkCapability("group", ["delete"]),groupController.deleteGroup);

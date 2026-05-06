@@ -46,6 +46,7 @@ const Group = database.define("group", {
   },
 },
 {
+  tableName: "circles",
   indexes: [{ fields: ["creator"]}, { fields: ["organizationId"] }],
 });
 

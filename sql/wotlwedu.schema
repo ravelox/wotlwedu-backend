@@ -45,18 +45,18 @@ CREATE TABLE `categories` (
   `createdAt` datetime NOT NULL,
   PRIMARY KEY (`id`),
   KEY `categories_creator` (`creator`),
-  CONSTRAINT `categories_ibfk_1` FOREIGN KEY (`creator`) REFERENCES `users` (`id`) ON DELETE CASCADE
+  CONSTRAINT `categories_ibfk_1` FOREIGN KEY (`creator`) REFERENCES `people` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `elections`
+-- Table structure for table `polls`
 --
 
-DROP TABLE IF EXISTS `elections`;
+DROP TABLE IF EXISTS `polls`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `elections` (
+CREATE TABLE `polls` (
   `id` varchar(255) NOT NULL,
   `name` varchar(255) NOT NULL,
   `description` varchar(255) NOT NULL,
@@ -72,8 +72,8 @@ CREATE TABLE `elections` (
   `updatedAt` datetime NOT NULL DEFAULT '2024-08-10 18:50:24',
   `createdAt` datetime NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `elections_creator` (`creator`),
-  CONSTRAINT `elections_ibfk_1` FOREIGN KEY (`creator`) REFERENCES `users` (`id`) ON DELETE CASCADE
+  KEY `polls_creator` (`creator`),
+  CONSTRAINT `polls_ibfk_1` FOREIGN KEY (`creator`) REFERENCES `people` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -99,18 +99,18 @@ CREATE TABLE `friends` (
   KEY `statusId` (`statusId`),
   KEY `userId` (`userId`),
   CONSTRAINT `friends_ibfk_1` FOREIGN KEY (`statusId`) REFERENCES `statuses` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `friends_ibfk_2` FOREIGN KEY (`userId`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+  CONSTRAINT `friends_ibfk_2` FOREIGN KEY (`userId`) REFERENCES `people` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `groupmembers`
+-- Table structure for table `circlemembers`
 --
 
-DROP TABLE IF EXISTS `groupmembers`;
+DROP TABLE IF EXISTS `circlemembers`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `groupmembers` (
+CREATE TABLE `circlemembers` (
   `id` varchar(255) NOT NULL,
   `groupId` varchar(255) NOT NULL,
   `userId` varchar(255) NOT NULL,
@@ -119,22 +119,22 @@ CREATE TABLE `groupmembers` (
   `updatedAt` datetime NOT NULL DEFAULT '2024-08-10 18:50:24',
   `createdAt` datetime NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `groupmembers_groupId_userId_unique` (`groupId`,`userId`),
-  KEY `groupmembers_creator` (`creator`),
+  UNIQUE KEY `circlemembers_groupId_userId_unique` (`groupId`,`userId`),
+  KEY `circlemembers_creator` (`creator`),
   KEY `userId` (`userId`),
-  CONSTRAINT `groupmembers_ibfk_1` FOREIGN KEY (`groupId`) REFERENCES `groups` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `groupmembers_ibfk_2` FOREIGN KEY (`userId`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+  CONSTRAINT `circlemembers_ibfk_1` FOREIGN KEY (`groupId`) REFERENCES `circles` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `circlemembers_ibfk_2` FOREIGN KEY (`userId`) REFERENCES `people` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `groups`
+-- Table structure for table `circles`
 --
 
-DROP TABLE IF EXISTS `groups`;
+DROP TABLE IF EXISTS `circles`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `groups` (
+CREATE TABLE `circles` (
   `id` varchar(255) NOT NULL,
   `name` varchar(255) NOT NULL,
   `description` varchar(255) NOT NULL,
@@ -145,19 +145,19 @@ CREATE TABLE `groups` (
   `updatedAt` datetime NOT NULL DEFAULT '2024-08-10 18:50:24',
   `createdAt` datetime NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `groups_creator` (`creator`),
-  CONSTRAINT `groups_ibfk_1` FOREIGN KEY (`creator`) REFERENCES `users` (`id`) ON DELETE CASCADE
+  KEY `circles_creator` (`creator`),
+  CONSTRAINT `circles_ibfk_1` FOREIGN KEY (`creator`) REFERENCES `people` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `images`
+-- Table structure for table `pictures`
 --
 
-DROP TABLE IF EXISTS `images`;
+DROP TABLE IF EXISTS `pictures`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `images` (
+CREATE TABLE `pictures` (
   `id` varchar(255) NOT NULL,
   `name` varchar(255) NOT NULL,
   `description` varchar(255) NOT NULL,
@@ -169,8 +169,8 @@ CREATE TABLE `images` (
   `updatedAt` datetime NOT NULL DEFAULT '2024-08-10 18:50:24',
   `createdAt` datetime NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `images_creator` (`creator`),
-  CONSTRAINT `images_ibfk_1` FOREIGN KEY (`creator`) REFERENCES `users` (`id`) ON DELETE CASCADE
+  KEY `pictures_creator` (`creator`),
+  CONSTRAINT `pictures_ibfk_1` FOREIGN KEY (`creator`) REFERENCES `people` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -195,8 +195,8 @@ CREATE TABLE `items` (
   PRIMARY KEY (`id`),
   KEY `items_creator` (`creator`),
   KEY `imageId` (`imageId`),
-  CONSTRAINT `items_ibfk_1` FOREIGN KEY (`imageId`) REFERENCES `images` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
-  CONSTRAINT `items_ibfk_2` FOREIGN KEY (`creator`) REFERENCES `users` (`id`) ON DELETE CASCADE
+  CONSTRAINT `items_ibfk_1` FOREIGN KEY (`imageId`) REFERENCES `pictures` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `items_ibfk_2` FOREIGN KEY (`creator`) REFERENCES `people` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -240,7 +240,7 @@ CREATE TABLE `lists` (
   `createdAt` datetime NOT NULL,
   PRIMARY KEY (`id`),
   KEY `lists_creator` (`creator`),
-  CONSTRAINT `lists_ibfk_1` FOREIGN KEY (`creator`) REFERENCES `users` (`id`) ON DELETE CASCADE
+  CONSTRAINT `lists_ibfk_1` FOREIGN KEY (`creator`) REFERENCES `people` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -267,8 +267,8 @@ CREATE TABLE `notifications` (
   KEY `notifications_user_id` (`userId`),
   KEY `senderId` (`senderId`),
   KEY `statusId` (`statusId`),
-  CONSTRAINT `notifications_ibfk_1` FOREIGN KEY (`userId`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `notifications_ibfk_2` FOREIGN KEY (`senderId`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `notifications_ibfk_1` FOREIGN KEY (`userId`) REFERENCES `people` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `notifications_ibfk_2` FOREIGN KEY (`senderId`) REFERENCES `people` (`id`) ON DELETE CASCADE,
   CONSTRAINT `notifications_ibfk_3` FOREIGN KEY (`statusId`) REFERENCES `statuses` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -283,13 +283,13 @@ DROP TABLE IF EXISTS `preferences`;
 CREATE TABLE `preferences` (
   `id` varchar(255) NOT NULL,
   `name` varchar(255) NOT NULL,
-  `value` varchar(255) DEFAULT NULL,
+  `value` text DEFAULT NULL,
   `creator` varchar(255) DEFAULT NULL,
   `updatedAt` datetime NOT NULL DEFAULT '2024-08-10 18:50:24',
   `createdAt` datetime NOT NULL,
   PRIMARY KEY (`id`),
   KEY `preferences_creator` (`creator`),
-  CONSTRAINT `preferences_ibfk_1` FOREIGN KEY (`creator`) REFERENCES `users` (`id`) ON DELETE CASCADE
+  CONSTRAINT `preferences_ibfk_1` FOREIGN KEY (`creator`) REFERENCES `people` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -356,34 +356,34 @@ CREATE TABLE `statuses` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `userroles`
+-- Table structure for table `personroles`
 --
 
-DROP TABLE IF EXISTS `userroles`;
+DROP TABLE IF EXISTS `personroles`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `userroles` (
+CREATE TABLE `personroles` (
   `id` varchar(255) NOT NULL,
   `roleId` varchar(255) NOT NULL,
   `userId` varchar(255) NOT NULL,
   `createdAt` datetime NOT NULL,
   `updatedAt` datetime NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `userroles_userId_roleId_unique` (`roleId`,`userId`),
+  UNIQUE KEY `personroles_userId_roleId_unique` (`roleId`,`userId`),
   KEY `userId` (`userId`),
-  CONSTRAINT `userroles_ibfk_1` FOREIGN KEY (`roleId`) REFERENCES `roles` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `userroles_ibfk_2` FOREIGN KEY (`userId`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+  CONSTRAINT `personroles_ibfk_1` FOREIGN KEY (`roleId`) REFERENCES `roles` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `personroles_ibfk_2` FOREIGN KEY (`userId`) REFERENCES `people` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `users`
+-- Table structure for table `people`
 --
 
-DROP TABLE IF EXISTS `users`;
+DROP TABLE IF EXISTS `people`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `users` (
+CREATE TABLE `people` (
   `id` varchar(255) NOT NULL,
   `firstName` varchar(255) NOT NULL,
   `lastName` varchar(255) NOT NULL,
@@ -410,10 +410,10 @@ CREATE TABLE `users` (
   `createdAt` datetime NOT NULL,
   `statusId` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `users_email` (`email`),
-  KEY `users_creator` (`creator`),
+  UNIQUE KEY `people_email` (`email`),
+  KEY `people_creator` (`creator`),
   KEY `statusId` (`statusId`),
-  CONSTRAINT `users_ibfk_1` FOREIGN KEY (`statusId`) REFERENCES `statuses` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+  CONSTRAINT `people_ibfk_1` FOREIGN KEY (`statusId`) REFERENCES `statuses` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -438,9 +438,9 @@ CREATE TABLE `votes` (
   KEY `votes_user_id` (`userId`),
   KEY `votes_election_id` (`electionId`),
   KEY `itemId` (`itemId`),
-  CONSTRAINT `votes_ibfk_1` FOREIGN KEY (`userId`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `votes_ibfk_1` FOREIGN KEY (`userId`) REFERENCES `people` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `votes_ibfk_2` FOREIGN KEY (`itemId`) REFERENCES `items` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `votes_ibfk_3` FOREIGN KEY (`creator`) REFERENCES `users` (`id`) ON DELETE CASCADE
+  CONSTRAINT `votes_ibfk_3` FOREIGN KEY (`creator`) REFERENCES `people` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;

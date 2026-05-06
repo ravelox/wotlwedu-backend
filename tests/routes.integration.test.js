@@ -76,6 +76,7 @@ Security.checkCapability = (_objectToCheck, opList) => {
 function buildApp() {
   const baseApp = express();
   baseApp.use(bodyParser.json());
+  const apiPath = (route) => `/v1${route}`;
 
   const itemRoutes = require("../routes/item");
   const loginRoutes = require("../routes/login");
@@ -91,22 +92,22 @@ function buildApp() {
   const workgroupRoutes = require("../routes/workgroup");
 
   // Mirror app.js protected routes used in tests
-  baseApp.use("/login", loginRoutes);
-  baseApp.use("/public/election", publicElectionRoutes);
-  baseApp.use("/item", Security.checkAuthentication, itemRoutes);
-  baseApp.use("/list", Security.checkAuthentication, listRoutes);
-  baseApp.use("/group", Security.checkAuthentication, groupRoutes);
-  baseApp.use("/notification", Security.checkAuthentication, notificationRoutes);
-  baseApp.use("/organization", Security.checkAuthentication, organizationRoutes);
-  baseApp.use("/election", Security.checkAuthentication, electionRoutes);
-  baseApp.use("/support", Security.checkAuthentication, supportRoutes);
-  baseApp.use("/tutorial", Security.checkAuthentication, tutorialRoutes);
-  baseApp.use("/user", Security.checkAuthentication, userRoutes);
-  baseApp.use("/workgroup", Security.checkAuthentication, workgroupRoutes);
+  baseApp.use(apiPath("/login"), loginRoutes);
+  baseApp.use(apiPath("/public/poll"), publicElectionRoutes);
+  baseApp.use(apiPath("/item"), Security.checkAuthentication, itemRoutes);
+  baseApp.use(apiPath("/list"), Security.checkAuthentication, listRoutes);
+  baseApp.use(apiPath("/circle"), Security.checkAuthentication, groupRoutes);
+  baseApp.use(apiPath("/notification"), Security.checkAuthentication, notificationRoutes);
+  baseApp.use(apiPath("/organization"), Security.checkAuthentication, organizationRoutes);
+  baseApp.use(apiPath("/poll"), Security.checkAuthentication, electionRoutes);
+  baseApp.use(apiPath("/support"), Security.checkAuthentication, supportRoutes);
+  baseApp.use(apiPath("/tutorial"), Security.checkAuthentication, tutorialRoutes);
+  baseApp.use(apiPath("/person"), Security.checkAuthentication, userRoutes);
+  baseApp.use(apiPath("/space"), Security.checkAuthentication, workgroupRoutes);
 
   // Ping route
   baseApp.use(
-    "/ping",
+    apiPath("/ping"),
     Security.checkAuthentication,
     (req, res) => res.status(200).json({ status: 200, message: "OK" })
   );
@@ -125,9 +126,10 @@ function request(server, method, path, body) {
     }
     const payload = body ? JSON.stringify(body) : null;
     const addressInfo = server.address();
+    const requestPath = path.startsWith("/v") ? path : `/v1${path}`;
     const options = {
       method,
-      path,
+      path: requestPath,
       host: addressInfo.address || "127.0.0.1",
       port: addressInfo.port,
       headers: payload
@@ -352,7 +354,7 @@ module.exports = (addTest) => {
 
     const publicItem = await Item.create({
       id: "item_public",
-      name: "Public Option",
+      name: "Public Idea",
       description: "Public item",
       url: "http://example.com/public",
       creator: "user_test",
@@ -383,7 +385,7 @@ module.exports = (addTest) => {
     publicElectionId = publicElection.id;
     const participationItem = await Item.create({
       id: "item_participation",
-      name: "Participation Option",
+      name: "Participation Idea",
       description: "Tracked item",
       url: "http://example.com/participation",
       creator: "user_test",
@@ -523,7 +525,7 @@ module.exports = (addTest) => {
   });
 
   addTest("list users can be narrowed by organizationId", async () => {
-    const res = await request(server, "GET", "/user?organizationId=org_filter");
+    const res = await request(server, "GET", "/person?organizationId=org_filter");
     assert.strictEqual(res.status, 200);
     const users = res.body?.data?.users || [];
     assert.strictEqual(users.length, 1);
@@ -532,7 +534,7 @@ module.exports = (addTest) => {
   });
 
   addTest("list workgroups can be narrowed by organizationId", async () => {
-    const res = await request(server, "GET", "/workgroup?organizationId=org_filter");
+    const res = await request(server, "GET", "/space?organizationId=org_filter");
     assert.strictEqual(res.status, 200);
     const workgroups = res.body?.data?.workgroups || [];
     assert.strictEqual(workgroups.length, 1);
@@ -724,7 +726,7 @@ module.exports = (addTest) => {
   });
 
   addTest("election participation summary exposes audience and progress counts", async () => {
-    const res = await request(server, "GET", `/election/${participationElectionId}/participation`);
+    const res = await request(server, "GET", `/poll/${participationElectionId}/participation`);
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.body.data.election.id, participationElectionId);
     assert.strictEqual(res.body.data.audience.group.id, "group_participation");
@@ -747,7 +749,7 @@ module.exports = (addTest) => {
   });
 
   addTest("election participation reminder sends notifications to incomplete participants", async () => {
-    const remindRes = await request(server, "POST", `/election/${participationElectionId}/remind`, {
+    const remindRes = await request(server, "POST", `/poll/${participationElectionId}/remind`, {
       states: ["not_started"],
       message: "Please vote today",
     });
@@ -771,7 +773,7 @@ module.exports = (addTest) => {
       ["user_password", "user_sender"]
     );
 
-    const summaryRes = await request(server, "GET", `/election/${participationElectionId}/participation`);
+    const summaryRes = await request(server, "GET", `/poll/${participationElectionId}/participation`);
     assert.strictEqual(summaryRes.status, 200);
     assert.strictEqual(summaryRes.body.data.participation.reminderCount, 2);
     assert.strictEqual(summaryRes.body.data.participation.remindedCount, 2);
@@ -800,20 +802,20 @@ module.exports = (addTest) => {
 
     const itemOneRes = await request(server, "POST", "/item", {
       name: "Tutorial Pizza",
-      description: "First tutorial option",
+      description: "First tutorial idea",
       url: "http://example.com/tutorial-pizza",
     });
     assert.strictEqual(itemOneRes.status, 200);
     const itemTwoRes = await request(server, "POST", "/item", {
       name: "Tutorial Sushi",
-      description: "Second tutorial option",
+      description: "Second tutorial idea",
       url: "http://example.com/tutorial-sushi",
     });
     assert.strictEqual(itemTwoRes.status, 200);
 
     const listRes = await request(server, "POST", "/list", {
       name: startRes.body.data.tutorial.names.listName,
-      description: "Tutorial options list",
+      description: "Tutorial ideas list",
     });
     assert.strictEqual(listRes.status, 200);
     const tutorialListId = listRes.body.data.list.id;
@@ -831,7 +833,7 @@ module.exports = (addTest) => {
       creator: "user_test",
     });
 
-    const groupRes = await request(server, "POST", "/group", {
+    const groupRes = await request(server, "POST", "/circle", {
       name: startRes.body.data.tutorial.names.groupName,
       description: "Tutorial audience",
     });
@@ -846,7 +848,7 @@ module.exports = (addTest) => {
       creator: "user_test",
     });
 
-    const tutorialElectionRes = await request(server, "POST", "/election", {
+    const tutorialElectionRes = await request(server, "POST", "/poll", {
       name: startRes.body.data.tutorial.names.electionName,
       description: "Tutorial poll",
       listId: tutorialListId,
@@ -928,7 +930,7 @@ module.exports = (addTest) => {
         startedAt: "2026-03-28T00:00:00.000Z",
         skippedAt: "2026-03-28T01:00:00.000Z",
         names: {
-          listName: "Tutorial Options OPS001",
+          listName: "Tutorial Ideas OPS001",
           groupName: "Tutorial Audience OPS001",
           electionName: "Tutorial Poll OPS001",
         },
@@ -943,7 +945,7 @@ module.exports = (addTest) => {
     const enableRes = await request(
       server,
       "POST",
-      "/support/users/user_password/tutorial/poll/enable",
+      "/support/people/user_password/tutorial/poll/enable",
       {}
     );
     assert.strictEqual(enableRes.status, 200);
@@ -1091,7 +1093,7 @@ module.exports = (addTest) => {
   });
 
   addTest("user sign-in methods expose password and linked providers", async () => {
-    const res = await request(server, "GET", "/user/user_password/signin-method");
+    const res = await request(server, "GET", "/person/user_password/signin-method");
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.body.data.methods.passwordEnabled, true);
     assert.ok(Array.isArray(res.body.data.methods.linkedProviders));
@@ -1135,7 +1137,7 @@ module.exports = (addTest) => {
   });
 
   addTest("user and organization audit feeds return recent events", async () => {
-    const userAuditRes = await request(server, "GET", "/user/user_password/authaudit");
+    const userAuditRes = await request(server, "GET", "/person/user_password/authaudit");
     assert.strictEqual(userAuditRes.status, 200);
     assert.ok(Array.isArray(userAuditRes.body.data.audits));
     assert.ok(userAuditRes.body.data.audits.length >= 1);
@@ -1245,18 +1247,18 @@ module.exports = (addTest) => {
   });
 
   addTest("support operator aliases expose remediations under support namespace", async () => {
-    const trustRes = await request(server, "GET", "/support/elections/public/trust");
+    const trustRes = await request(server, "GET", "/support/polls/public/trust");
     assert.strictEqual(trustRes.status, 200);
     assert.ok(trustRes.body.data.trustProfile);
 
-    const methodsRes = await request(server, "GET", "/support/users/user_password/signin-method");
+    const methodsRes = await request(server, "GET", "/support/people/user_password/signin-method");
     assert.strictEqual(methodsRes.status, 200);
     assert.ok(methodsRes.body.data.methods);
 
     const auditRes = await request(
       server,
       "GET",
-      "/support/users/user_password/authaudit?items=5"
+      "/support/people/user_password/authaudit?items=5"
     );
     assert.strictEqual(auditRes.status, 200);
     assert.ok(Array.isArray(auditRes.body.data.audits));
@@ -1352,14 +1354,14 @@ module.exports = (addTest) => {
   });
 
   addTest("public poll trust endpoint exposes trust-gated invite limits", async () => {
-    const res = await request(server, "GET", "/election/public/trust");
+    const res = await request(server, "GET", "/poll/public/trust");
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.body.data.trustProfile.trustTier, "basic");
     assert.strictEqual(res.body.data.trustProfile.canSendExternalInvites, true);
   });
 
   addTest("election owner can enable public poll mode", async () => {
-    const res = await request(server, "POST", `/election/${publicElectionId}/public/enable`, {
+    const res = await request(server, "POST", `/poll/${publicElectionId}/public/enable`, {
       publicAccessMode: "link_vote",
       guestVotingEnabled: true,
       allowPlatformInvites: true,
@@ -1373,19 +1375,19 @@ module.exports = (addTest) => {
   });
 
   addTest("public poll can be viewed and voted through guest session", async () => {
-    const viewRes = await request(server, "GET", `/public/election/${publicElectionToken}`);
+    const viewRes = await request(server, "GET", `/public/poll/${publicElectionToken}`);
     assert.strictEqual(viewRes.status, 200);
     assert.strictEqual(viewRes.body.data.election.id, publicElectionId);
     assert.ok(Array.isArray(viewRes.body.data.election.list.items));
     assert.strictEqual(viewRes.body.data.election.list.items[0].id, publicListItemId);
 
-    const sessionRes = await request(server, "POST", `/public/election/${publicElectionToken}/session`, {
+    const sessionRes = await request(server, "POST", `/public/poll/${publicElectionToken}/session`, {
       displayName: "Guest User",
     });
     assert.strictEqual(sessionRes.status, 200);
     assert.ok(sessionRes.body.data.sessionToken);
 
-    const voteRes = await request(server, "POST", `/public/election/${publicElectionToken}/vote`, {
+    const voteRes = await request(server, "POST", `/public/poll/${publicElectionToken}/vote`, {
       sessionToken: sessionRes.body.data.sessionToken,
       itemId: publicListItemId,
       decision: "yes",
@@ -1396,14 +1398,14 @@ module.exports = (addTest) => {
   });
 
   addTest("trusted election owner can send public poll invite", async () => {
-    const res = await request(server, "POST", `/election/${publicElectionId}/invite`, {
+    const res = await request(server, "POST", `/poll/${publicElectionId}/invite`, {
       email: "public.invited@example.com",
     });
     assert.strictEqual(res.status, 200);
     assert.ok(Array.isArray(res.body.data.results));
     assert.strictEqual(res.body.data.results[0].status, 200);
 
-    const statsRes = await request(server, "GET", `/election/${publicElectionId}/public/stats`);
+    const statsRes = await request(server, "GET", `/poll/${publicElectionId}/public/stats`);
     assert.strictEqual(statsRes.status, 200);
     assert.strictEqual(statsRes.body.data.statistics.inviteCount, 1);
     assert.strictEqual(statsRes.body.data.statistics.participantCount, 1);
@@ -1414,7 +1416,7 @@ module.exports = (addTest) => {
     const res = await request(
       server,
       "GET",
-      "/user/user_source_owner/ownership/preview?ownerId=user_target_owner&includeLinked=true&resources=lists,elections"
+      "/person/user_source_owner/ownership/preview?ownerId=user_target_owner&includeLinked=true&resources=lists,elections"
     );
     assert.strictEqual(res.status, 200);
     assert.deepStrictEqual(res.body.data.transfer.resources, ["lists", "elections"]);
@@ -1427,7 +1429,7 @@ module.exports = (addTest) => {
   });
 
   addTest("ownership transfer applies direct and linked owner changes", async () => {
-    const res = await request(server, "POST", "/user/user_source_owner/ownership/transfer", {
+    const res = await request(server, "POST", "/person/user_source_owner/ownership/transfer", {
       ownerId: "user_target_owner",
       includeLinked: true,
       resources: ["lists", "elections"],

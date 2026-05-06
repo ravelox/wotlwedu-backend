@@ -1,4 +1,8 @@
-const baseUrl = (process.env.WOTLWEDU_VALIDATE_BASE_URL || "").replace(/\/+$/, "");
+const API_VERSION = "v1";
+const configuredBaseUrl = (process.env.WOTLWEDU_VALIDATE_BASE_URL || "").replace(/\/+$/, "");
+const baseUrl = /\/v\d+$/.test(configuredBaseUrl)
+  ? configuredBaseUrl
+  : `${configuredBaseUrl}/${API_VERSION}`;
 const token = process.env.WOTLWEDU_VALIDATE_TOKEN || "";
 const organizationId = process.env.WOTLWEDU_VALIDATE_ORGANIZATION_ID || "";
 const userId = process.env.WOTLWEDU_VALIDATE_USER_ID || "";
@@ -6,7 +10,7 @@ const email = process.env.WOTLWEDU_VALIDATE_EMAIL || "";
 const password = process.env.WOTLWEDU_VALIDATE_PASSWORD || "";
 const outputPath = process.env.WOTLWEDU_VALIDATE_OUTPUT || "";
 
-if (!baseUrl) {
+if (!configuredBaseUrl) {
   console.error("Missing WOTLWEDU_VALIDATE_BASE_URL");
   process.exit(1);
 }
@@ -93,12 +97,12 @@ async function main() {
 
   if (resolvedUserId) {
     await runCheck(
-      "GET /user/:userId/signin-method",
-      `/user/${encodeURIComponent(resolvedUserId)}/signin-method`
+      "GET /person/:userId/signin-method",
+      `/person/${encodeURIComponent(resolvedUserId)}/signin-method`
     );
     await runCheck(
-      "GET /user/:userId/authaudit",
-      `/user/${encodeURIComponent(resolvedUserId)}/authaudit?page=1&items=10`
+      "GET /person/:userId/authaudit",
+      `/person/${encodeURIComponent(resolvedUserId)}/authaudit?page=1&items=10`
     );
   }
 

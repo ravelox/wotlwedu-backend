@@ -244,7 +244,7 @@ function buildPublicPollInviteMessage(
   inviteToken = null
 ) {
   const inviteUrl =
-    `${Config.baseFrontendUrl}/public/election/${encodeURIComponent(publicToken)}` +
+    `${Config.baseFrontendUrl}/public/poll/${encodeURIComponent(publicToken)}` +
     (inviteToken ? `?invite=${encodeURIComponent(inviteToken)}` : "");
   const textBody = `Hi there,
 

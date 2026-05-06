@@ -202,7 +202,7 @@ module.exports.putUserInGroup = (req, res, next) => {
       if (!canManageGroup(req, foundGroup))
         return StatusResponse(res, 403, "Not authorized for this group");
 
-      User.findByPk(userToFind)
+      User.findByPk(personToFind)
         .then((userFound) => {
           if (!userFound) return StatusResponse(res, 404, "User not found");
           if (!Security.isInSameOrganization(req, userFound))
@@ -238,7 +238,7 @@ module.exports.deleteUserFromGroup = (req, res, next) => {
       if (!canManageGroup(req, foundGroup))
         return StatusResponse(res, 403, "Not authorized for this group");
 
-      User.findByPk(userToFind)
+      User.findByPk(personToFind)
         .then((userFound) => {
           if (!userFound) return StatusResponse(res, 404, "User not found");
           if (!Security.isInSameOrganization(req, userFound))
@@ -286,9 +286,9 @@ module.exports.deleteGroup = (req, res, next) => {
 
 module.exports.putBulkAddUserToRole = (req, res, next) => {
   const groupToFind = req.params.groupId;
-  const userList = req.body.userList;
+  const personList = req.body.personList;
   if (!groupToFind) return StatusResponse(res, 421, "No group ID provided");
-  if (!userList) return StatusResponse(res, 421, "No user list provided");
+  if (!personList) return StatusResponse(res, 421, "No person list provided");
 
   Group.findByPk(groupToFind).then(async (foundGroup) => {
     if (!foundGroup) return StatusResponse(res, 404, "Group not found");
@@ -296,19 +296,19 @@ module.exports.putBulkAddUserToRole = (req, res, next) => {
       return StatusResponse(res, 403, "Not authorized for this group");
 
     const results = [];
-    for (const userToFind of userList) {
-      await User.findByPk(userToFind)
+    for (const personToFind of personList) {
+      await User.findByPk(personToFind)
         .then(async (userFound) => {
           if (!userFound) {
             results.push({
-              id: userToFind,
+              id: personToFind,
               status: 404,
-              message: "User not found",
+              message: "Person not found",
             });
           } else {
             if (!Security.isInSameOrganization(req, userFound)) {
               results.push({
-                id: userToFind,
+                id: personToFind,
                 status: 403,
                 message: "Cross-organization access denied",
               });
@@ -321,12 +321,12 @@ module.exports.putBulkAddUserToRole = (req, res, next) => {
               .then((addedUser) => {
                 if (!addedUser) {
                   results.push({
-                    id: userToFind,
+                    id: personToFind,
                     status: 500,
-                    message: "Cannot add user to group",
+                    message: "Cannot add person to group",
                   });
                 } else {
-                  results.push({ id: userToFind, status: 200, message: "OK" });
+                  results.push({ id: personToFind, status: 200, message: "OK" });
                 }
               })
               .catch((err) => next(err));
@@ -340,9 +340,9 @@ module.exports.putBulkAddUserToRole = (req, res, next) => {
 
 module.exports.deleteBulkUserFromGroup = (req, res, next) => {
   const groupToFind = req.params.groupId;
-  const userList = req.body.userList;
+  const personList = req.body.personList;
   if (!groupToFind) return StatusResponse(res, 421, "No group ID provided");
-  if (!userList) return StatusResponse(res, 421, "No user list provided");
+  if (!personList) return StatusResponse(res, 421, "No person list provided");
 
   Group.findByPk(groupToFind)
     .then(async (foundGroup) => {
@@ -351,19 +351,19 @@ module.exports.deleteBulkUserFromGroup = (req, res, next) => {
         return StatusResponse(res, 403, "Not authorized for this group");
 
       const results = [];
-      for (const userToFind of userList) {
-        await User.findByPk(userToFind)
+      for (const personToFind of personList) {
+        await User.findByPk(personToFind)
           .then(async (userFound) => {
             if (!userFound) {
               results.push({
-                id: userToFind,
+                id: personToFind,
                 status: 404,
-                message: "User not found",
+                message: "Person not found",
               });
             } else {
               if (!Security.isInSameOrganization(req, userFound)) {
                 results.push({
-                  id: userToFind,
+                  id: personToFind,
                   status: 403,
                   message: "Cross-organization access denied",
                 });
@@ -374,12 +374,12 @@ module.exports.deleteBulkUserFromGroup = (req, res, next) => {
                 .then((removedUser) => {
                   if (!removedUser) {
                     results.push({
-                      id: userToFind,
+                      id: personToFind,
                       status: 500,
-                      message: "Cannot delete user from group",
+                      message: "Cannot delete person from group",
                     });
                   } else {
-                    results.push({ id: userToFind, status: 200, message: "OK" });
+                    results.push({ id: personToFind, status: 200, message: "OK" });
                   }
                 })
                 .catch((err) => next(err));

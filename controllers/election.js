@@ -26,7 +26,7 @@ const GroupMember = require("../model/groupmember");
 const Notification = require("../model/notification");
 
 const Attributes = require("../model/attributes");
-const PARTICIPATION_REMINDER_STATUS = "Election Participation Reminder";
+const PARTICIPATION_REMINDER_STATUS = "Poll Participation Reminder";
 
 function normalizeReminderStates(value) {
   const allowedStates = new Set(["not_started", "in_progress", "completed"]);

@@ -65,6 +65,8 @@ const Helpers = require("./util/helpers");
 const StatusResponse = require("./util/statusresponse");
 
 const app = express();
+const API_VERSION = "v1";
+const apiPath = (route) => `/${API_VERSION}${route}`;
 
 let privateKey;
 let certificate;
@@ -104,7 +106,7 @@ const multerFilter = (req, file, cb) => {
 };
 
 app.post(
-  "/image/file/:imageId",
+  apiPath("/picture/file/:imageId"),
   multer({ storage: multerFileStorage, fileFilter: multerFilter }).single(
     "imageUpload"
   )
@@ -131,13 +133,13 @@ app.use('/docs', express.static(path.join(__dirname, 'docs')));
 app.get("/favicon.ico", (req, res) => res.status(204));
 
 // Routes that can be accessed without a login
-app.use("/login", Helpers.logComment("Login"), loginRoutes);
-app.use("/register", Helpers.logComment("Register"), registerRoutes);
-app.use("/public/election", Helpers.logComment("Public Election"), publicElectionRoutes);
+app.use(apiPath("/login"), Helpers.logComment("Login"), loginRoutes);
+app.use(apiPath("/register"), Helpers.logComment("Register"), registerRoutes);
+app.use(apiPath("/public/poll"), Helpers.logComment("Public Poll"), publicElectionRoutes);
 
 /* Connection Test */
 app.use(
-  "/ping",
+  apiPath("/ping"),
   Helpers.logComment("Ping"),
   Security.checkAuthentication,
   (req, res, next) => {
@@ -150,111 +152,111 @@ app.use(
 
 // Routes that require a login
 app.use(
-  "/organization",
+  apiPath("/organization"),
   Helpers.logComment("Organization"),
   Security.checkAuthentication,
   organizationRoutes
 );
 app.use(
-  "/support",
+  apiPath("/support"),
   Helpers.logComment("Support"),
   Security.checkAuthentication,
   supportRoutes
 );
 app.use(
-  "/tutorial",
+  apiPath("/tutorial"),
   Helpers.logComment("Tutorial"),
   Security.checkAuthentication,
   tutorialRoutes
 );
 app.use(
-  "/helper",
+  apiPath("/helper"),
   Helpers.logComment("Helper"),
   Security.checkAuthentication,
   helperRoutes
 );
 app.use(
-  "/user",
-  Helpers.logComment("User"),
+  apiPath("/person"),
+  Helpers.logComment("Person"),
   Security.checkAuthentication,
   userRoutes
 );
 app.use(
-  "/role",
+  apiPath("/role"),
   Helpers.logComment("Role"),
   Security.checkAuthentication,
   roleRoutes
 );
 app.use(
-  "/capability",
+  apiPath("/capability"),
   Helpers.logComment("Capability"),
   Security.checkAuthentication,
   capabilityRoutes
 );
 app.use(
-  "/item",
+  apiPath("/item"),
   Helpers.logComment("Item"),
   Security.checkAuthentication,
   itemRoutes
 );
 app.use(
-  "/list",
+  apiPath("/list"),
   Helpers.logComment("List"),
   Security.checkAuthentication,
   listRoutes
 );
 app.use(
-  "/workgroup",
-  Helpers.logComment("Workgroup"),
+  apiPath("/space"),
+  Helpers.logComment("Space"),
   Security.checkAuthentication,
   workgroupRoutes
 );
 app.use(
-  "/group",
-  Helpers.logComment("Group"),
+  apiPath("/circle"),
+  Helpers.logComment("Circle"),
   Security.checkAuthentication,
   groupRoutes
 );
 app.use(
-  "/image",
-  Helpers.logComment("Image"),
+  apiPath("/picture"),
+  Helpers.logComment("Picture"),
   Security.checkAuthentication,
   imageRoutes
 );
 app.use(
-  "/category",
+  apiPath("/category"),
   Helpers.logComment("Category"),
   Security.checkAuthentication,
   categoryRoutes
 );
 app.use(
-  "/election",
-  Helpers.logComment("Election"),
+  apiPath("/poll"),
+  Helpers.logComment("Poll"),
   Security.checkAuthentication,
   electionRoutes
 );
 app.use(
-  "/vote",
+  apiPath("/vote"),
   Helpers.logComment("Vote"),
   Security.checkAuthentication,
   voteRoutes
 );
 app.use(
-  "/preference",
+  apiPath("/preference"),
   Helpers.logComment("Preference"),
   Security.checkAuthentication,
   preferenceRoutes
 );
 
 app.use(
-  "/cast",
+  apiPath("/cast"),
   Helpers.logComment("Cast"),
   Security.checkAuthentication,
   castRoutes
 );
 
 app.use(
-  "/notification",
+  apiPath("/notification"),
   Helpers.logComment("Notification"),
   Security.checkAuthentication,
   notificationRoutes

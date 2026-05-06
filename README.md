@@ -7,7 +7,6 @@
 This repository contains the REST API backend for the wotlwedu ecosystem. It is used by clients such as:
 - `wotlwedu-minimal`
 - `wotlwedu-browser`
-- `wotlwedu-ios`
 
 Core stack:
 - Node.js + Express
@@ -15,7 +14,7 @@ Core stack:
 - Sequelize by default (MariaDB)
 - Optional DB adapters via `WOTLWEDU_DB_TYPE` (`sequelize`, `mongoose`, `pg`)
 - Socket.IO for real-time notifications/refresh events
-- Organization/workgroup tenancy controls
+- Organization/space tenancy controls
 
 ## Multi-tenancy concepts
 - `Organization`: top-level tenant boundary. Data access is restricted by organization context.
@@ -26,7 +25,7 @@ Core stack:
 - `Workgroup admin user`: can administer data for one workgroup (`adminWorkgroupId`, legacy `adminGroupId`).
 
 ## Current version
-The backend changes in this repo are documented as **0.0.42** in `CHANGELOG.md`.
+The backend changes in this repo are documented as **0.0.43** in `CHANGELOG.md`.
 
 ## Recent API behavior updates
 - Category IDs are now consistently included on category-enabled resources (`group`, `workgroup`, `image`, `item`, `list`, `election`).
@@ -42,25 +41,25 @@ The backend changes in this repo are documented as **0.0.42** in `CHANGELOG.md`.
 - Add post-auth social-link confirmation via `POST /login/google/link` and `POST /login/social/link` when a verified Google/social sign-in matches an existing password-based account.
 - Add organization email invitations via `POST /organization/:organizationId/invite`.
 - Add public invite lookup via `GET /login/invite/:token` so clients can show invite context before Google sign-in.
-- Add public election access via `GET /public/election/:token`, guest session issuance via `POST /public/election/:token/session`, guest voting via `POST /public/election/:token/vote`, and public abuse reporting via `POST /public/election/:token/report`.
-- Add trust-gated public election invite management for authenticated election owners via `GET /election/public/trust`, `POST /election/:electionId/public/enable`, `POST /election/:electionId/public/disable`, `GET /election/:electionId/public/stats`, and `GET/POST/DELETE` invite lifecycle routes under `/election/:electionId/invite`.
+- Add public election access via `GET /public/poll/:token`, guest session issuance via `POST /public/poll/:token/session`, guest voting via `POST /public/poll/:token/vote`, and public abuse reporting via `POST /public/poll/:token/report`.
+- Add trust-gated public election invite management for authenticated election owners via `GET /poll/public/trust`, `POST /poll/:electionId/public/enable`, `POST /poll/:electionId/public/disable`, `GET /poll/:electionId/public/stats`, and `GET/POST/DELETE` invite lifecycle routes under `/poll/:electionId/invite`.
 - Add public-poll trust, suppression, invite, participant, vote, and abuse-audit persistence so public links can expand participation without allowing guest-triggered outbound messaging.
 - First-time social sign-in now consumes a pending organization invite only when the supplied invite token matches the Google account email; otherwise it auto-provisions a new organization named `<FirstInitial> <LastInitial>'s Organization`.
 - Matching password-based accounts are not auto-linked before provider authentication. Social login now returns a neutral `linkRequired` confirmation state after verified provider authentication, and linking preserves password login.
 - Social sign-in now refuses to auto-link against an existing non-password account match and returns a manual-support error instead of risking account takeover or duplicate identity state.
 - Auth and invite operations now emit persistent audit records (`authaudits`) covering password sign-in, social sign-in, deferred link confirmation, invite lookup, invite acceptance, invite creation, resend, and revoke flows.
 - Support/admin observability now includes aggregated support endpoints via `GET /support/auth/overview`, `GET /support/auth/audit`, `GET /support/publicpoll/overview`, and `GET /support/publicpoll/audit`.
-- Poll participation follow-up now includes `POST /election/:electionId/remind`, and `GET /election/:electionId/participation` now returns reminder counts and last-reminder metadata.
+- Poll participation follow-up now includes `POST /poll/:electionId/remind`, and `GET /poll/:electionId/participation` now returns reminder counts and last-reminder metadata.
 - Add a real poll tutorial via `POST /tutorial/poll/start` and `GET /tutorial/poll`, which stores tutorial progress per user, suggests exact names for the real list/audience/poll to create in the existing UI, and tracks completion from real items, memberships, votes, and stats.
 - Invite lookup, invite management, and deferred social-link confirmation now use dedicated rate limits in addition to the existing password/social login throttles.
-- Add user-level support endpoints for linked sign-in methods and recent auth audit history via `GET /user/:userId/signin-method`, `DELETE /user/:userId/signin-method/:identityId`, and `GET /user/:userId/authaudit`.
-- Add ownership-transfer preview/apply endpoints for support operators via `GET /user/:userId/ownership/preview` and `POST /user/:userId/ownership/transfer`.
+- Add user-level support endpoints for linked sign-in methods and recent auth audit history via `GET /person/:userId/signin-method`, `DELETE /person/:userId/signin-method/:identityId`, and `GET /person/:userId/authaudit`.
+- Add ownership-transfer preview/apply endpoints for support operators via `GET /person/:userId/ownership/preview` and `POST /person/:userId/ownership/transfer`.
 - Add organization-level audit visibility for admins via `GET /organization/:organizationId/authaudit`.
 - Organization invite conflicts now return structured diagnostics when the target email already belongs to another organization.
 - Add invite lifecycle controls for org admins: `GET /organization/:organizationId/invite`, `POST /organization/:organizationId/invite/:inviteId/resend`, and `DELETE /organization/:organizationId/invite/:inviteId`.
 - Organization invites now default to a 7-day expiry (`WOTLWEDU_ORG_INVITE_EXPIRY_DAYS`) and retain status history (`pending`, `accepted`, `revoked`, `expired`) for admin review.
-- Admin/scoped-admin collection queries can now narrow `GET /user` and `GET /workgroup` with explicit `organizationId` filters.
-- Operator-only aliases now live under `/support/...` for admin/support clients. Preferred paths include `/support/users/:userId/*`, `/support/organizations/:organizationId/*`, `/support/elections/:electionId/*`, and `/support/session/testtoken`.
+- Admin/scoped-admin collection queries can now narrow `GET /person` and `GET /space` with explicit `organizationId` filters.
+- Operator-only aliases now live under `/support/...` for admin/support clients. Preferred paths include `/support/people/:userId/*`, `/support/organizations/:organizationId/*`, `/support/polls/:electionId/*`, and `/support/session/testtoken`.
 
 ## Prerequisites
 - Node.js and npm
@@ -206,31 +205,31 @@ Additional tenancy endpoints:
 - `POST /tutorial/poll/start`
 - `POST /tutorial/poll/skip`
 - `POST /tutorial/poll/enable`
-- `GET /support/users/:userId/signin-method`
-- `GET /support/users/:userId/authaudit`
-- `GET /support/users/:userId/ownership/preview`
-- `POST /support/users/:userId/ownership/transfer`
-- `POST /support/users/:userId/tutorial/poll/enable`
+- `GET /support/people/:userId/signin-method`
+- `GET /support/people/:userId/authaudit`
+- `GET /support/people/:userId/ownership/preview`
+- `POST /support/people/:userId/ownership/transfer`
+- `POST /support/people/:userId/tutorial/poll/enable`
 - `GET /support/organizations/:organizationId/invite`
 - `GET /support/organizations/:organizationId/authaudit`
 - `POST /support/organizations/:organizationId/invite`
 - `POST /support/organizations/:organizationId/invite/:inviteId/resend`
 - `DELETE /support/organizations/:organizationId/invite/:inviteId`
-- `GET /support/elections/public/trust`
-- `POST /election/:electionId/remind`
-- `GET /support/elections/:electionId/public/stats`
-- `GET /support/elections/:electionId/invite`
-- `POST /support/elections/:electionId/public/enable`
-- `POST /support/elections/:electionId/public/disable`
-- `POST /support/elections/:electionId/invite`
-- `POST /support/elections/:electionId/invite/:inviteId/resend`
-- `DELETE /support/elections/:electionId/invite/:inviteId`
+- `GET /support/polls/public/trust`
+- `POST /poll/:electionId/remind`
+- `GET /support/polls/:electionId/public/stats`
+- `GET /support/polls/:electionId/invite`
+- `POST /support/polls/:electionId/public/enable`
+- `POST /support/polls/:electionId/public/disable`
+- `POST /support/polls/:electionId/invite`
+- `POST /support/polls/:electionId/invite/:inviteId/resend`
+- `DELETE /support/polls/:electionId/invite/:inviteId`
 - `POST /support/session/testtoken`
 - `POST /support/session/testtoken/revoke`
 - `GET /support/publicpoll/overview`
 - `GET /support/publicpoll/audit`
-- `GET /user/:userId/ownership/preview`
-- `POST /user/:userId/ownership/transfer`
+- `GET /person/:userId/ownership/preview`
+- `POST /person/:userId/ownership/transfer`
 
 ## Notes for contributors
 - Response format helper: `util/statusresponse.js`

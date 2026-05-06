@@ -1,5 +1,5 @@
 const module_id = "update-0018";
-const module_comment = "Add election participation reminder notification status";
+const module_comment = "Add poll participation reminder notification status";
 const module_target_database_version = 19;
 
 const Status = require("../model/status");
@@ -8,7 +8,7 @@ module.exports.id = module_id;
 module.exports.comment = module_comment;
 module.exports.targetDatabaseVersion = module_target_database_version;
 
-const statuses = [{ id: 110, object: "notification", name: "Election Participation Reminder" }];
+const statuses = [{ id: 110, object: "notification", name: "Poll Participation Reminder" }];
 
 function init(queryInterface) {
   if (!queryInterface) {
@@ -39,6 +39,10 @@ async function apply() {
       const foundStatus = await Status.findOne({ where: { id: status.id } });
       if (!foundStatus) {
         await Status.create({ ...status, creator: "system" });
+      } else if (foundStatus.name !== status.name || foundStatus.object !== status.object) {
+        foundStatus.name = status.name;
+        foundStatus.object = status.object;
+        await foundStatus.save();
       }
     } catch (err) {
       console.log(err);

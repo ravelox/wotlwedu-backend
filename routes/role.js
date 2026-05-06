@@ -27,10 +27,10 @@ router.put("/:roleId/cap/:capabilityId", Security.checkCapability("role",["edit"
 router.delete("/:roleId/cap/:capabilityId", Security.checkCapability("role",["edit"]),roleController.deleteCapFromRole);
 
 // Manage users given the role
-router.put("/:roleId/bulkuseradd", Security.checkCapability("role",["edit"]),roleController.putBulkAddUserToRole);
-router.put("/:roleId/bulkuserdel", Security.checkCapability("role",["edit"]),roleController.deleteBulkUserFromRole);
+router.put("/:roleId/bulkpersonadd", Security.checkCapability("role",["edit"]),roleController.putBulkAddUserToRole);
+router.put("/:roleId/bulkpersondel", Security.checkCapability("role",["edit"]),roleController.deleteBulkUserFromRole);
 
-router.put("/:roleId/user/:userId", Security.checkCapability("role",["edit"]),roleController.putAddUserToRole);
-router.delete("/:roleId/user/:userId", Security.checkCapability("role",["edit"]),roleController.deleteUserFromRole);
+router.put("/:roleId/person/:userId", Security.checkCapability("role",["edit"]),roleController.putAddUserToRole);
+router.delete("/:roleId/person/:userId", Security.checkCapability("role",["edit"]),roleController.deleteUserFromRole);
 
 module.exports = router;

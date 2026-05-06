@@ -141,7 +141,7 @@ async function getPublicElectionByToken(token) {
 }
 
 function getPublicShareUrl(token) {
-  return `${Config.baseFrontendUrl}/public/election/${encodeURIComponent(token)}`;
+  return `${Config.baseFrontendUrl}/public/poll/${encodeURIComponent(token)}`;
 }
 
 function serializePublicElection(election) {

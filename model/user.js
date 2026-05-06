@@ -118,6 +118,7 @@ const User = database.define(
     },
   },
   {
+    tableName: "people",
     indexes: [
       { fields: ["email"], unique: true },
       { fields: ["creator"] },

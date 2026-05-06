@@ -30,7 +30,7 @@ function parseTutorialValue(value) {
 
 function buildTutorialNames(suffix) {
   return {
-    listName: `Tutorial Options ${suffix}`,
+    listName: `Tutorial Ideas ${suffix}`,
     groupName: `Tutorial Audience ${suffix}`,
     electionName: `Tutorial Poll ${suffix}`,
   };
@@ -44,7 +44,7 @@ function buildTutorialSteps(progress, names = {}, bindings = {}) {
   return [
     {
       key: "create_options_list",
-      title: "Create an options list",
+      title: "Create an ideas list",
       complete: progress.listCreated === true,
       resourceType: "list",
       suggestedName: names.listName || null,
@@ -67,7 +67,7 @@ function buildTutorialSteps(progress, names = {}, bindings = {}) {
       resourceType: "group",
       suggestedName: names.groupName || null,
       resourceId: groupRef,
-      detail: "Use the existing audience/group UI and create a real audience list with the suggested name.",
+      detail: "Use the existing circle UI and create a real circle with the suggested name.",
     },
     {
       key: "add_yourself_to_audience",
@@ -84,7 +84,7 @@ function buildTutorialSteps(progress, names = {}, bindings = {}) {
       resourceType: "election",
       suggestedName: names.electionName || null,
       resourceId: electionRef,
-      detail: "Create a real poll that uses the tutorial options list and tutorial audience list.",
+      detail: "Create a real poll that uses the tutorial ideas list and tutorial audience list.",
     },
     {
       key: "start_poll",
