@@ -120,6 +120,7 @@ function createTutorialSession() {
     status: "active",
     startedAt: new Date().toISOString(),
     skippedAt: null,
+    dismissedAt: null,
     names: buildTutorialNames(suffix),
     bindings: {
       listId: null,
@@ -133,7 +134,14 @@ function summarizeTutorial(session, bindings, progress) {
   const steps = buildTutorialSteps(progress, session.names, bindings);
   const completedSteps = steps.filter((step) => step.complete).length;
   const nextStep = steps.find((step) => !step.complete) || null;
-  const status = session.status === "skipped" ? "skipped" : nextStep ? "active" : "completed";
+  const status =
+    session.status === "dismissed"
+      ? "dismissed"
+      : session.status === "skipped"
+        ? "skipped"
+        : nextStep
+          ? "active"
+          : "completed";
 
   return {
     key: TUTORIAL_PREFERENCE_NAME,
@@ -141,6 +149,7 @@ function summarizeTutorial(session, bindings, progress) {
     status,
     startedAt: session.startedAt || null,
     skippedAt: session.skippedAt || null,
+    dismissedAt: session.dismissedAt || null,
     names: session.names,
     bindings,
     progress: {
@@ -149,7 +158,7 @@ function summarizeTutorial(session, bindings, progress) {
       totalSteps: steps.length,
       completionRate: steps.length ? Math.round((completedSteps / steps.length) * 100) : 0,
     },
-    nextStepKey: status === "skipped" ? null : nextStep ? nextStep.key : null,
+    nextStepKey: status === "skipped" || status === "dismissed" ? null : nextStep ? nextStep.key : null,
     steps,
   };
 }
@@ -201,6 +210,7 @@ async function enableTutorialPreference(record, userId, { restart = false } = {}
         ...(parseTutorialValue(record?.value) || createTutorialSession()),
         status: "active",
         skippedAt: null,
+        dismissedAt: null,
       };
   return saveTutorialPreference(record, baseSession, userId);
 }
@@ -434,6 +444,23 @@ module.exports.postSkipPollTutorial = async (req, res, next) => {
         castVoteCount: 0,
         hasStats: false,
       }),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports.postDismissPollTutorial = async (req, res, next) => {
+  try {
+    const existingRecord = await loadTutorialPreference(req.authUserId);
+    const session = parseTutorialValue(existingRecord?.value) || createTutorialSession();
+
+    session.status = "dismissed";
+    session.dismissedAt = new Date().toISOString();
+
+    await saveTutorialPreference(existingRecord, session, req.authUserId);
+    return StatusResponse(res, 200, "OK", {
+      dismissed: true,
     });
   } catch (err) {
     next(err);
