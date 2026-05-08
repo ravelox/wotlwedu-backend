@@ -7,6 +7,14 @@ const Assoc = require("../model/associations");
 const updateDirName = "updates";
 const fileRegex = /^update-\d+\.js$/;
 
+function getUpdateTitle(updateModule) {
+  return updateModule.title || updateModule.comment || "Untitled update";
+}
+
+function getUpdateLabel(updateModule) {
+  return updateModule.id + " - " + getUpdateTitle(updateModule);
+}
+
 async function upsertMetadata(name, value, comment = null) {
   const existing = await Metadata.findByPk(name);
   if (existing) {
@@ -57,6 +65,7 @@ module.exports.checkForUpdates = async () => {
     if (!updateModule.id) {
       throw new Error("Database Updates: Update module has no id: " + entry);
     }
+    const updateLabel = getUpdateLabel(updateModule);
     const updateMetadata = await Metadata.findByPk(updateModule.id);
 
     let physicallyApplied = false;
@@ -73,7 +82,7 @@ module.exports.checkForUpdates = async () => {
       if (physicalCheck && physicalCheck.status === -1) {
         console.log(
           "Database Updates: Physical check errored for " +
-            updateModule.id +
+            updateLabel +
             "; proceeding to apply"
         );
       }
@@ -85,37 +94,37 @@ module.exports.checkForUpdates = async () => {
     // If metadata says we've applied this update, verify that the change still exists.
     // If it doesn't, re-apply the update (updates are expected to be idempotent).
     if (updateMetadata && physicallyApplied) {
-      console.log("Database Updates: Skipping " + updateModule.id);
+      console.log("Database Updates: Skipping " + updateLabel);
       continue;
     }
     if (updateMetadata && !physicallyApplied && typeof updateModule.isApplied === "function") {
       console.log(
         "Database Updates: Metadata present but physical check indicates not applied; reapplying [" +
-          updateModule.id +
+          updateLabel +
           "]"
       );
     } else if (updateMetadata && typeof updateModule.isApplied !== "function") {
-      console.log("Database Updates: Skipping " + updateModule.id);
+      console.log("Database Updates: Skipping " + updateLabel);
       continue;
     }
 
     if (physicallyApplied) {
       console.log(
         "Database Updates: Backfilling metadata for already-applied update [" +
-          updateModule.id +
+          updateLabel +
           "]"
       );
-      await upsertMetadata(updateModule.id, "applied", updateModule.comment || null);
+      await upsertMetadata(updateModule.id, "applied", getUpdateTitle(updateModule));
       continue;
     }
 
-    console.log("Database Updates: Applying update [" + updateModule.id + "]");
+    console.log("Database Updates: Applying update [" + updateLabel + "]");
 
     let result;
     const initResult = updateModule.init(queryInterface);
     if (initResult && initResult.status === -1) {
       throw new Error(
-        "Database Updates: Failed to initialise update " + updateModule.id
+        "Database Updates: Failed to initialise update " + updateLabel
       );
     }
 
@@ -123,12 +132,12 @@ module.exports.checkForUpdates = async () => {
 
     // If an error occured, call the remove method to clean up
     if (result.status === -1) {
-      console.log("Database Updates: Removing update");
+      console.log("Database Updates: Removing update [" + updateLabel + "]");
       result = await updateModule.remove(true);
     } else {
       updateModule.cleanup();
-      await upsertMetadata(updateModule.id, "applied", updateModule.comment || null);
-      console.log("Database Updates: Update applied");
+      await upsertMetadata(updateModule.id, "applied", getUpdateTitle(updateModule));
+      console.log("Database Updates: Update applied [" + updateLabel + "]");
     }
   }
   console.log("Database Updates: Done");

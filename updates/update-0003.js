@@ -17,6 +17,7 @@ let _queryInterface = null;
 
 module.exports.id = module_id;
 module.exports.comment = module_comment;
+module.exports.title = module_comment;
 module.exports.targetDatabaseVersion = module_target_database_version;
 
 async function createRole(rolename, description, capabilityList) {

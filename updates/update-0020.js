@@ -6,6 +6,7 @@ const module_target_database_version = 21;
 
 module.exports.id = module_id;
 module.exports.comment = module_comment;
+module.exports.title = module_comment;
 module.exports.targetDatabaseVersion = module_target_database_version;
 
 let _queryInterface;

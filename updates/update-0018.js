@@ -6,6 +6,7 @@ const Status = require("../model/status");
 
 module.exports.id = module_id;
 module.exports.comment = module_comment;
+module.exports.title = module_comment;
 module.exports.targetDatabaseVersion = module_target_database_version;
 
 const statuses = [{ id: 110, object: "notification", name: "Poll Participation Reminder" }];
