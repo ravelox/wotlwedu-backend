@@ -1,4 +1,7 @@
 const assert = require("assert");
+const FS = require("fs");
+const Os = require("os");
+const Path = require("path");
 
 const miniUuid = require("../util/mini-uuid");
 const statusResponse = require("../util/statusresponse");
@@ -8,6 +11,64 @@ const LoginController = require("../controllers/login");
 const AdminController = require("../controllers/admin");
 const Mailer = require("../util/mailer");
 const Config = require("../config/wotlwedu");
+const DBUpdate = require("../util/dbupdate");
+
+function createMemoryMetadata(initialRows = {}) {
+  const rows = new Map(
+    Object.entries(initialRows).map(([name, row]) => [
+      name,
+      {
+        name,
+        value: row.value,
+        comment: row.comment || null,
+      },
+    ])
+  );
+
+  function wrap(row) {
+    if (!row) return null;
+    return {
+      get name() {
+        return row.name;
+      },
+      get value() {
+        return row.value;
+      },
+      set value(nextValue) {
+        row.value = nextValue;
+      },
+      get comment() {
+        return row.comment;
+      },
+      set comment(nextComment) {
+        row.comment = nextComment;
+      },
+      async save() {
+        rows.set(row.name, row);
+        return this;
+      },
+    };
+  }
+
+  return {
+    rows,
+    async sync() {},
+    async findByPk(name) {
+      return wrap(rows.get(name) || null);
+    },
+    async create(row) {
+      const nextRow = { ...row };
+      rows.set(nextRow.name, nextRow);
+      return wrap(nextRow);
+    },
+  };
+}
+
+function writeUpdateModule(dir, fileName, source) {
+  const filePath = Path.join(dir, fileName);
+  FS.writeFileSync(filePath, source);
+  delete require.cache[require.resolve(filePath)];
+}
 
 module.exports = (addTest) => {
   addTest("mini-uuid applies prefix and produces unique values", () => {
@@ -233,6 +294,166 @@ module.exports = (addTest) => {
     } finally {
       Config.supportEmail = previousSupportEmail;
       Config.baseFrontendUrl = previousBaseFrontendUrl;
+    }
+  });
+
+  addTest("database update runner applies modules missing metadata and reapplies incomplete modules", async () => {
+    const updateDir = FS.mkdtempSync(Path.join(Os.tmpdir(), "wotlwedu-updates-"));
+    global.__wotlweduDbUpdateTestEvents = [];
+
+    try {
+      writeUpdateModule(
+        updateDir,
+        "update-9000.js",
+        `
+          module.exports.id = "update-9000";
+          module.exports.title = "Missing metadata update";
+          module.exports.comment = "Missing metadata update";
+          module.exports.init = () => {
+            global.__wotlweduDbUpdateTestEvents.push("9000:init");
+            return { status: 0 };
+          };
+          module.exports.apply = async () => {
+            global.__wotlweduDbUpdateTestEvents.push("9000:apply");
+            return { status: 0 };
+          };
+          module.exports.cleanup = () => {
+            global.__wotlweduDbUpdateTestEvents.push("9000:cleanup");
+          };
+          module.exports.remove = async () => {
+            global.__wotlweduDbUpdateTestEvents.push("9000:remove");
+            return { status: 0 };
+          };
+        `
+      );
+      writeUpdateModule(
+        updateDir,
+        "update-9001.js",
+        `
+          module.exports.id = "update-9001";
+          module.exports.title = "Incomplete physical update";
+          module.exports.comment = "Incomplete physical update";
+          module.exports.isApplied = async () => ({ status: 0, applied: false });
+          module.exports.init = () => {
+            global.__wotlweduDbUpdateTestEvents.push("9001:init");
+            return { status: 0 };
+          };
+          module.exports.apply = async () => {
+            global.__wotlweduDbUpdateTestEvents.push("9001:apply");
+            return { status: 0 };
+          };
+          module.exports.cleanup = () => {
+            global.__wotlweduDbUpdateTestEvents.push("9001:cleanup");
+          };
+          module.exports.remove = async () => {
+            global.__wotlweduDbUpdateTestEvents.push("9001:remove");
+            return { status: 0 };
+          };
+        `
+      );
+      writeUpdateModule(
+        updateDir,
+        "update-9002.js",
+        `
+          module.exports.id = "update-9002";
+          module.exports.title = "Legacy metadata-only update";
+          module.exports.comment = "Legacy metadata-only update";
+          module.exports.init = () => {
+            global.__wotlweduDbUpdateTestEvents.push("9002:init");
+            return { status: 0 };
+          };
+          module.exports.apply = async () => {
+            global.__wotlweduDbUpdateTestEvents.push("9002:apply");
+            return { status: 0 };
+          };
+          module.exports.cleanup = () => {
+            global.__wotlweduDbUpdateTestEvents.push("9002:cleanup");
+          };
+          module.exports.remove = async () => {
+            global.__wotlweduDbUpdateTestEvents.push("9002:remove");
+            return { status: 0 };
+          };
+        `
+      );
+      writeUpdateModule(
+        updateDir,
+        "update-9003.js",
+        `
+          module.exports.id = "update-9003";
+          module.exports.title = "Physically applied update";
+          module.exports.comment = "Physically applied update";
+          module.exports.isApplied = async () => ({ status: 0, applied: true });
+          module.exports.init = () => {
+            global.__wotlweduDbUpdateTestEvents.push("9003:init");
+            return { status: 0 };
+          };
+          module.exports.apply = async () => {
+            global.__wotlweduDbUpdateTestEvents.push("9003:apply");
+            return { status: 0 };
+          };
+          module.exports.cleanup = () => {
+            global.__wotlweduDbUpdateTestEvents.push("9003:cleanup");
+          };
+          module.exports.remove = async () => {
+            global.__wotlweduDbUpdateTestEvents.push("9003:remove");
+            return { status: 0 };
+          };
+        `
+      );
+
+      const metadataModel = createMemoryMetadata({
+        "update-9001": { value: "applied", comment: "old title" },
+        "update-9002": { value: "applied", comment: "old title" },
+      });
+      const logs = [];
+
+      await DBUpdate.checkForUpdates({
+        updatePath: updateDir,
+        metadataModel,
+        database: { getQueryInterface: () => ({}) },
+        associations: { setup() {} },
+        logger: { log: (message) => logs.push(message) },
+      });
+
+      assert.deepStrictEqual(global.__wotlweduDbUpdateTestEvents, [
+        "9000:init",
+        "9000:apply",
+        "9000:cleanup",
+        "9001:init",
+        "9001:apply",
+        "9001:cleanup",
+      ]);
+      assert.strictEqual(metadataModel.rows.get("update-9000").value, "applied");
+      assert.strictEqual(metadataModel.rows.get("update-9000").comment, "Missing metadata update");
+      assert.strictEqual(metadataModel.rows.get("update-9001").comment, "Incomplete physical update");
+      assert.strictEqual(metadataModel.rows.get("update-9002").comment, "old title");
+      assert.strictEqual(metadataModel.rows.get("update-9003").value, "applied");
+      assert.strictEqual(metadataModel.rows.get("update-9003").comment, "Physically applied update");
+      assert.ok(
+        logs.some((line) =>
+          line.includes(
+            "reapplying [update-9001 - Incomplete physical update]"
+          )
+        ),
+        "reapply log should include module id and title"
+      );
+      assert.ok(
+        logs.some((line) =>
+          line.includes("Skipping update-9002 - Legacy metadata-only update")
+        ),
+        "skip log should include module id and title"
+      );
+      assert.ok(
+        logs.some((line) =>
+          line.includes(
+            "Backfilling metadata for already-applied update [update-9003 - Physically applied update]"
+          )
+        ),
+        "backfill log should include module id and title"
+      );
+    } finally {
+      delete global.__wotlweduDbUpdateTestEvents;
+      FS.rmSync(updateDir, { recursive: true, force: true });
     }
   });
 };

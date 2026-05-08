@@ -15,8 +15,8 @@ function getUpdateLabel(updateModule) {
   return updateModule.id + " - " + getUpdateTitle(updateModule);
 }
 
-async function upsertMetadata(name, value, comment = null) {
-  const existing = await Metadata.findByPk(name);
+async function upsertMetadata(metadataModel, name, value, comment = null) {
+  const existing = await metadataModel.findByPk(name);
   if (existing) {
     existing.value = value;
     if (comment !== null && comment !== undefined) {
@@ -26,36 +26,40 @@ async function upsertMetadata(name, value, comment = null) {
     return existing;
   }
 
-  return Metadata.create({
+  return metadataModel.create({
     name: name,
     value: value,
     comment: comment,
   });
 }
 
-module.exports.checkForUpdates = async () => {
+module.exports.checkForUpdates = async (options = {}) => {
   // Ensure all models are loaded and associations are registered in this process.
-  Assoc.setup();
+  const metadataModel = options.metadataModel || Metadata;
+  const associations = options.associations || Assoc;
+  const databaseInstance = options.database || database;
+  const logger = options.logger || console;
+  associations.setup();
 
-  const queryInterface = database.getQueryInterface();
+  const queryInterface = databaseInstance.getQueryInterface();
 
-  console.log("Database Updates: Checking");
+  logger.log("Database Updates: Checking");
 
-  const fullUpdatePath = Path.join(__dirname, "..", updateDirName);
+  const fullUpdatePath = options.updatePath || Path.join(__dirname, "..", updateDirName);
   const dir = FS.readdirSync(fullUpdatePath).sort();
 
   // Bootstrap metadata tracking table if it does not yet exist.
   try {
-    await Metadata.sync();
+    await metadataModel.sync();
   } catch (err) {
-    console.log("Database Updates: Failed to sync metadata table");
+    logger.log("Database Updates: Failed to sync metadata table");
     throw err;
   }
 
   for await (const entry of dir) {
     // Only work on update js files matching the regex
     if (!fileRegex.test(entry)) {
-      console.log("Database Updates: Skipping " + entry);
+      logger.log("Database Updates: Skipping " + entry);
       continue;
     }
 
@@ -66,7 +70,7 @@ module.exports.checkForUpdates = async () => {
       throw new Error("Database Updates: Update module has no id: " + entry);
     }
     const updateLabel = getUpdateLabel(updateModule);
-    const updateMetadata = await Metadata.findByPk(updateModule.id);
+    const updateMetadata = await metadataModel.findByPk(updateModule.id);
 
     let physicallyApplied = false;
     if (typeof updateModule.isApplied === "function") {
@@ -80,7 +84,7 @@ module.exports.checkForUpdates = async () => {
       // Physical checks are best-effort. If they fail (e.g. because a table does not
       // exist yet), treat as "not applied" and proceed to apply().
       if (physicalCheck && physicalCheck.status === -1) {
-        console.log(
+        logger.log(
           "Database Updates: Physical check errored for " +
             updateLabel +
             "; proceeding to apply"
@@ -94,31 +98,31 @@ module.exports.checkForUpdates = async () => {
     // If metadata says we've applied this update, verify that the change still exists.
     // If it doesn't, re-apply the update (updates are expected to be idempotent).
     if (updateMetadata && physicallyApplied) {
-      console.log("Database Updates: Skipping " + updateLabel);
+      logger.log("Database Updates: Skipping " + updateLabel);
       continue;
     }
     if (updateMetadata && !physicallyApplied && typeof updateModule.isApplied === "function") {
-      console.log(
+      logger.log(
         "Database Updates: Metadata present but physical check indicates not applied; reapplying [" +
           updateLabel +
           "]"
       );
     } else if (updateMetadata && typeof updateModule.isApplied !== "function") {
-      console.log("Database Updates: Skipping " + updateLabel);
+      logger.log("Database Updates: Skipping " + updateLabel);
       continue;
     }
 
     if (physicallyApplied) {
-      console.log(
+      logger.log(
         "Database Updates: Backfilling metadata for already-applied update [" +
           updateLabel +
           "]"
       );
-      await upsertMetadata(updateModule.id, "applied", getUpdateTitle(updateModule));
+      await upsertMetadata(metadataModel, updateModule.id, "applied", getUpdateTitle(updateModule));
       continue;
     }
 
-    console.log("Database Updates: Applying update [" + updateLabel + "]");
+    logger.log("Database Updates: Applying update [" + updateLabel + "]");
 
     let result;
     const initResult = updateModule.init(queryInterface);
@@ -132,13 +136,13 @@ module.exports.checkForUpdates = async () => {
 
     // If an error occured, call the remove method to clean up
     if (result.status === -1) {
-      console.log("Database Updates: Removing update [" + updateLabel + "]");
+      logger.log("Database Updates: Removing update [" + updateLabel + "]");
       result = await updateModule.remove(true);
     } else {
       updateModule.cleanup();
-      await upsertMetadata(updateModule.id, "applied", getUpdateTitle(updateModule));
-      console.log("Database Updates: Update applied [" + updateLabel + "]");
+      await upsertMetadata(metadataModel, updateModule.id, "applied", getUpdateTitle(updateModule));
+      logger.log("Database Updates: Update applied [" + updateLabel + "]");
     }
   }
-  console.log("Database Updates: Done");
+  logger.log("Database Updates: Done");
 };
