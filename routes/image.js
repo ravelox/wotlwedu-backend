@@ -1,8 +1,8 @@
 const express = require("express");
-const multer = require("multer");
 const router = express.Router();
 
 const Security = require("../util/security");
+const { imageUpload, validateImageUpload } = require("../util/upload-security");
 const imageController = require("../controllers/image");
 
 router.get("/:imageId/notif/:notificationId", imageController.getImage);
@@ -22,6 +22,9 @@ router.get(
 router.post(
   "/file/:imageId",
   Security.checkCapability("image", ["add"]),
+  imageController.checkImageFileUploadAccess,
+  imageUpload.single("imageUpload"),
+  validateImageUpload,
   imageController.postImageFile
 );
 

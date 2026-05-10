@@ -12,6 +12,8 @@ const AdminController = require("../controllers/admin");
 const Mailer = require("../util/mailer");
 const Config = require("../config/wotlwedu");
 const DBUpdate = require("../util/dbupdate");
+const RateLimit = require("../util/rate-limit");
+const UploadSecurity = require("../util/upload-security");
 
 function createMemoryMetadata(initialRows = {}) {
   const rows = new Map(
@@ -179,6 +181,71 @@ module.exports = (addTest) => {
     assert.strictEqual(redacted.app_port, 9876);
     assert.deepStrictEqual(redacted.corsOrigin, ["http://localhost:5173"]);
     assert.strictEqual(redacted.mailerProvider.sendEmail, "[function]");
+  });
+
+  addTest("upload security accepts only matching JPEG and PNG magic bytes", () => {
+    const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xdb]);
+    const png = Buffer.from([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    ]);
+    const script = Buffer.from("<script>alert(1)</script>");
+
+    assert.strictEqual(UploadSecurity.sniffImageType(jpeg), "image/jpeg");
+    assert.strictEqual(UploadSecurity.sniffImageType(png), "image/png");
+    assert.strictEqual(UploadSecurity.sniffImageType(script), null);
+    assert.strictEqual(UploadSecurity.sanitizeFileExtension(".PNG"), "png");
+    assert.strictEqual(UploadSecurity.sanitizeFileExtension("gif"), "jpg");
+    assert.strictEqual(
+      UploadSecurity.sanitizeFileStem("../image_123!"),
+      "image_123"
+    );
+  });
+
+  addTest("rate limiter memory store blocks after configured maximum", async () => {
+    const limiter = RateLimit({
+      max: 1,
+      windowMs: 60 * 1000,
+      keyMode: "ip",
+      store: "memory",
+      message: "Too many test requests",
+    });
+    const req = {
+      ip: "203.0.113.10",
+      headers: {},
+      connection: {},
+      body: {},
+      params: {},
+    };
+    const captured = {};
+    const res = {
+      set(name, value) {
+        captured[name] = value;
+      },
+      status(code) {
+        captured.status = code;
+        return {
+          json(payload) {
+            captured.payload = payload;
+            return payload;
+          },
+        };
+      },
+    };
+    let nextCount = 0;
+
+    await limiter(req, res, () => {
+      nextCount += 1;
+    });
+    await limiter(req, res, () => {
+      nextCount += 1;
+    });
+
+    assert.strictEqual(nextCount, 1);
+    assert.strictEqual(captured.status, 429);
+    assert.strictEqual(captured.payload.message, "Too many test requests");
+    assert.ok(captured["Retry-After"]);
+
+    RateLimit._memoryCounters.clear();
   });
 
   addTest("mailer confirmation payload uses configured support email and confirmation link", () => {

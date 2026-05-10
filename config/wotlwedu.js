@@ -2,8 +2,21 @@
 // Do not remove
 const toBool = require("../util/tobool");
 
+module.exports.nodeEnv = process.env.NODE_ENV || "development";
+module.exports.isProduction = module.exports.nodeEnv === "production";
+
+function parseTrustProxy(value) {
+  if (value === undefined || value === null || value === "") return false;
+  if (value === "true") return true;
+  if (value === "false") return false;
+  const numericValue = Number(value);
+  if (Number.isInteger(numericValue) && numericValue >= 0) return numericValue;
+  return value;
+}
+
 module.exports.app_port = process.env.WOTLWEDU_APP_PORT || 9876;
 module.exports.app_listen = process.env.WOTLWEDU_APP_LISTEN || "0.0.0.0";
+module.exports.trustProxy = parseTrustProxy(process.env.WOTLWEDU_TRUST_PROXY);
 
 module.exports.db_host = process.env.WOTLWEDU_DB_HOST || "localhost";
 module.exports.db_user = process.env.WOTLWEDU_DB_USER || "wotlwedu";
@@ -77,6 +90,11 @@ module.exports.confirmationLinkBaseUrl =
 module.exports.imageURL =
   process.env.WOTLWEDU_IMAGE_URL || baseApiUrl + "images/";
 module.exports.imageDir = process.env.WOTLWEDU_IMAGE_DIR || "public/images/";
+module.exports.uploadMaxBytes =
+  +(process.env.WOTLWEDU_UPLOAD_MAX_BYTES || 5 * 1024 * 1024);
+module.exports.jsonBodyLimit = process.env.WOTLWEDU_JSON_BODY_LIMIT || "1mb";
+module.exports.urlEncodedBodyLimit =
+  process.env.WOTLWEDU_URLENCODED_BODY_LIMIT || module.exports.jsonBodyLimit;
 
 module.exports.defaultRoleName = "Default Role";
 
@@ -87,9 +105,14 @@ module.exports.corsOrigin = corsOriginsRaw
   .split(",")
   .map((v) => v.trim())
   .filter((v) => v.length > 0);
+module.exports.corsAllowNoOrigin = toBool(
+  process.env.WOTLWEDU_CORS_ALLOW_NO_ORIGIN || !module.exports.isProduction
+);
 
 module.exports.authRateLimitLoginMax =
   +(process.env.WOTLWEDU_RATE_LOGIN_MAX || 10);
+module.exports.authRateLimitRegisterMax =
+  +(process.env.WOTLWEDU_RATE_REGISTER_MAX || 10);
 module.exports.authRateLimitResetMax =
   +(process.env.WOTLWEDU_RATE_RESET_MAX || 5);
 module.exports.authRateLimitVerify2faMax =
@@ -106,6 +129,12 @@ module.exports.authRateLimitPublicVoteMax =
   +(process.env.WOTLWEDU_RATE_PUBLIC_VOTE_MAX || 30);
 module.exports.authRateLimitWindowMs =
   +(process.env.WOTLWEDU_RATE_WINDOW_MS || 60 * 1000);
+module.exports.rateLimitStore =
+  process.env.WOTLWEDU_RATE_LIMIT_STORE ||
+  (module.exports.isProduction ? "database" : "memory");
+module.exports.rateLimitFailOpen = toBool(
+  process.env.WOTLWEDU_RATE_LIMIT_FAIL_OPEN || false
+);
 module.exports.organizationInviteExpiryDays =
   +(process.env.WOTLWEDU_ORG_INVITE_EXPIRY_DAYS || 7);
 module.exports.publicPollTrustMinAccountAgeHours =

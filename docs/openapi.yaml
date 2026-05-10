@@ -831,15 +831,31 @@ paths:
       responses:
         '200':
           description: Successful response
+        '413':
+          description: Uploaded file is too large
+        '421':
+          description: Missing or invalid image upload
       security:
       - bearerAuth: []
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
               type: object
-              additionalProperties: true
+              required:
+              - imageUpload
+              properties:
+                imageUpload:
+                  type: string
+                  format: binary
+                  description: PNG or JPEG image file. Size is limited by WOTLWEDU_UPLOAD_MAX_BYTES.
+                fileextension:
+                  type: string
+                  enum:
+                  - jpg
+                  - jpeg
+                  - png
   /v1/support/organizations/:organizationId/invite/:inviteId/resend:
     post:
       summary: POST /v1/support/organizations/:organizationId/invite/:inviteId/resend

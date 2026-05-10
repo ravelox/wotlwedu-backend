@@ -70,9 +70,9 @@ router.post("/gentoken", Security.checkAuthentication, loginController.getGenera
 router.post("/testtoken", Security.checkAuthentication, loginController.postGenerateTestBearer);
 router.post("/testtoken/revoke", Security.checkAuthentication, loginController.postRevokeTestBearer);
 
-router.post("/refresh", loginController.postRefreshLogin);
+router.post("/refresh", loginRateLimit, loginController.postRefreshLogin);
 router.post("/resetreq", resetRateLimit, loginController.postRequestPasswordReset);
-router.put("/password/:userid", loginController.putResetUserPassword);
+router.put("/password/:userid", resetRateLimit, loginController.putResetUserPassword);
 router.post("/", loginRateLimit, loginController.postLogin);
 
 module.exports = router;

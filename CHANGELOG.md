@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.50 - 2026-05-10
+- Add production security hardening: Helmet headers, configured body limits, production-safe 500 error redaction, deliberate trust-proxy configuration, and stricter production CORS defaults.
+- Move picture uploads fully behind authenticated capability/object authorization and validate upload size, extension, MIME type, and image magic bytes before accepting files.
+- Add database-backed rate-limit counters for production/shared app replicas and extend throttles to registration, refresh, and password reset completion flows.
+
 ## 0.0.49 - 2026-05-10
 - Refresh Codex agent guidance for the backend repository.
 - Update README and OpenAPI documentation for current backend routes and release metadata.

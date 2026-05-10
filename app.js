@@ -2,7 +2,7 @@
 const path = require("path");
 const express = require("express");
 const cors = require("cors");
-const multer = require("multer");
+const helmet = require("helmet");
 const https = require("https");
 const FS = require("fs");
 const Util = require("util");
@@ -29,7 +29,6 @@ console.log(`Starting wotlwedu-backend version ${packageJSON.version}`);
 
 const Housekeeping = require("./util/housekeeping")
 
-const UUID = require("./util/mini-uuid");
 const database = require("./util/database");
 
 // Set up database assocations
@@ -84,44 +83,32 @@ if (Config.ssl === true) {
   }
 }
 
-app.use(bodyParser.json());
-
-// Set up multer for PNG and JPEG images
-
-FS.mkdirSync(Config.imageDir, { recursive: true });
-const multerFileStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, Config.imageDir);
-  },
-  filename: (req, file, cb) => {
-    const fileExt = req.body.fileextension ? req.body.fileextension : "jpg";
-    cb(
-      null,
-      (req.params.imageId ? req.params.imageId : UUID("file")) + "." + fileExt
-    );
-  },
-});
-const filterMimeTypes = ["image/png", "image/jpg", "image/jpeg"];
-const multerFilter = (req, file, cb) => {
-  cb(null, filterMimeTypes.includes(file.mimetype));
-};
-
-app.post(
-  apiPath("/picture/file/:imageId"),
-  multer({ storage: multerFileStorage, fileFilter: multerFilter }).single(
-    "imageUpload"
-  )
+app.set("trust proxy", Config.trustProxy);
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
+app.use(bodyParser.json({ limit: Config.jsonBodyLimit }));
+app.use(
+  bodyParser.urlencoded({
+    extended: false,
+    limit: Config.urlEncodedBodyLimit,
+  })
 );
 
 // Add CORS headers
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin) return callback(null, true);
+      if (!origin) return callback(null, Config.corsAllowNoOrigin);
       if (!Config.corsOrigin || Config.corsOrigin.includes(origin)) {
         return callback(null, true);
       }
-      return callback(new Error("CORS origin not allowed"), false);
+      const err = new Error("CORS origin not allowed");
+      err.statusCode = 403;
+      return callback(err, false);
     },
   })
 );
@@ -278,10 +265,31 @@ app.use((req, res, next) => {
 // Catch-all error handler
 app.use((error, req, res, next) => {
   const status = error.statusCode || 500;
-  const message = error.message;
-  const data = error.data;
-  const errType = error.type;
+  let message = error.message;
+  let data = error.data;
+  let errType = error.type;
+
+  if (error.name === "MulterError") {
+    if (error.code === "LIMIT_FILE_SIZE") {
+      message = "Uploaded file is too large";
+      return res.status(413).json({ status: 413, message });
+    }
+    message = "Invalid upload";
+    return res.status(421).json({ status: 421, message });
+  }
+
+  if (error.type === "entity.too.large") {
+    return res
+      .status(413)
+      .json({ status: 413, message: "Request body is too large" });
+  }
+
   if (status >= 500) console.log(error);
+  if (Config.isProduction && status >= 500) {
+    message = "Internal Server Error";
+    data = undefined;
+    errType = undefined;
+  }
   res
     .status(status)
     .json({ status: status, message: message, type: errType, data: data });

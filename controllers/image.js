@@ -326,41 +326,52 @@ module.exports.deleteImage = (req, res, next) => {
     .catch((err) => next(err));
 };
 
-module.exports.postImageFile = (req, res, next) => {
+module.exports.checkImageFileUploadAccess = async (req, res, next) => {
   const imageToFind = req.params.imageId;
 
   if (!imageToFind) return StatusResponse(res, 421, "No image ID provided");
+
+  try {
+    const foundImage = await Image.findByPk(imageToFind);
+    if (!foundImage) return StatusResponse(res, 421, "No image found");
+
+    if (foundImage.workgroupId) {
+      const allowed = await Security.canAccessWorkgroup(req, foundImage.workgroupId);
+      if (!allowed) return StatusResponse(res, 403, "Not authorized for this workgroup");
+    } else if (!Security.getVerdict(req.verdicts, "add").isAdmin) {
+      if (foundImage.creator !== req.authUserId) {
+        return StatusResponse(res, 403, "Not authorized for this image");
+      }
+    }
+
+    req.uploadTargetImage = foundImage;
+    return next();
+  } catch (err) {
+    return next(err);
+  }
+};
+
+module.exports.postImageFile = async (req, res, next) => {
   if (!req.file) return StatusResponse(res, 421, "No image provided");
 
-  if (req.file.path) {
+  try {
+    const foundImage =
+      req.uploadTargetImage || (await Image.findByPk(req.params.imageId));
+    if (!foundImage) return StatusResponse(res, 421, "No image found");
 
-    // Update the filename details on the image object
-    Image.findByPk(imageToFind)
-      .then(async (foundImage) => {
-        if (!foundImage) return StatusResponse(res, 421, "No image found");
+    foundImage.filename = req.file.filename;
+    if (req.file.detectedMimeType) {
+      foundImage.contentType = req.file.detectedMimeType;
+    }
+    const updatedImage = await foundImage.save();
+    if (!updatedImage)
+      return StatusResponse(res, 500, "Cannot save image to storage");
 
-        if (foundImage.workgroupId) {
-          const allowed = await Security.canAccessWorkgroup(req, foundImage.workgroupId);
-          if (!allowed) return StatusResponse(res, 403, "Not authorized for this workgroup");
-        } else if (!Security.getVerdict(req.verdicts, "add").isAdmin) {
-          if (foundImage.creator !== req.authUserId) {
-            return StatusResponse(res, 403, "Not authorized for this image");
-          }
-        }
-
-        foundImage.filename = req.file.filename;
-        foundImage
-          .save()
-          .then((updatedImage) => {
-            if (!updatedImage)
-              return StatusResponse(res, 500, "Cannot save image to storage");
-                        return StatusResponse(res, 200, "OK", {
-              filename: updatedImage.filename,
-            });
-          })
-          .catch((err) => next(err));
-      })
-      .catch((err) => next(err));
+    return StatusResponse(res, 200, "OK", {
+      filename: updatedImage.filename,
+    });
+  } catch (err) {
+    return next(err);
   }
 };
 

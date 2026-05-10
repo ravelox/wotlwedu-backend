@@ -48,6 +48,20 @@ spec:
               value: "{{ .Values.env.frontendUrl }}"
             - name: WOTLWEDU_CORS_ORIGINS
               value: "{{ .Values.env.corsOrigins }}"
+            - name: WOTLWEDU_CORS_ALLOW_NO_ORIGIN
+              value: "{{ ternary "true" "false" .Values.env.corsAllowNoOrigin }}"
+            - name: WOTLWEDU_TRUST_PROXY
+              value: "{{ .Values.env.trustProxy }}"
+            - name: WOTLWEDU_JSON_BODY_LIMIT
+              value: "{{ .Values.env.jsonBodyLimit }}"
+            - name: WOTLWEDU_URLENCODED_BODY_LIMIT
+              value: "{{ .Values.env.urlEncodedBodyLimit }}"
+            - name: WOTLWEDU_UPLOAD_MAX_BYTES
+              value: "{{ .Values.env.uploadMaxBytes }}"
+            - name: WOTLWEDU_RATE_LIMIT_STORE
+              value: "{{ .Values.env.rateLimitStore }}"
+            - name: WOTLWEDU_RATE_LIMIT_FAIL_OPEN
+              value: "{{ ternary "true" "false" .Values.env.rateLimitFailOpen }}"
             - name: WOTLWEDU_DB_HOST
               value: "{{ .Values.database.host }}"
             - name: WOTLWEDU_DB_NAME

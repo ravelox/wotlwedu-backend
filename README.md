@@ -25,7 +25,7 @@ Core stack:
 - `Workgroup admin user`: can administer data for one workgroup (`adminWorkgroupId`, legacy `adminGroupId`).
 
 ## Current version
-The backend changes in this repo are documented as **0.0.49** in `CHANGELOG.md`.
+The backend changes in this repo are documented as **0.0.50** in `CHANGELOG.md`.
 
 ## Recent API behavior updates
 - Category IDs are now consistently included on category-enabled resources (`group`, `workgroup`, `image`, `item`, `list`, `election`).
@@ -64,6 +64,7 @@ The backend changes in this repo are documented as **0.0.49** in `CHANGELOG.md`.
 - Add local SMTP defaults for development mail capture.
 - Add `POST /tutorial/poll/dismiss` for dismissing the current tutorial prompt without permanently skipping the tutorial.
 - Improve database update logging and add coverage for unapplied updates whose metadata row already exists.
+- Production security defaults now include Helmet headers, configured JSON/form body limits, production-safe 500 error redaction, stricter production CORS behavior, authenticated picture uploads with file validation, and shared database-backed rate limiting when `NODE_ENV=production`.
 
 ## Prerequisites
 - Node.js and npm
@@ -146,15 +147,17 @@ Commonly used settings:
 - Support/deep links: `WOTLWEDU_SUPPORT_EMAIL`, `WOTLWEDU_INVITE_LINK_BASE_URL`, `WOTLWEDU_PASSWORD_RESET_LINK_BASE_URL`, `WOTLWEDU_CONFIRMATION_LINK_BASE_URL`
 - Invite policy: `WOTLWEDU_ORG_INVITE_EXPIRY_DAYS`
 - TLS: `WOTLWEDU_SSL`, `WOTLWEDU_SSL_KEY`, `WOTLWEDU_SSL_CERT`
-- CORS: `WOTLWEDU_CORS_ORIGINS` (comma-separated allowed origins)
-- Auth rate limits: `WOTLWEDU_RATE_LOGIN_MAX`, `WOTLWEDU_RATE_RESET_MAX`, `WOTLWEDU_RATE_VERIFY2FA_MAX`, `WOTLWEDU_RATE_SOCIAL_LINK_MAX`, `WOTLWEDU_RATE_INVITE_LOOKUP_MAX`, `WOTLWEDU_RATE_INVITE_MANAGE_MAX`, `WOTLWEDU_RATE_WINDOW_MS`
+- Security: `NODE_ENV`, `WOTLWEDU_TRUST_PROXY`, `WOTLWEDU_JSON_BODY_LIMIT`, `WOTLWEDU_URLENCODED_BODY_LIMIT`
+- CORS: `WOTLWEDU_CORS_ORIGINS` (comma-separated allowed origins), `WOTLWEDU_CORS_ALLOW_NO_ORIGIN`
+- Auth rate limits: `WOTLWEDU_RATE_LIMIT_STORE`, `WOTLWEDU_RATE_LIMIT_FAIL_OPEN`, `WOTLWEDU_RATE_LOGIN_MAX`, `WOTLWEDU_RATE_REGISTER_MAX`, `WOTLWEDU_RATE_RESET_MAX`, `WOTLWEDU_RATE_VERIFY2FA_MAX`, `WOTLWEDU_RATE_SOCIAL_LINK_MAX`, `WOTLWEDU_RATE_INVITE_LOOKUP_MAX`, `WOTLWEDU_RATE_INVITE_MANAGE_MAX`, `WOTLWEDU_RATE_WINDOW_MS`
 - Public poll trust/rate limits: `WOTLWEDU_RATE_PUBLIC_POLL_MAX`, `WOTLWEDU_RATE_PUBLIC_VOTE_MAX`, `WOTLWEDU_PUBLIC_TRUST_MIN_ACCOUNT_AGE_HOURS`, `WOTLWEDU_PUBLIC_BASIC_INVITE_QUOTA_DAILY`, `WOTLWEDU_PUBLIC_BASIC_INVITE_QUOTA_HOURLY`, `WOTLWEDU_PUBLIC_BASIC_RECIPIENTS_PER_POLL`, `WOTLWEDU_PUBLIC_INVITE_RESEND_COOLDOWN_HOURS`
 - Observability: `WOTLWEDU_AUTH_AUDIT_STDOUT`
 - URLs: `WOTLWEDU_API_URL`, `WOTLWEDU_FRONTEND_URL`, `WOTLWEDU_IMAGE_URL`
-- Images: `WOTLWEDU_IMAGE_DIR`
+- Images: `WOTLWEDU_IMAGE_DIR`, `WOTLWEDU_UPLOAD_MAX_BYTES`
 
 Notes:
 - `WOTLWEDU_DB_TYPE` defaults to `sequelize`.
+- `WOTLWEDU_RATE_LIMIT_STORE` defaults to `database` in production and `memory` elsewhere. Use `database` for horizontally scaled app replicas.
 - If SSL is enabled, provide certificate/key file paths.
 
 ## Docker

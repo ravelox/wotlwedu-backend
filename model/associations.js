@@ -30,6 +30,7 @@ const PublicPollInvite = require("./publicpollinvite");
 const ContactSuppression = require("./contactsuppression");
 const TrustProfile = require("./trustprofile");
 const AbuseAudit = require("./abuseaudit");
+const RateLimit = require("./ratelimit");
 
 let _associationsSetup = false;
 
