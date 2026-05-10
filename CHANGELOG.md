@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.0.49 - 2026-05-10
+- Refresh Codex agent guidance for the backend repository.
+- Update README and OpenAPI documentation for current backend routes and release metadata.
+
+## 0.0.48 - 2026-05-07
+- Add unit coverage for the database update runner when update metadata exists but the physical schema change is still unapplied.
+- Keep update reapplication behavior covered so partially migrated databases can self-heal predictably.
+
+## 0.0.47 - 2026-05-07
+- Add `POST /tutorial/poll/dismiss` so clients can dismiss the current poll tutorial prompt without marking the tutorial permanently skipped.
+- Extend tutorial controller behavior for dismissible tutorial prompts.
+
+## 0.0.46 - 2026-05-07
+- Improve database update logging across existing update modules and the shared update runner.
+- Refresh the update module template with the current logging pattern.
+
+## 0.0.45 - 2026-05-06
+- Add system-admin `GET /admin/config` for safe runtime configuration visibility.
+- Add local SMTP provider support for development mail capture.
+- Extend unit coverage around admin config redaction and SMTP behavior.
+
 ## 0.0.44 - 2026-05-05
 - Allow list filters to match resource IDs across backend collection endpoints.
 

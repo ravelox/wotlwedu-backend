@@ -1,9 +1,128 @@
 openapi: 3.0.0
 info:
   title: WOTLWEDU API
-  version: 1.0.0
+  version: 0.0.49
 
 paths:
+  /v1/ping:
+    get:
+      summary: GET /v1/ping
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /v1/admin/config:
+    get:
+      summary: GET /v1/admin/config
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /v1/public/poll/:token:
+    get:
+      summary: GET /v1/public/poll/:token
+      parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+  /v1/public/poll/:token/session:
+    post:
+      summary: POST /v1/public/poll/:token/session
+      parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+  /v1/public/poll/:token/vote:
+    post:
+      summary: POST /v1/public/poll/:token/vote
+      parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+  /v1/public/poll/:token/report:
+    post:
+      summary: POST /v1/public/poll/:token/report
+      parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+  /v1/organization/:
+    get:
+      summary: GET /v1/organization/
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+    post:
+      summary: POST /v1/organization/
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /v1/organization/:organizationId:
+    get:
+      summary: GET /v1/organization/:organizationId
+      parameters:
+      - name: organizationId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+    put:
+      summary: PUT /v1/organization/:organizationId
+      parameters:
+      - name: organizationId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+    delete:
+      summary: DELETE /v1/organization/:organizationId
+      parameters:
+      - name: organizationId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
   /v1/login/invite/:token:
     get:
       summary: GET /v1/login/invite/:token
@@ -296,6 +415,15 @@ paths:
   /v1/tutorial/poll/skip:
     post:
       summary: POST /v1/tutorial/poll/skip
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /v1/tutorial/poll/dismiss:
+    post:
+      summary: POST /v1/tutorial/poll/dismiss
       parameters: []
       responses:
         '200':
@@ -2492,6 +2620,126 @@ paths:
           description: Successful response
       security:
       - bearerAuth: []
+  /v1/space/:
+    get:
+      summary: GET /v1/space/
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+    post:
+      summary: POST /v1/space/
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /v1/space/:workgroupId:
+    get:
+      summary: GET /v1/space/:workgroupId
+      parameters:
+      - name: workgroupId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+    put:
+      summary: PUT /v1/space/:workgroupId
+      parameters:
+      - name: workgroupId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+    delete:
+      summary: DELETE /v1/space/:workgroupId
+      parameters:
+      - name: workgroupId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /v1/space/:workgroupId/person/:userId:
+    put:
+      summary: PUT /v1/space/:workgroupId/person/:userId
+      parameters:
+      - name: workgroupId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+    delete:
+      summary: DELETE /v1/space/:workgroupId/person/:userId
+      parameters:
+      - name: workgroupId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /v1/space/:workgroupId/bulkpersonadd:
+    put:
+      summary: PUT /v1/space/:workgroupId/bulkpersonadd
+      parameters:
+      - name: workgroupId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /v1/space/:workgroupId/bulkpersondel:
+    put:
+      summary: PUT /v1/space/:workgroupId/bulkpersondel
+      parameters:
+      - name: workgroupId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
   /v1/poll/:
     post:
       summary: POST /v1/poll/
@@ -2565,6 +2813,121 @@ paths:
             schema:
               type: object
               additionalProperties: true
+  /v1/poll/public/trust:
+    get:
+      summary: GET /v1/poll/public/trust
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /v1/poll/:electionId/public/stats:
+    get:
+      summary: GET /v1/poll/:electionId/public/stats
+      parameters:
+      - name: electionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /v1/poll/:electionId/invite:
+    get:
+      summary: GET /v1/poll/:electionId/invite
+      parameters:
+      - name: electionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+    post:
+      summary: POST /v1/poll/:electionId/invite
+      parameters:
+      - name: electionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /v1/poll/:electionId/invite/:inviteId/resend:
+    post:
+      summary: POST /v1/poll/:electionId/invite/:inviteId/resend
+      parameters:
+      - name: electionId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: inviteId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /v1/poll/:electionId/invite/:inviteId:
+    delete:
+      summary: DELETE /v1/poll/:electionId/invite/:inviteId
+      parameters:
+      - name: electionId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: inviteId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /v1/poll/:electionId/public/enable:
+    post:
+      summary: POST /v1/poll/:electionId/public/enable
+      parameters:
+      - name: electionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /v1/poll/:electionId/public/disable:
+    post:
+      summary: POST /v1/poll/:electionId/public/disable
+      parameters:
+      - name: electionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
   /v1/poll/:electionId:
     get:
       summary: GET /v1/poll/:electionId

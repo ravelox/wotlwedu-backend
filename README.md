@@ -5,7 +5,7 @@
 
 ## What is this repository?
 This repository contains the REST API backend for the wotlwedu ecosystem. It is used by clients such as:
-- `wotlwedu-minimal`
+- `wotlwedu-ui`
 - `wotlwedu-browser`
 
 Core stack:
@@ -25,7 +25,7 @@ Core stack:
 - `Workgroup admin user`: can administer data for one workgroup (`adminWorkgroupId`, legacy `adminGroupId`).
 
 ## Current version
-The backend changes in this repo are documented as **0.0.44** in `CHANGELOG.md`.
+The backend changes in this repo are documented as **0.0.49** in `CHANGELOG.md`.
 
 ## Recent API behavior updates
 - Category IDs are now consistently included on category-enabled resources (`group`, `workgroup`, `image`, `item`, `list`, `election`).
@@ -60,6 +60,10 @@ The backend changes in this repo are documented as **0.0.44** in `CHANGELOG.md`.
 - Organization invites now default to a 7-day expiry (`WOTLWEDU_ORG_INVITE_EXPIRY_DAYS`) and retain status history (`pending`, `accepted`, `revoked`, `expired`) for admin review.
 - Admin/scoped-admin collection queries can now narrow `GET /person` and `GET /space` with explicit `organizationId` filters.
 - Operator-only aliases now live under `/support/...` for admin/support clients. Preferred paths include `/support/people/:userId/*`, `/support/organizations/:organizationId/*`, `/support/polls/:electionId/*`, and `/support/session/testtoken`.
+- Add `GET /admin/config` for authenticated system-admin configuration visibility.
+- Add local SMTP defaults for development mail capture.
+- Add `POST /tutorial/poll/dismiss` for dismissing the current tutorial prompt without permanently skipping the tutorial.
+- Improve database update logging and add coverage for unapplied updates whose metadata row already exists.
 
 ## Prerequisites
 - Node.js and npm
@@ -86,7 +90,7 @@ Without `WOTLWEDU_JWT_SECRET`, the app exits at startup.
    export WOTLWEDU_DB_NAME="wotlwedu"
    export WOTLWEDU_DB_PASSWORD="wotlwedu"
    ```
-   For the full auth/invite/deep-link configuration, start from [`.env.example`](/Users/dkelly/Projects/wotlwedu/wotlwedu-backend/.env.example).
+   For the full auth/invite/deep-link configuration, start from `.env.example`.
 4. Start the API:
    ```bash
    npm start
@@ -189,9 +193,12 @@ Swagger UI assets are in `docs/` and served by the app at `/docs`.
 - Current route modules are mounted in `app.js`; there is currently no `/ai` route mounted.
 
 Additional tenancy endpoints:
+- `GET /admin/config`
+- `GET /ping`
 - `GET /organization`
 - `GET /organization/:organizationId`
 - `GET /organization/:organizationId/invite`
+- `GET /organization/:organizationId/membership`
 - `GET /organization/:organizationId/authaudit`
 - `POST /organization`
 - `POST /organization/:organizationId/invite`
@@ -204,7 +211,17 @@ Additional tenancy endpoints:
 - `GET /tutorial/poll`
 - `POST /tutorial/poll/start`
 - `POST /tutorial/poll/skip`
+- `POST /tutorial/poll/dismiss`
 - `POST /tutorial/poll/enable`
+- `GET /space`
+- `GET /space/:workgroupId`
+- `POST /space`
+- `PUT /space/:workgroupId`
+- `DELETE /space/:workgroupId`
+- `PUT /space/:workgroupId/person/:userId`
+- `DELETE /space/:workgroupId/person/:userId`
+- `PUT /space/:workgroupId/bulkpersonadd`
+- `PUT /space/:workgroupId/bulkpersondel`
 - `GET /support/people/:userId/signin-method`
 - `GET /support/people/:userId/authaudit`
 - `GET /support/people/:userId/ownership/preview`
@@ -217,6 +234,14 @@ Additional tenancy endpoints:
 - `DELETE /support/organizations/:organizationId/invite/:inviteId`
 - `GET /support/polls/public/trust`
 - `POST /poll/:electionId/remind`
+- `GET /poll/public/trust`
+- `GET /poll/:electionId/public/stats`
+- `GET /poll/:electionId/invite`
+- `POST /poll/:electionId/public/enable`
+- `POST /poll/:electionId/public/disable`
+- `POST /poll/:electionId/invite`
+- `POST /poll/:electionId/invite/:inviteId/resend`
+- `DELETE /poll/:electionId/invite/:inviteId`
 - `GET /support/polls/:electionId/public/stats`
 - `GET /support/polls/:electionId/invite`
 - `POST /support/polls/:electionId/public/enable`
@@ -230,6 +255,10 @@ Additional tenancy endpoints:
 - `GET /support/publicpoll/audit`
 - `GET /person/:userId/ownership/preview`
 - `POST /person/:userId/ownership/transfer`
+- `GET /public/poll/:token`
+- `POST /public/poll/:token/session`
+- `POST /public/poll/:token/vote`
+- `POST /public/poll/:token/report`
 
 ## Notes for contributors
 - Response format helper: `util/statusresponse.js`
