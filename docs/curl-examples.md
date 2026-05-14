@@ -947,7 +947,11 @@ curl -sS "$API/picture" \
 
 ### `POST /v1/picture/file/:imageId` (upload image bytes)
 
-This is a multipart upload. The field name must be `imageUpload`.
+This is a multipart upload. The field name must be `imageUpload`. The backend
+validates PNG/JPEG type and stores the bytes through the configured media
+provider (`local` for development/test or S3-compatible storage for production).
+The optional `fileextension` field is validated but never trusted for the stored
+object key.
 
 ```sh
 IMAGE_ID="image_000"

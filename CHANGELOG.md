@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+
+## 0.0.53 - 2026-05-14
+- Add provider-based media storage with local development storage and S3-compatible production storage for AWS S3, MinIO, or compatible providers.
 - Complete the public poll backend contract with public response context, guest-session expiry, guest vote quota enforcement, and support moderation actions for locking/restoring/removing public access.
 - Scope rate-limit counters per protected flow so login, registration, reset, social-link, invite, and public-poll throttles cannot accidentally consume each other's counters for the same IP/body key.
 - Add Priority 1 regression coverage for route-scoped rate limiting and unauthenticated picture uploads not writing files.

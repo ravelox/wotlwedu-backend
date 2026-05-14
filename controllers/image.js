@@ -1,7 +1,5 @@
 const Util = require("util");
 const { Op } = require("sequelize");
-const FS = require("fs");
-const Path = require("path");
 const Sequelize = require("sequelize")
 
 const Security = require("../util/security");
@@ -16,6 +14,7 @@ const Notify = require("../util/notification");
 const Config = require("../config/wotlwedu");
 const StatusResponse = require("../util/statusresponse");
 const { copyObject, getStatusIdByName, buildCategoryMenu } = require("../util/helpers");
+const MediaStorage = require("../util/media-storage");
 
 const Image = require("../model/image");
 const Category = require("../model/category");
@@ -308,14 +307,18 @@ module.exports.deleteImage = (req, res, next) => {
         }
       }
 
+      const previousObjectKey = foundImage.filename;
       // Remove the image ID from any item
       Item.update({ imageId: null }, { where: { imageId: foundImage.id } })
         .then(() => {
           foundImage
             .destroy()
-            .then((removedImage) => {
+            .then(async (removedImage) => {
               if (!removedImage)
                 return StatusResponse(res, 500, "Cannot delete image");
+              if (previousObjectKey) {
+                await MediaStorage.getProvider().deleteObject(previousObjectKey);
+              }
 
               return StatusResponse(res, 200, "OK");
             })
@@ -359,16 +362,40 @@ module.exports.postImageFile = async (req, res, next) => {
       req.uploadTargetImage || (await Image.findByPk(req.params.imageId));
     if (!foundImage) return StatusResponse(res, 421, "No image found");
 
-    foundImage.filename = req.file.filename;
+    const previousObjectKey = foundImage.filename || null;
+    const nextObjectKey = MediaStorage.createObjectKey(foundImage.id, req.file.detectedMimeType);
+    await MediaStorage.getProvider().putObject({
+      objectKey: nextObjectKey,
+      body: req.file.buffer,
+      contentType: req.file.detectedMimeType,
+      metadata: {
+        imageId: String(foundImage.id || ""),
+        creator: String(foundImage.creator || ""),
+        workgroupId: String(foundImage.workgroupId || ""),
+      },
+    });
+
+    foundImage.filename = nextObjectKey;
     if (req.file.detectedMimeType) {
       foundImage.contentType = req.file.detectedMimeType;
     }
-    const updatedImage = await foundImage.save();
-    if (!updatedImage)
-      return StatusResponse(res, 500, "Cannot save image to storage");
+    let updatedImage;
+    try {
+      updatedImage = await foundImage.save();
+      if (!updatedImage)
+        throw new Error("Cannot save image to storage");
+    } catch (err) {
+      await MediaStorage.getProvider().deleteObject(nextObjectKey);
+      throw err;
+    }
+
+    if (previousObjectKey && previousObjectKey !== nextObjectKey) {
+      await MediaStorage.getProvider().deleteObject(previousObjectKey);
+    }
 
     return StatusResponse(res, 200, "OK", {
       filename: updatedImage.filename,
+      url: MediaStorage.getPublicUrl(updatedImage.filename),
     });
   } catch (err) {
     return next(err);
@@ -394,12 +421,13 @@ module.exports.deleteImageFile = (req, res, next) => {
       }
 
       if (foundImage.filename) {
-        FS.unlink(Config.imageDir + foundImage.filename, (err) => {
-          return StatusResponse(res, 200, "OK");
-        });
-      } else {
-        return StatusResponse(res, 200, "OK");
+        const previousObjectKey = foundImage.filename;
+        foundImage.filename = null;
+        foundImage.contentType = null;
+        await foundImage.save();
+        await MediaStorage.getProvider().deleteObject(previousObjectKey);
       }
+      return StatusResponse(res, 200, "OK");
     })
     .catch((err) => next(err));
 };

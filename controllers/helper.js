@@ -1,9 +1,8 @@
 const Util = require("util");
 const { Op } = require("sequelize");
-const FS = require("fs");
 const Path = require("path");
 
-const Config = require("../config/wotlwedu");
+const MediaStorage = require("../util/media-storage");
 
 const Housekeeping = require("../util/housekeeping");
 
@@ -70,26 +69,34 @@ module.exports.getStatusId = (req, res, next) => {
 };
 
 module.exports.copyImage = (origImageId, newOwnerId, options = {}) => {
-  const imageDir = Config.imageDir;
   const transaction = options.transaction;
 
   return new Promise((resolve, reject) => {
     if (!origImageId || !newOwnerId)
       reject(new Error("Need image ID and owner"));
 
-    Image.findByPk(origImageId, { raw: true, transaction: transaction }).then((foundImage) => {
+    Image.findByPk(origImageId, { raw: true, transaction: transaction }).then(async (foundImage) => {
       if (!foundImage) return reject(new Error("No image found"));
 
       const newImageId = UUID("image");
 
-      // Copy the image file to the new filename
-      const oldFileName = imageDir + "/" + foundImage.filename;
-      const extension = Path.extname(foundImage.filename);
-      const newFileName = imageDir + "/" + newImageId + extension;
+      const extension = foundImage.filename
+        ? Path.extname(foundImage.filename).toLowerCase()
+        : "";
+      const newObjectKey = foundImage.filename
+        ? MediaStorage.createObjectKey(
+            newImageId,
+            foundImage.contentType || (extension === ".png" ? "image/png" : "image/jpeg")
+          )
+        : null;
 
-      const fileExists = FS.existsSync(oldFileName);
-      if (fileExists) {
-        FS.copyFileSync(oldFileName, newFileName);
+      if (foundImage.filename) {
+        const copied = await MediaStorage.getProvider().copyObject(
+          foundImage.filename,
+          newObjectKey,
+          foundImage.contentType
+        );
+        if (!copied) return reject(new Error("Cannot copy image media"));
       }
 
       delete foundImage.id;
@@ -97,7 +104,7 @@ module.exports.copyImage = (origImageId, newOwnerId, options = {}) => {
       delete foundImage.updatedAt;
       const newImage = new Image(foundImage);
       newImage.id = newImageId;
-      newImage.filename = Path.basename(newFileName);
+      newImage.filename = foundImage.filename ? newObjectKey : null;
 
       // Important to set the new owner
       newImage.creator = newOwnerId;
@@ -112,7 +119,10 @@ module.exports.copyImage = (origImageId, newOwnerId, options = {}) => {
             return reject(new Error("Cannot save new image record"));
           return resolve(imageCreated);
         })
-        .catch((err) => reject(err));
+        .catch(async (err) => {
+          if (newObjectKey) await MediaStorage.getProvider().deleteObject(newObjectKey);
+          reject(err);
+        });
     });
   });
 };

@@ -25,7 +25,7 @@ Core stack:
 - `Workgroup admin user`: can administer data for one workgroup (`adminWorkgroupId`, legacy `adminGroupId`).
 
 ## Current version
-The backend changes in this repo are documented as **0.0.50** in `CHANGELOG.md`.
+The backend changes in this repo are documented as **0.0.53** in `CHANGELOG.md`.
 
 ## Recent API behavior updates
 - Category IDs are now consistently included on category-enabled resources (`group`, `workgroup`, `image`, `item`, `list`, `election`).
@@ -157,11 +157,14 @@ Commonly used settings:
 - Public poll trust/rate limits: `WOTLWEDU_RATE_PUBLIC_POLL_MAX`, `WOTLWEDU_RATE_PUBLIC_VOTE_MAX`, `WOTLWEDU_PUBLIC_TRUST_MIN_ACCOUNT_AGE_HOURS`, `WOTLWEDU_PUBLIC_BASIC_INVITE_QUOTA_DAILY`, `WOTLWEDU_PUBLIC_BASIC_INVITE_QUOTA_HOURLY`, `WOTLWEDU_PUBLIC_BASIC_RECIPIENTS_PER_POLL`, `WOTLWEDU_PUBLIC_INVITE_RESEND_COOLDOWN_HOURS`
 - Observability: `WOTLWEDU_AUTH_AUDIT_STDOUT`
 - URLs: `WOTLWEDU_API_URL`, `WOTLWEDU_FRONTEND_URL`, `WOTLWEDU_IMAGE_URL`
-- Images: `WOTLWEDU_IMAGE_DIR`, `WOTLWEDU_UPLOAD_MAX_BYTES`
+- Images/media: `WOTLWEDU_IMAGE_DIR`, `WOTLWEDU_UPLOAD_MAX_BYTES`, `WOTLWEDU_MEDIA_STORAGE_PROVIDER`, `WOTLWEDU_MEDIA_PUBLIC_BASE_URL`, `WOTLWEDU_MEDIA_KEY_PREFIX`
+- S3-compatible media: `WOTLWEDU_S3_ENDPOINT`, `WOTLWEDU_S3_REGION`, `WOTLWEDU_S3_BUCKET`, `WOTLWEDU_S3_ACCESS_KEY_ID`, `WOTLWEDU_S3_SECRET_ACCESS_KEY`, `WOTLWEDU_S3_FORCE_PATH_STYLE`, `WOTLWEDU_S3_TLS`
 
 Notes:
 - `WOTLWEDU_DB_TYPE` defaults to `sequelize`.
 - `WOTLWEDU_RATE_LIMIT_STORE` defaults to `database` in production and `memory` elsewhere. Use `database` for horizontally scaled app replicas. Rate-limit counters are scoped per protected flow so login, registration, password reset, social-link, invite, and public-poll throttles do not share accidental counters.
+- `WOTLWEDU_MEDIA_STORAGE_PROVIDER` defaults to `local` for development/test. Use `s3` or `s3-compatible` in production with an AWS S3, MinIO, or compatible bucket and set `WOTLWEDU_MEDIA_PUBLIC_BASE_URL` to the public bucket/CDN URL. Media records store provider object keys, so app replicas do not need shared local disk.
+- Back up media by snapshotting or replicating the configured object-storage bucket/prefix together with MariaDB backups. Restore both the database and media prefix from the same point in time so image metadata and object keys stay aligned.
 - `WOTLWEDU_JWT_REFRESH_COOKIE_ENABLED=true` stores refresh tokens in an HTTP-only cookie while preserving the JSON refresh-token response for existing bearer-token clients. Enable CORS credentials and matching frontend `withCredentials` when using this across origins.
 - If SSL is enabled, provide certificate/key file paths.
 

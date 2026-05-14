@@ -12,10 +12,10 @@ const {
   copyObject,
   bulkUpdate,
   getStatusIdByName,
-  deleteImageFile,
 } = require("../util/helpers");
 const { normalizeOptionalId } = require("../util/idnormalize");
 const OwnershipTransfer = require("../util/ownership-transfer");
+const MediaStorage = require("../util/media-storage");
 
 const User = require("../model/user");
 const Friend = require("../model/friend");
@@ -604,7 +604,7 @@ exports.deleteUser = async (req, res, next) => {
         (foundImages) => {
           if (foundImages) {
             for (const i of foundImages) {
-              deleteImageFile(Config.imageDir + i.filename)
+              MediaStorage.getProvider().deleteObject(i.filename)
                 .then((result) => {
                   /* File deleted */
                 })

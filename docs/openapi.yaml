@@ -1248,6 +1248,7 @@ paths:
   /v1/picture/file/:imageId:
     post:
       summary: POST /v1/picture/file/:imageId
+      description: Upload PNG/JPEG bytes for an image record. The backend validates the file and stores it through the configured media provider, including S3-compatible providers such as AWS S3 or MinIO.
       parameters:
       - name: imageId
         in: path
@@ -1262,10 +1263,21 @@ paths:
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
               type: object
-              additionalProperties: true
+              required:
+              - imageUpload
+              properties:
+                imageUpload:
+                  type: string
+                  format: binary
+                fileextension:
+                  type: string
+                  enum:
+                  - jpg
+                  - jpeg
+                  - png
     delete:
       summary: DELETE /v1/picture/file/:imageId
       parameters:

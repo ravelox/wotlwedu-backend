@@ -98,8 +98,23 @@ module.exports.passwordResetLinkBaseUrl =
 module.exports.confirmationLinkBaseUrl =
   process.env.WOTLWEDU_CONFIRMATION_LINK_BASE_URL || baseFrontendUrl;
 module.exports.imageURL =
-  process.env.WOTLWEDU_IMAGE_URL || baseApiUrl + "images/";
+  process.env.WOTLWEDU_IMAGE_URL ||
+  process.env.WOTLWEDU_MEDIA_PUBLIC_BASE_URL ||
+  baseApiUrl + "images/";
 module.exports.imageDir = process.env.WOTLWEDU_IMAGE_DIR || "public/images/";
+module.exports.mediaStorageProvider =
+  (process.env.WOTLWEDU_MEDIA_STORAGE_PROVIDER || "local").toLowerCase();
+module.exports.mediaStoragePublicBaseUrl =
+  process.env.WOTLWEDU_MEDIA_PUBLIC_BASE_URL || module.exports.imageURL;
+module.exports.mediaStorageKeyPrefix =
+  process.env.WOTLWEDU_MEDIA_KEY_PREFIX || "pictures";
+module.exports.s3Endpoint = process.env.WOTLWEDU_S3_ENDPOINT || "";
+module.exports.s3Region = process.env.WOTLWEDU_S3_REGION || "us-east-1";
+module.exports.s3Bucket = process.env.WOTLWEDU_S3_BUCKET || "";
+module.exports.s3AccessKeyId = process.env.WOTLWEDU_S3_ACCESS_KEY_ID || "";
+module.exports.s3SecretAccessKey = process.env.WOTLWEDU_S3_SECRET_ACCESS_KEY || "";
+module.exports.s3ForcePathStyle = toBool(process.env.WOTLWEDU_S3_FORCE_PATH_STYLE || false);
+module.exports.s3Tls = toBool(process.env.WOTLWEDU_S3_TLS || true);
 module.exports.uploadMaxBytes =
   +(process.env.WOTLWEDU_UPLOAD_MAX_BYTES || 5 * 1024 * 1024);
 module.exports.jsonBodyLimit = process.env.WOTLWEDU_JSON_BODY_LIMIT || "1mb";

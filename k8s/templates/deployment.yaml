@@ -66,6 +66,22 @@ spec:
               value: "{{ .Values.env.urlEncodedBodyLimit }}"
             - name: WOTLWEDU_UPLOAD_MAX_BYTES
               value: "{{ .Values.env.uploadMaxBytes }}"
+            - name: WOTLWEDU_MEDIA_STORAGE_PROVIDER
+              value: "{{ .Values.media.provider }}"
+            - name: WOTLWEDU_MEDIA_PUBLIC_BASE_URL
+              value: "{{ .Values.media.publicBaseUrl }}"
+            - name: WOTLWEDU_MEDIA_KEY_PREFIX
+              value: "{{ .Values.media.keyPrefix }}"
+            - name: WOTLWEDU_S3_ENDPOINT
+              value: "{{ .Values.media.s3.endpoint }}"
+            - name: WOTLWEDU_S3_REGION
+              value: "{{ .Values.media.s3.region }}"
+            - name: WOTLWEDU_S3_BUCKET
+              value: "{{ .Values.media.s3.bucket }}"
+            - name: WOTLWEDU_S3_FORCE_PATH_STYLE
+              value: "{{ ternary "true" "false" .Values.media.s3.forcePathStyle }}"
+            - name: WOTLWEDU_S3_TLS
+              value: "{{ ternary "true" "false" .Values.media.s3.tls }}"
             - name: WOTLWEDU_RATE_LIMIT_STORE
               value: "{{ .Values.env.rateLimitStore }}"
             - name: WOTLWEDU_RATE_LIMIT_FAIL_OPEN
@@ -103,6 +119,18 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.secrets.name }}
                   key: jwt-secret
+            - name: WOTLWEDU_S3_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: s3-access-key-id
+                  optional: true
+            - name: WOTLWEDU_S3_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.name }}
+                  key: s3-secret-access-key
+                  optional: true
           startupProbe:
             httpGet:
               path: {{ .Values.probes.startup.path }}

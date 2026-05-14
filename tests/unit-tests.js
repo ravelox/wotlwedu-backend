@@ -17,6 +17,7 @@ const Config = require("../config/wotlwedu");
 const DBUpdate = require("../util/dbupdate");
 const RateLimit = require("../util/rate-limit");
 const UploadSecurity = require("../util/upload-security");
+const MediaStorage = require("../util/media-storage");
 
 function createMemoryMetadata(initialRows = {}) {
   const rows = new Map(
@@ -238,6 +239,61 @@ module.exports = (addTest) => {
       UploadSecurity.sanitizeFileStem("../image_123!"),
       "image_123"
     );
+  });
+
+  addTest("media storage creates safe provider object keys and public URLs", () => {
+    const previousPrefix = Config.mediaStorageKeyPrefix;
+    const previousPublicBaseUrl = Config.mediaStoragePublicBaseUrl;
+    try {
+      Config.mediaStorageKeyPrefix = "tenant media/pictures";
+      Config.mediaStoragePublicBaseUrl = "https://cdn.example.com/media";
+      const key = MediaStorage.createObjectKey("../image_123!", "image/png");
+      assert.match(key, /^tenantmedia\/pictures\/image_123-[a-f0-9]{16}\.png$/);
+      assert.strictEqual(
+        MediaStorage.getPublicUrl(key),
+        `https://cdn.example.com/media/${key}`
+      );
+    } finally {
+      Config.mediaStorageKeyPrefix = previousPrefix;
+      Config.mediaStoragePublicBaseUrl = previousPublicBaseUrl;
+    }
+  });
+
+  addTest("local media storage writes copies and deletes provider objects", async () => {
+    const previousProvider = Config.mediaStorageProvider;
+    const previousImageDir = Config.imageDir;
+    const uploadDir = FS.mkdtempSync(Path.join(Os.tmpdir(), "wotlwedu-media-"));
+    try {
+      Config.mediaStorageProvider = "local";
+      Config.imageDir = uploadDir;
+      MediaStorage.resetProviderForTests();
+      const provider = MediaStorage.getProvider();
+      await provider.putObject({
+        objectKey: "pictures/test-source.jpg",
+        body: Buffer.from("source"),
+        contentType: "image/jpeg",
+      });
+      assert.strictEqual(
+        FS.readFileSync(Path.join(uploadDir, "pictures", "test-source.jpg"), "utf8"),
+        "source"
+      );
+      await provider.copyObject("pictures/test-source.jpg", "pictures/test-copy.jpg");
+      assert.strictEqual(
+        FS.readFileSync(Path.join(uploadDir, "pictures", "test-copy.jpg"), "utf8"),
+        "source"
+      );
+      await assert.rejects(
+        () => provider.putObject({ objectKey: "../escape.jpg", body: Buffer.from("nope") }),
+        /Invalid media object key/
+      );
+      assert.strictEqual(await provider.deleteObject("pictures/test-source.jpg"), true);
+      assert.strictEqual(await provider.deleteObject("pictures/missing.jpg"), false);
+    } finally {
+      Config.mediaStorageProvider = previousProvider;
+      Config.imageDir = previousImageDir;
+      MediaStorage.resetProviderForTests();
+      FS.rmSync(uploadDir, { recursive: true, force: true });
+    }
   });
 
   addTest("rate limiter memory store blocks after configured maximum", async () => {

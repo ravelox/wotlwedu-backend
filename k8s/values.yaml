@@ -99,6 +99,19 @@ secrets:
   dbPassword: change-me
   dbRootPassword: change-root
   jwtSecret: change-jwt
+  s3AccessKeyId: ""
+  s3SecretAccessKey: ""
+
+media:
+  provider: local
+  publicBaseUrl: "http://localhost:9876/images/"
+  keyPrefix: pictures
+  s3:
+    endpoint: ""
+    region: us-east-1
+    bucket: ""
+    forcePathStyle: false
+    tls: true
 
 persistence:
   enabled: false

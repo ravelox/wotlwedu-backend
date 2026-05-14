@@ -1,5 +1,3 @@
-const Crypto = require("crypto");
-const FS = require("fs");
 const Path = require("path");
 const multer = require("multer");
 
@@ -58,30 +56,6 @@ function sniffImageType(buffer) {
   return null;
 }
 
-function removeUploadedFile(file) {
-  if (!file?.path) return;
-  try {
-    FS.unlinkSync(file.path);
-  } catch (err) {
-    console.log("Failed to remove rejected upload: " + err.message);
-  }
-}
-
-const imageFileStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    FS.mkdirSync(Config.imageDir, { recursive: true });
-    cb(null, Config.imageDir);
-  },
-  filename: (req, file, cb) => {
-    const requestedExtension = sanitizeFileExtension(
-      req.body?.fileextension || Path.extname(file.originalname || "")
-    );
-    const stem = sanitizeFileStem(req.params?.imageId);
-    const randomSuffix = Crypto.randomBytes(4).toString("hex");
-    cb(null, `${stem}-${randomSuffix}.${requestedExtension}`);
-  },
-});
-
 function imageFileFilter(req, file, cb) {
   if (!ALLOWED_IMAGE_TYPES[file.mimetype]) {
     return cb(new multer.MulterError("LIMIT_UNEXPECTED_FILE", "imageUpload"));
@@ -90,7 +64,7 @@ function imageFileFilter(req, file, cb) {
 }
 
 const imageUpload = multer({
-  storage: imageFileStorage,
+  storage: multer.memoryStorage(),
   fileFilter: imageFileFilter,
   limits: {
     files: 1,
@@ -101,28 +75,20 @@ const imageUpload = multer({
 function validateImageUpload(req, res, next) {
   if (!req.file) return StatusResponse(res, 421, "No image provided");
 
-  let header;
-  try {
-    const fd = FS.openSync(req.file.path, "r");
-    header = Buffer.alloc(16);
-    FS.readSync(fd, header, 0, header.length, 0);
-    FS.closeSync(fd);
-  } catch (err) {
-    removeUploadedFile(req.file);
-    return next(err);
-  }
-
+  const header = req.file.buffer ? req.file.buffer.subarray(0, 16) : Buffer.alloc(0);
   const detectedMimeType = sniffImageType(header);
   const declaredType = ALLOWED_IMAGE_TYPES[req.file.mimetype];
-  const extension = sanitizeFileExtension(Path.extname(req.file.filename || ""));
+  const extension = sanitizeFileExtension(
+    req.body?.fileextension || Path.extname(req.file.originalname || "")
+  );
   const extensionAllowed = declaredType?.extensions?.has(extension);
 
   if (!detectedMimeType || detectedMimeType !== req.file.mimetype || !extensionAllowed) {
-    removeUploadedFile(req.file);
     return StatusResponse(res, 421, "Invalid image file");
   }
 
   req.file.detectedMimeType = detectedMimeType;
+  req.file.detectedExtension = extension;
   return next();
 }
 
@@ -130,7 +96,6 @@ module.exports = {
   ALLOWED_IMAGE_TYPES,
   configuredUploadLimitBytes,
   imageUpload,
-  removeUploadedFile,
   sanitizeFileExtension,
   sanitizeFileStem,
   sniffImageType,
