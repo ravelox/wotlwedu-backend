@@ -12,12 +12,14 @@ const publicElectionController = require("../controllers/publicelection");
 
 const router = express.Router();
 const inviteManageRateLimit = createRateLimiter({
+  scope: "support.organization-invite-manage",
   max: Config.authRateLimitInviteManageMax,
   windowMs: Config.authRateLimitWindowMs,
   keyMode: "ip+body",
   message: "Too many invite management attempts",
 });
 const publicInviteRateLimit = createRateLimiter({
+  scope: "support.public-invite-manage",
   max: Config.authRateLimitInviteManageMax,
   windowMs: Config.authRateLimitWindowMs,
   keyMode: "ip+body",
@@ -51,6 +53,21 @@ router.get(
   "/people/:userId/authaudit",
   Security.checkCapability("user", ["view"]),
   userController.getUserAuthAudit
+);
+router.get(
+  "/people/:userId/session",
+  Security.checkCapability("user", ["view"]),
+  loginController.getUserSessions
+);
+router.delete(
+  "/people/:userId/session/:sessionId",
+  Security.checkCapability("user", ["edit"]),
+  loginController.deleteUserSession
+);
+router.post(
+  "/people/:userId/session/revoke-all",
+  Security.checkCapability("user", ["edit"]),
+  loginController.postRevokeUserSessions
 );
 router.get(
   "/people/:userId/ownership/preview",

@@ -6,6 +6,7 @@ const router = express.Router();
 const publicElectionController = require("../controllers/publicelection");
 
 const publicPollRateLimit = createRateLimiter({
+  scope: "public-poll.read-session-report",
   max: Config.authRateLimitPublicPollMax,
   windowMs: Config.authRateLimitWindowMs,
   keyMode: "ip",
@@ -13,6 +14,7 @@ const publicPollRateLimit = createRateLimiter({
 });
 
 const publicVoteRateLimit = createRateLimiter({
+  scope: "public-poll.vote",
   max: Config.authRateLimitPublicVoteMax,
   windowMs: Config.authRateLimitWindowMs,
   keyMode: "ip",

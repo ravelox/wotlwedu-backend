@@ -1,4 +1,7 @@
 const assert = require("assert");
+const http = require("http");
+const express = require("express");
+const FormData = require("form-data");
 const FS = require("fs");
 const Os = require("os");
 const Path = require("path");
@@ -70,6 +73,42 @@ function writeUpdateModule(dir, fileName, source) {
   const filePath = Path.join(dir, fileName);
   FS.writeFileSync(filePath, source);
   delete require.cache[require.resolve(filePath)];
+}
+
+function postMultipart(server, path, form) {
+  return new Promise((resolve, reject) => {
+    const addressInfo = server.address();
+    const req = http.request(
+      {
+        method: "POST",
+        host: addressInfo.address || "127.0.0.1",
+        port: addressInfo.port,
+        path,
+        headers: form.getHeaders(),
+      },
+      (res) => {
+        let data = "";
+        res.on("data", (chunk) => {
+          data += chunk;
+        });
+        res.on("end", () => {
+        try {
+          resolve({
+            status: res.statusCode,
+            body: data ? JSON.parse(data) : {},
+          });
+        } catch (err) {
+          resolve({
+            status: res.statusCode,
+            body: data,
+          });
+        }
+        });
+      }
+    );
+    req.on("error", reject);
+    form.pipe(req);
+  });
 }
 
 module.exports = (addTest) => {
@@ -246,6 +285,89 @@ module.exports = (addTest) => {
     assert.ok(captured["Retry-After"]);
 
     RateLimit._memoryCounters.clear();
+  });
+
+  addTest("rate limiter scopes counters per protected flow", async () => {
+    const req = {
+      ip: "203.0.113.11",
+      headers: {},
+      connection: {},
+      body: { email: "same@example.com" },
+      params: {},
+    };
+    const firstLimiter = RateLimit({
+      scope: "test.login",
+      max: 1,
+      windowMs: 60 * 1000,
+      keyMode: "ip+body",
+      store: "memory",
+    });
+    const secondLimiter = RateLimit({
+      scope: "test.reset",
+      max: 1,
+      windowMs: 60 * 1000,
+      keyMode: "ip+body",
+      store: "memory",
+    });
+    const res = {
+      set() {},
+      status(code) {
+        return {
+          json(payload) {
+            return { code, payload };
+          },
+        };
+      },
+    };
+    let firstNextCount = 0;
+    let secondNextCount = 0;
+
+    await firstLimiter(req, res, () => {
+      firstNextCount += 1;
+    });
+    await firstLimiter(req, res, () => {
+      firstNextCount += 1;
+    });
+    await secondLimiter(req, res, () => {
+      secondNextCount += 1;
+    });
+
+    assert.strictEqual(firstNextCount, 1);
+    assert.strictEqual(secondNextCount, 1);
+    RateLimit._memoryCounters.clear();
+  });
+
+  addTest("unauthenticated picture uploads do not write files", async () => {
+    const previousImageDir = Config.imageDir;
+    const uploadDir = FS.mkdtempSync(Path.join(Os.tmpdir(), "wotlwedu-upload-"));
+    Config.imageDir = uploadDir + Path.sep;
+
+    const app = express();
+    app.use("/v1/picture", Security.checkAuthentication, require("../routes/image"));
+    const server = app.listen(0, "127.0.0.1");
+    await new Promise((resolve) => server.once("listening", resolve));
+
+    try {
+      const form = new FormData();
+      form.append("fileextension", "jpg");
+      form.append("imageUpload", Buffer.from([0xff, 0xd8, 0xff, 0xdb]), {
+        filename: "test.jpg",
+        contentType: "image/jpeg",
+      });
+
+      const response = await postMultipart(
+        server,
+        "/v1/picture/file/image_noauth",
+        form
+      );
+
+      assert.ok(response.status >= 400, "unauthenticated upload should fail");
+      assert.deepStrictEqual(FS.readdirSync(uploadDir), []);
+    } finally {
+      Config.imageDir = previousImageDir;
+      await new Promise((resolve) => server.close(resolve));
+      FS.rmSync(uploadDir, { recursive: true, force: true });
+    }
   });
 
   addTest("mailer confirmation payload uses configured support email and confirmation link", () => {

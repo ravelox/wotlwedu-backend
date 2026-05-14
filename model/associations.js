@@ -31,6 +31,7 @@ const ContactSuppression = require("./contactsuppression");
 const TrustProfile = require("./trustprofile");
 const AbuseAudit = require("./abuseaudit");
 const RateLimit = require("./ratelimit");
+const Session = require("./session");
 
 let _associationsSetup = false;
 
@@ -107,6 +108,7 @@ module.exports.setup = function () {
   User.hasMany(AuthAudit, { foreignKey: "targetUserId", sourceKey: "id", as: "authAuditTarget" });
   User.hasMany(OrganizationInvite, { foreignKey: "invitedByUserId", sourceKey: "id" });
   User.hasMany(SocialIdentity, { foreignKey: "userId", sourceKey: "id" });
+  User.hasMany(Session, { foreignKey: "userId", sourceKey: "id" });
   User.hasOne(TrustProfile, { foreignKey: "userId", sourceKey: "id" });
   User.hasMany(PublicPollInvite, { foreignKey: "creatorUserId", sourceKey: "id" });
   User.hasMany(AbuseAudit, { foreignKey: "actorUserId", sourceKey: "id" });

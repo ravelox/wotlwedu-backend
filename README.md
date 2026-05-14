@@ -65,6 +65,8 @@ The backend changes in this repo are documented as **0.0.50** in `CHANGELOG.md`.
 - Add `POST /tutorial/poll/dismiss` for dismissing the current tutorial prompt without permanently skipping the tutorial.
 - Improve database update logging and add coverage for unapplied updates whose metadata row already exists.
 - Production security defaults now include Helmet headers, configured JSON/form body limits, production-safe 500 error redaction, stricter production CORS behavior, authenticated picture uploads with file validation, and shared database-backed rate limiting when `NODE_ENV=production`.
+- Server-side auth sessions now rotate refresh tokens, detect refresh-token replay, expose current-user session list/revoke endpoints, and provide support session revocation endpoints.
+- Self-service registration now provisions a private organization, creates the first personal space, assigns the user to that space, and starts the poll tutorial. New consumer users no longer land in a shared default organization.
 
 ## Prerequisites
 - Node.js and npm
@@ -143,12 +145,12 @@ Runtime options are defined in `config/wotlwedu.js` and can be overridden with e
 Commonly used settings:
 - App listener: `WOTLWEDU_APP_LISTEN`, `WOTLWEDU_APP_PORT`
 - DB: `WOTLWEDU_DB_HOST`, `WOTLWEDU_DB_USER`, `WOTLWEDU_DB_NAME`, `WOTLWEDU_DB_PASSWORD`, `WOTLWEDU_DB_TYPE`
-- Auth: `WOTLWEDU_JWT_SECRET`, `WOTLWEDU_GOOGLE_CLIENT_ID`
+- Auth: `WOTLWEDU_JWT_SECRET`, `WOTLWEDU_GOOGLE_CLIENT_ID`, `WOTLWEDU_JWT_REFRESH_COOKIE_ENABLED`, `WOTLWEDU_JWT_REFRESH_COOKIE_NAME`, `WOTLWEDU_JWT_REFRESH_COOKIE_SAMESITE`, `WOTLWEDU_JWT_REFRESH_COOKIE_SECURE`
 - Support/deep links: `WOTLWEDU_SUPPORT_EMAIL`, `WOTLWEDU_INVITE_LINK_BASE_URL`, `WOTLWEDU_PASSWORD_RESET_LINK_BASE_URL`, `WOTLWEDU_CONFIRMATION_LINK_BASE_URL`
 - Invite policy: `WOTLWEDU_ORG_INVITE_EXPIRY_DAYS`
 - TLS: `WOTLWEDU_SSL`, `WOTLWEDU_SSL_KEY`, `WOTLWEDU_SSL_CERT`
 - Security: `NODE_ENV`, `WOTLWEDU_TRUST_PROXY`, `WOTLWEDU_JSON_BODY_LIMIT`, `WOTLWEDU_URLENCODED_BODY_LIMIT`
-- CORS: `WOTLWEDU_CORS_ORIGINS` (comma-separated allowed origins), `WOTLWEDU_CORS_ALLOW_NO_ORIGIN`
+- CORS: `WOTLWEDU_CORS_ORIGINS` (comma-separated allowed origins), `WOTLWEDU_CORS_ALLOW_NO_ORIGIN`, `WOTLWEDU_CORS_CREDENTIALS`
 - Auth rate limits: `WOTLWEDU_RATE_LIMIT_STORE`, `WOTLWEDU_RATE_LIMIT_FAIL_OPEN`, `WOTLWEDU_RATE_LOGIN_MAX`, `WOTLWEDU_RATE_REGISTER_MAX`, `WOTLWEDU_RATE_RESET_MAX`, `WOTLWEDU_RATE_VERIFY2FA_MAX`, `WOTLWEDU_RATE_SOCIAL_LINK_MAX`, `WOTLWEDU_RATE_INVITE_LOOKUP_MAX`, `WOTLWEDU_RATE_INVITE_MANAGE_MAX`, `WOTLWEDU_RATE_WINDOW_MS`
 - Public poll trust/rate limits: `WOTLWEDU_RATE_PUBLIC_POLL_MAX`, `WOTLWEDU_RATE_PUBLIC_VOTE_MAX`, `WOTLWEDU_PUBLIC_TRUST_MIN_ACCOUNT_AGE_HOURS`, `WOTLWEDU_PUBLIC_BASIC_INVITE_QUOTA_DAILY`, `WOTLWEDU_PUBLIC_BASIC_INVITE_QUOTA_HOURLY`, `WOTLWEDU_PUBLIC_BASIC_RECIPIENTS_PER_POLL`, `WOTLWEDU_PUBLIC_INVITE_RESEND_COOLDOWN_HOURS`
 - Observability: `WOTLWEDU_AUTH_AUDIT_STDOUT`
@@ -157,7 +159,8 @@ Commonly used settings:
 
 Notes:
 - `WOTLWEDU_DB_TYPE` defaults to `sequelize`.
-- `WOTLWEDU_RATE_LIMIT_STORE` defaults to `database` in production and `memory` elsewhere. Use `database` for horizontally scaled app replicas.
+- `WOTLWEDU_RATE_LIMIT_STORE` defaults to `database` in production and `memory` elsewhere. Use `database` for horizontally scaled app replicas. Rate-limit counters are scoped per protected flow so login, registration, password reset, social-link, invite, and public-poll throttles do not share accidental counters.
+- `WOTLWEDU_JWT_REFRESH_COOKIE_ENABLED=true` stores refresh tokens in an HTTP-only cookie while preserving the JSON refresh-token response for existing bearer-token clients. Enable CORS credentials and matching frontend `withCredentials` when using this across origins.
 - If SSL is enabled, provide certificate/key file paths.
 
 ## Docker
@@ -227,6 +230,9 @@ Additional tenancy endpoints:
 - `PUT /space/:workgroupId/bulkpersondel`
 - `GET /support/people/:userId/signin-method`
 - `GET /support/people/:userId/authaudit`
+- `GET /support/people/:userId/session`
+- `DELETE /support/people/:userId/session/:sessionId`
+- `POST /support/people/:userId/session/revoke-all`
 - `GET /support/people/:userId/ownership/preview`
 - `POST /support/people/:userId/ownership/transfer`
 - `POST /support/people/:userId/tutorial/poll/enable`
@@ -254,6 +260,10 @@ Additional tenancy endpoints:
 - `DELETE /support/polls/:electionId/invite/:inviteId`
 - `POST /support/session/testtoken`
 - `POST /support/session/testtoken/revoke`
+- `GET /login/session`
+- `DELETE /login/session/:sessionId`
+- `POST /login/logout`
+- `POST /login/logout/all`
 - `GET /support/publicpoll/overview`
 - `GET /support/publicpoll/audit`
 - `GET /person/:userId/ownership/preview`

@@ -7,6 +7,7 @@ const router = express.Router();
 
 const organizationController = require("../controllers/organization");
 const inviteManageRateLimit = createRateLimiter({
+  scope: "organization.invite-manage",
   max: Config.authRateLimitInviteManageMax,
   windowMs: Config.authRateLimitWindowMs,
   keyMode: "ip+body",

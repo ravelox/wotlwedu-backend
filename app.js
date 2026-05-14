@@ -101,6 +101,7 @@ app.use(
 // Add CORS headers
 app.use(
   cors({
+    credentials: Config.corsCredentials,
     origin: function (origin, callback) {
       if (!origin) return callback(null, Config.corsAllowNoOrigin);
       if (!Config.corsOrigin || Config.corsOrigin.includes(origin)) {

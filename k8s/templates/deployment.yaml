@@ -50,6 +50,14 @@ spec:
               value: "{{ .Values.env.corsOrigins }}"
             - name: WOTLWEDU_CORS_ALLOW_NO_ORIGIN
               value: "{{ ternary "true" "false" .Values.env.corsAllowNoOrigin }}"
+            - name: WOTLWEDU_CORS_CREDENTIALS
+              value: "{{ ternary "true" "false" .Values.env.corsCredentials }}"
+            - name: WOTLWEDU_JWT_REFRESH_COOKIE_ENABLED
+              value: "{{ ternary "true" "false" .Values.env.refreshCookieEnabled }}"
+            - name: WOTLWEDU_JWT_REFRESH_COOKIE_SAMESITE
+              value: "{{ .Values.env.refreshCookieSameSite }}"
+            - name: WOTLWEDU_JWT_REFRESH_COOKIE_SECURE
+              value: "{{ ternary "true" "false" .Values.env.refreshCookieSecure }}"
             - name: WOTLWEDU_TRUST_PROXY
               value: "{{ .Values.env.trustProxy }}"
             - name: WOTLWEDU_JSON_BODY_LIMIT

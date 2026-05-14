@@ -32,6 +32,16 @@ module.exports.db_force_sync = toBool(process.env.WOTLWEDU_DB_SYNC || true);
 module.exports.jwtSecret = process.env.WOTLWEDU_JWT_SECRET;
 module.exports.jwtExpiry = process.env.WOTLWEDU_JWT_EXPIRY || "1h";
 module.exports.jwtRefreshExpiry = process.env.WOTLWEDU_JWT_REFRESH_EXPIRY || "2h";
+module.exports.jwtRefreshCookieEnabled = toBool(
+  process.env.WOTLWEDU_JWT_REFRESH_COOKIE_ENABLED || false
+);
+module.exports.jwtRefreshCookieName =
+  process.env.WOTLWEDU_JWT_REFRESH_COOKIE_NAME || "wotlwedu_refresh";
+module.exports.jwtRefreshCookieSameSite =
+  process.env.WOTLWEDU_JWT_REFRESH_COOKIE_SAMESITE || "lax";
+module.exports.jwtRefreshCookieSecure = toBool(
+  process.env.WOTLWEDU_JWT_REFRESH_COOKIE_SECURE || module.exports.isProduction
+);
 module.exports.googleClientId = process.env.WOTLWEDU_GOOGLE_CLIENT_ID || "";
 
 module.exports.defaultItemsPerPage = 10;
@@ -107,6 +117,9 @@ module.exports.corsOrigin = corsOriginsRaw
   .filter((v) => v.length > 0);
 module.exports.corsAllowNoOrigin = toBool(
   process.env.WOTLWEDU_CORS_ALLOW_NO_ORIGIN || !module.exports.isProduction
+);
+module.exports.corsCredentials = toBool(
+  process.env.WOTLWEDU_CORS_CREDENTIALS || module.exports.jwtRefreshCookieEnabled
 );
 
 module.exports.authRateLimitLoginMax =

@@ -41,6 +41,7 @@ const ContactSuppression = require("./contactsuppression");
 const TrustProfile = require("./trustprofile");
 const AbuseAudit = require("./abuseaudit");
 const RateLimit = require("./ratelimit");
+const Session = require("./session");
 const TerminologyUpdate = require("../updates/update-0019");
 
 let createdFreshSchema = false;

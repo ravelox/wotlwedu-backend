@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+- Scope rate-limit counters per protected flow so login, registration, reset, social-link, invite, and public-poll throttles cannot accidentally consume each other's counters for the same IP/body key.
+- Add Priority 1 regression coverage for route-scoped rate limiting and unauthenticated picture uploads not writing files.
+- Add server-side auth sessions with refresh-token rotation, replay detection, current-user session listing, logout current/all devices, and support session revocation endpoints.
+- Add optional HTTP-only refresh-token cookie configuration for browser deployments.
+- Change self-service registration to provision a private organization, first personal space, space membership, default role, and active poll tutorial instead of placing users in a shared default tenant.
+
 ## 0.0.50 - 2026-05-10
 - Add production security hardening: Helmet headers, configured body limits, production-safe 500 error redaction, deliberate trust-proxy configuration, and stricter production CORS defaults.
 - Move picture uploads fully behind authenticated capability/object authorization and validate upload size, extension, MIME type, and image magic bytes before accepting files.

@@ -9,30 +9,35 @@ const router = express.Router();
 const loginController = require("../controllers/login");
 
 const loginRateLimit = createRateLimiter({
+  scope: "auth.login",
   max: Config.authRateLimitLoginMax,
   windowMs: Config.authRateLimitWindowMs,
   keyMode: "ip+body",
   message: "Too many login attempts",
 });
 const resetRateLimit = createRateLimiter({
+  scope: "auth.password-reset",
   max: Config.authRateLimitResetMax,
   windowMs: Config.authRateLimitWindowMs,
   keyMode: "ip+body",
   message: "Too many password reset attempts",
 });
 const verify2faRateLimit = createRateLimiter({
+  scope: "auth.verify-2fa",
   max: Config.authRateLimitVerify2faMax,
   windowMs: Config.authRateLimitWindowMs,
   keyMode: "ip+body",
   message: "Too many 2FA verification attempts",
 });
 const socialLinkRateLimit = createRateLimiter({
+  scope: "auth.social-link",
   max: Config.authRateLimitSocialLinkMax,
   windowMs: Config.authRateLimitWindowMs,
   keyMode: "ip+body",
   message: "Too many social link confirmation attempts",
 });
 const inviteLookupRateLimit = createRateLimiter({
+  scope: "auth.invite-lookup",
   max: Config.authRateLimitInviteLookupMax,
   windowMs: Config.authRateLimitWindowMs,
   keyMode: "ip",
@@ -62,6 +67,15 @@ router.post(
   Security.bypassCheck,
   Security.checkAuthentication,
   loginController.postDeclineInvite
+);
+
+router.get("/session", Security.checkAuthentication, loginController.getSessions);
+router.post("/logout", Security.checkAuthentication, loginController.postLogout);
+router.post("/logout/all", Security.checkAuthentication, loginController.postLogoutAll);
+router.delete(
+  "/session/:sessionId",
+  Security.checkAuthentication,
+  loginController.deleteSession
 );
 
 /* Must be authenticated to enable 2FA */

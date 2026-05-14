@@ -86,6 +86,7 @@ function buildApp() {
   const organizationRoutes = require("../routes/organization");
   const electionRoutes = require("../routes/election");
   const publicElectionRoutes = require("../routes/publicelection");
+  const registerRoutes = require("../routes/register");
   const supportRoutes = require("../routes/support");
   const tutorialRoutes = require("../routes/tutorial");
   const userRoutes = require("../routes/user");
@@ -94,6 +95,7 @@ function buildApp() {
   // Mirror app.js protected routes used in tests
   baseApp.use(apiPath("/login"), loginRoutes);
   baseApp.use(apiPath("/public/poll"), publicElectionRoutes);
+  baseApp.use(apiPath("/register"), registerRoutes);
   baseApp.use(apiPath("/item"), Security.checkAuthentication, itemRoutes);
   baseApp.use(apiPath("/list"), Security.checkAuthentication, listRoutes);
   baseApp.use(apiPath("/circle"), Security.checkAuthentication, groupRoutes);
@@ -181,6 +183,7 @@ module.exports = (addTest) => {
 
   Mailer.sendOrganizationInviteMessage = async () => "OK";
   Mailer.sendPublicPollInviteMessage = async () => "OK";
+  Mailer.sendEmailConfirmMessage = async () => "OK";
 
   addTest("setup test database", async () => {
     Associations.setup();
@@ -504,6 +507,45 @@ module.exports = (addTest) => {
     const res = await request(server, "GET", "/ping");
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.body.message, "OK");
+  });
+
+  addTest("consumer registration creates a personal organization, first space, and tutorial", async () => {
+    const res = await request(server, "POST", "/register", {
+      email: "new.consumer@example.com",
+      firstName: "New",
+      lastName: "Consumer",
+      password: "password123",
+      spaceName: "Weekend Plans",
+    });
+
+    assert.strictEqual(res.status, 200);
+    assert.ok(res.body.data.organizationId);
+    assert.ok(res.body.data.workgroupId);
+    assert.notStrictEqual(res.body.data.organizationId, "org_default");
+    assert.strictEqual(res.body.data.onboarding.firstSpaceCreated, true);
+    assert.strictEqual(res.body.data.onboarding.pollTutorialStarted, true);
+
+    const createdUser = await User.findOne({ where: { email: "new.consumer@example.com" }, raw: true });
+    assert.ok(createdUser);
+    assert.strictEqual(createdUser.organizationId, res.body.data.organizationId);
+    assert.strictEqual(createdUser.adminWorkgroupId, res.body.data.workgroupId);
+    assert.strictEqual(Boolean(createdUser.organizationAdmin), true);
+    assert.strictEqual(Boolean(createdUser.workgroupAdmin), true);
+    assert.ok(createdUser.alias);
+
+    const createdWorkgroup = await Workgroup.findByPk(res.body.data.workgroupId, { raw: true });
+    assert.ok(createdWorkgroup);
+    assert.strictEqual(createdWorkgroup.name, "Weekend Plans");
+    assert.strictEqual(createdWorkgroup.organizationId, res.body.data.organizationId);
+
+    const tutorial = await Preference.findOne({
+      where: { creator: createdUser.id, name: "tutorial.poll.create" },
+      raw: true,
+    });
+    assert.ok(tutorial);
+    const tutorialValue = JSON.parse(tutorial.value);
+    assert.strictEqual(tutorialValue.status, "active");
+    assert.ok(tutorialValue.names.groupName.includes("Circle"));
   });
 
   addTest("can create item via POST /item", async () => {

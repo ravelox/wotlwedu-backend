@@ -1,5 +1,6 @@
 const Util = require("util");
 const bcrypt = require("bcryptjs");
+const Crypto = require("crypto");
 const JWT = require("jsonwebtoken");
 const { OAuth2Client } = require("google-auth-library");
 const { Op } = require("sequelize");
@@ -22,12 +23,106 @@ const SocialIdentity = require("../model/socialidentity");
 const User = require("../model/user");
 const UserRole = require("../model/userrole");
 const TestToken = require("../model/testtoken");
+const Session = require("../model/session");
 
 let googleOAuthClient = null;
 const SOCIAL_LINK_TOKEN_EXPIRY = "10m";
 
 function getRequestUserAgent(req) {
   return (req?.get?.("User-Agent") || "").toString().trim() || null;
+}
+
+function getRequestIp(req) {
+  return (
+    req?.ip ||
+    req?.headers?.["x-forwarded-for"] ||
+    req?.connection?.remoteAddress ||
+    ""
+  )
+    .toString()
+    .split(",")[0]
+    .trim();
+}
+
+function hashRefreshTokenId(tokenId) {
+  return Crypto.createHash("sha256").update(String(tokenId || "")).digest("hex");
+}
+
+function getBearerToken(req) {
+  const authHeader = req.get?.("Authorization") || "";
+  if (authHeader.toLowerCase().startsWith("bearer ")) {
+    return authHeader.slice(7).trim();
+  }
+  return authHeader.trim();
+}
+
+function getCookieValue(req, name) {
+  const cookieHeader = req.get?.("Cookie") || "";
+  const prefix = `${name}=`;
+  const part = cookieHeader
+    .split(";")
+    .map((entry) => entry.trim())
+    .find((entry) => entry.startsWith(prefix));
+  if (!part) return null;
+  return decodeURIComponent(part.slice(prefix.length));
+}
+
+function refreshCookieOptions() {
+  return {
+    httpOnly: true,
+    secure: Config.jwtRefreshCookieSecure,
+    sameSite: Config.jwtRefreshCookieSameSite,
+    path: "/v1/login",
+  };
+}
+
+function setRefreshCookie(res, tokens) {
+  if (!Config.jwtRefreshCookieEnabled || !tokens?.refreshToken) return;
+  res.cookie(Config.jwtRefreshCookieName, tokens.refreshToken, {
+    ...refreshCookieOptions(),
+    expires: tokens.refreshTokenExpiresAt,
+  });
+}
+
+function clearRefreshCookie(res) {
+  if (!Config.jwtRefreshCookieEnabled) return;
+  res.clearCookie(Config.jwtRefreshCookieName, refreshCookieOptions());
+}
+
+function getCurrentSessionId(req) {
+  const token = getBearerToken(req);
+  if (!token) return null;
+  try {
+    const decoded = JWT.verify(token, Config.jwtSecret);
+    return decoded.session || null;
+  } catch {
+    return null;
+  }
+}
+
+function serializeSession(session, currentSessionId = null) {
+  return {
+    id: session.id,
+    userId: session.userId,
+    userAgent: session.userAgent,
+    ipAddress: session.ipAddress,
+    lastUsedAt: session.lastUsedAt,
+    expiresAt: session.expiresAt,
+    revokedAt: session.revokedAt,
+    replayDetectedAt: session.replayDetectedAt,
+    current: currentSessionId === session.id,
+  };
+}
+
+function jwtExpiresAt(expiresIn) {
+  const now = Date.now();
+  if (typeof expiresIn === "number") return new Date(now + expiresIn * 1000);
+  const match = String(expiresIn || "").trim().match(/^(\d+)\s*([smhd])?$/i);
+  if (!match) return new Date(now + 2 * 60 * 60 * 1000);
+  const value = Number(match[1]);
+  const unit = (match[2] || "s").toLowerCase();
+  const multipliers = { s: 1000, m: 60 * 1000, h: 60 * 60 * 1000, d: 24 * 60 * 60 * 1000 };
+  return new Date(now + value * (multipliers[unit] || 1000));
 }
 
 function sanitizeAuditMetadata(metadata) {
@@ -58,26 +153,47 @@ async function writeAuthAudit(req, eventType, outcome, details = {}, options = {
   );
 }
 
-async function generateJWTAndSave(foundUser) {
+async function generateJWTAndSave(foundUser, req = null, existingSession = null) {
   if (!foundUser) return null;
 
-  // Generate a new UUID for the refresh token to sign
+  const sessionId = existingSession?.id || UUID("session");
   const refreshTokenId = UUID("wotlwedu");
+  const refreshTokenHash = hashRefreshTokenId(refreshTokenId);
+  const refreshTokenExpiresAt = jwtExpiresAt(Config.jwtRefreshExpiry);
 
-  const authTokenContents = { user: foundUser.id };
-  const refreshTokenContents = { user: foundUser.id, token: refreshTokenId };
+  const authTokenContents = { user: foundUser.id, session: sessionId };
+  const refreshTokenContents = {
+    user: foundUser.id,
+    session: sessionId,
+    token: refreshTokenId,
+    kind: "refresh",
+  };
 
-  // Save the refresh token to the user record
-  foundUser.refreshToken = refreshTokenId;
-  foundUser.refreshTokenExpire = Date.now() + 3600000;
   // Record the last login time
   foundUser.lastLogin = Date.now();
 
-  await foundUser.save().then((userUpdated) => {
-    if (!userUpdated) {
-      throw new Error("Cannot save refresh token");
-    }
-  });
+  if (existingSession) {
+    existingSession.previousRefreshTokenHash = existingSession.refreshTokenHash;
+    existingSession.refreshTokenHash = refreshTokenHash;
+    existingSession.expiresAt = refreshTokenExpiresAt;
+    existingSession.lastUsedAt = new Date();
+    existingSession.userAgent = getRequestUserAgent(req);
+    existingSession.ipAddress = getRequestIp(req);
+    await existingSession.save();
+  } else {
+    await Session.create({
+      id: sessionId,
+      userId: foundUser.id,
+      refreshTokenHash,
+      previousRefreshTokenHash: null,
+      userAgent: getRequestUserAgent(req),
+      ipAddress: getRequestIp(req),
+      lastUsedAt: new Date(),
+      expiresAt: refreshTokenExpiresAt,
+    });
+  }
+
+  await foundUser.save();
 
   const newAuthToken = JWT.sign(authTokenContents, Config.jwtSecret, {
     expiresIn: Config.jwtExpiry,
@@ -86,7 +202,12 @@ async function generateJWTAndSave(foundUser) {
     expiresIn: Config.jwtRefreshExpiry,
   });
 
-  return { authToken: newAuthToken, refreshToken: newRefreshToken };
+  return {
+    authToken: newAuthToken,
+    refreshToken: newRefreshToken,
+    sessionId,
+    refreshTokenExpiresAt,
+  };
 }
 
 function buildAuthResponse(foundUser, tokens, extras = {}) {
@@ -105,6 +226,7 @@ function buildAuthResponse(foundUser, tokens, extras = {}) {
       foundUser.adminWorkgroupId || foundUser.adminGroupId || null,
     authToken: tokens.authToken,
     refreshToken: tokens.refreshToken,
+    sessionId: tokens.sessionId,
     ...extras,
   };
 }
@@ -770,7 +892,8 @@ exports.postAcceptInvite = async (req, res, next) => {
     });
 
     const refreshedUser = await User.findByPk(req.authUserId);
-    const tokens = await generateJWTAndSave(refreshedUser);
+    const tokens = await generateJWTAndSave(refreshedUser, req);
+    setRefreshCookie(res, tokens);
     return StatusResponse(
       res,
       200,
@@ -908,7 +1031,8 @@ exports.postLogin = async (req, res, next) => {
       });
     }
 
-    const tokens = await generateJWTAndSave(foundUser);
+    const tokens = await generateJWTAndSave(foundUser, req);
+    setRefreshCookie(res, tokens);
     await writeAuthAudit(req, "password_sign_in", "success", {
       targetUserId: foundUser.id,
       organizationId: foundUser.organizationId,
@@ -930,6 +1054,7 @@ exports.postLogin = async (req, res, next) => {
         foundUser.adminWorkgroupId || foundUser.adminGroupId || null,
       authToken: tokens.authToken,
       refreshToken: tokens.refreshToken,
+      sessionId: tokens.sessionId,
     });
   } catch (err) {
     next(err);
@@ -946,7 +1071,8 @@ exports.postSocialLogin = async (req, res, next) => {
         provider: normalizeProvider(req.body?.provider),
       });
     }
-    const tokens = await generateJWTAndSave(result.user);
+    const tokens = await generateJWTAndSave(result.user, req);
+    setRefreshCookie(res, tokens);
     return StatusResponse(
       res,
       200,
@@ -1011,7 +1137,8 @@ exports.postGoogleLogin = async (req, res, next) => {
         provider: "google",
       });
     }
-    const tokens = await generateJWTAndSave(result.user);
+    const tokens = await generateJWTAndSave(result.user, req);
+    setRefreshCookie(res, tokens);
     return StatusResponse(
       res,
       200,
@@ -1076,7 +1203,8 @@ exports.postConfirmSocialLink = async (req, res, next) => {
     if (!linkToken) return StatusResponse(res, 421, "No social link token provided");
 
     const result = await confirmSocialLink(linkToken, { req });
-    const tokens = await generateJWTAndSave(result.user);
+    const tokens = await generateJWTAndSave(result.user, req);
+    setRefreshCookie(res, tokens);
     return StatusResponse(
       res,
       200,
@@ -1115,45 +1243,165 @@ exports._buildProvisionedOrganizationName = buildProvisionedOrganizationName;
 exports._splitDisplayName = splitDisplayName;
 
 exports.postRefreshLogin = async (req, res, next) => {
-  const refreshToken = req.body.refreshToken;
-
-  if (!refreshToken)
-    return StatusResponse(res, 403, "No refresh token provided");
-
-  let decoded;
   try {
-    decoded = JWT.verify(refreshToken, Config.jwtSecret);
-  } catch (err) {
-    return StatusResponse(res, 403, "Invalid reset token", {
-      message: err.name,
-    });
-  }
+    const refreshToken =
+      req.body.refreshToken ||
+      getCookieValue(req, Config.jwtRefreshCookieName);
+    if (!refreshToken)
+      return StatusResponse(res, 403, "No refresh token provided");
 
-  User.findByPk(decoded.user).then(async (foundUser) => {
+    let decoded;
+    try {
+      decoded = JWT.verify(refreshToken, Config.jwtSecret);
+    } catch (err) {
+      return StatusResponse(res, 403, "Invalid refresh token", {
+        message: err.name,
+      });
+    }
+
+    if (!decoded.session || !decoded.token || decoded.kind !== "refresh") {
+      return StatusResponse(res, 403, "Invalid refresh token");
+    }
+
+    const foundSession = await Session.findByPk(decoded.session);
+    if (!foundSession || foundSession.userId !== decoded.user) {
+      return StatusResponse(res, 403, "Invalid refresh token");
+    }
+    if (foundSession.revokedAt || foundSession.expiresAt.getTime() < Date.now()) {
+      return StatusResponse(res, 403, "Session expired");
+    }
+
+    const presentedHash = hashRefreshTokenId(decoded.token);
+    if (presentedHash !== foundSession.refreshTokenHash) {
+      if (presentedHash === foundSession.previousRefreshTokenHash) {
+        foundSession.replayDetectedAt = new Date();
+        foundSession.revokedAt = new Date();
+        await foundSession.save();
+        await Session.update(
+          { revokedAt: new Date() },
+          { where: { userId: foundSession.userId, revokedAt: null } }
+        );
+        return StatusResponse(res, 403, "Refresh token replay detected");
+      }
+      return StatusResponse(res, 403, "Invalid refresh token");
+    }
+
+    const foundUser = await User.findByPk(decoded.user);
     if (!foundUser) return StatusResponse(res, 421, "Invalid credentials");
+    if (!foundUser.active) return StatusResponse(res, 403, "Account disabled");
 
-    if (decoded.token !== foundUser.refreshToken)
-      return StatusResponse(res, 403, "Invalid credentials");
+    const tokens = await generateJWTAndSave(foundUser, req, foundSession);
+    setRefreshCookie(res, tokens);
+    return StatusResponse(res, 200, "OK", buildAuthResponse(foundUser, tokens));
+  } catch (err) {
+    return next(err);
+  }
+};
 
-    const tokens = await generateJWTAndSave(foundUser);
-
-        return StatusResponse(res, 200, "OK", {
-      userId: foundUser.id,
-      firstName: foundUser.firstName,
-      lastName: foundUser.lastName,
-      email: foundUser.email,
-      alias: foundUser.alias,
-      admin: foundUser.admin,
-      systemAdmin: foundUser.systemAdmin === true || foundUser.admin === true,
-      organizationId: foundUser.organizationId || null,
-      organizationAdmin: foundUser.organizationAdmin === true,
-      workgroupAdmin: foundUser.workgroupAdmin === true,
-      adminWorkgroupId:
-        foundUser.adminWorkgroupId || foundUser.adminGroupId || null,
-      authToken: tokens.authToken,
-      refreshToken: tokens.refreshToken,
+exports.getSessions = async (req, res, next) => {
+  try {
+    const currentSessionId = getCurrentSessionId(req);
+    const sessions = await Session.findAll({
+      where: { userId: req.authUserId },
+      order: [["lastUsedAt", "DESC"]],
     });
-  });
+    return StatusResponse(res, 200, "OK", {
+      sessions: sessions.map((session) => serializeSession(session, currentSessionId)),
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+exports.postLogout = async (req, res, next) => {
+  try {
+    const currentSessionId = getCurrentSessionId(req);
+    if (currentSessionId) {
+      await Session.update(
+        { revokedAt: new Date() },
+        { where: { id: currentSessionId, userId: req.authUserId, revokedAt: null } }
+      );
+    }
+    clearRefreshCookie(res);
+    return StatusResponse(res, 200, "OK");
+  } catch (err) {
+    return next(err);
+  }
+};
+
+exports.postLogoutAll = async (req, res, next) => {
+  try {
+    await Session.update(
+      { revokedAt: new Date() },
+      { where: { userId: req.authUserId, revokedAt: null } }
+    );
+    clearRefreshCookie(res);
+    return StatusResponse(res, 200, "OK");
+  } catch (err) {
+    return next(err);
+  }
+};
+
+exports.deleteSession = async (req, res, next) => {
+  try {
+    const sessionId = req.params.sessionId;
+    if (!sessionId) return StatusResponse(res, 421, "No session ID provided");
+    const foundSession = await Session.findOne({
+      where: { id: sessionId, userId: req.authUserId },
+    });
+    if (!foundSession) return StatusResponse(res, 404, "Session not found");
+    foundSession.revokedAt = new Date();
+    await foundSession.save();
+    return StatusResponse(res, 200, "OK");
+  } catch (err) {
+    return next(err);
+  }
+};
+
+exports.getUserSessions = async (req, res, next) => {
+  try {
+    const userId = req.params.userId;
+    if (!userId) return StatusResponse(res, 421, "No user ID provided");
+    const sessions = await Session.findAll({
+      where: { userId },
+      order: [["lastUsedAt", "DESC"]],
+    });
+    return StatusResponse(res, 200, "OK", {
+      sessions: sessions.map((session) => serializeSession(session)),
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+exports.deleteUserSession = async (req, res, next) => {
+  try {
+    const { userId, sessionId } = req.params;
+    if (!userId || !sessionId) {
+      return StatusResponse(res, 421, "No user/session ID provided");
+    }
+    const foundSession = await Session.findOne({ where: { id: sessionId, userId } });
+    if (!foundSession) return StatusResponse(res, 404, "Session not found");
+    foundSession.revokedAt = new Date();
+    await foundSession.save();
+    return StatusResponse(res, 200, "OK");
+  } catch (err) {
+    return next(err);
+  }
+};
+
+exports.postRevokeUserSessions = async (req, res, next) => {
+  try {
+    const userId = req.params.userId;
+    if (!userId) return StatusResponse(res, 421, "No user ID provided");
+    await Session.update(
+      { revokedAt: new Date() },
+      { where: { userId, revokedAt: null } }
+    );
+    return StatusResponse(res, 200, "OK");
+  } catch (err) {
+    return next(err);
+  }
 };
 
 exports.postRequestPasswordReset = (req, res, next) => {
@@ -1343,7 +1591,8 @@ exports.verify2FA = (req, res, next) => {
     if (verified === null)
       return StatusResponse(res, 421, "Invalid credentials");
 
-    const tokens = await generateJWTAndSave(foundUser);
+    const tokens = await generateJWTAndSave(foundUser, req);
+    setRefreshCookie(res, tokens);
 
     foundUser.token2fa = null;
     foundUser.save().then((updatedUser) => {
@@ -1364,6 +1613,7 @@ exports.verify2FA = (req, res, next) => {
           foundUser.adminWorkgroupId || foundUser.adminGroupId || null,
         authToken: tokens.authToken,
         refreshToken: tokens.refreshToken,
+        sessionId: tokens.sessionId,
       });
     });
   });

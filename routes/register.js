@@ -7,6 +7,7 @@ const createRateLimiter = require("../util/rate-limit");
 const registerController = require("../controllers/register");
 
 const registerRateLimit = createRateLimiter({
+  scope: "auth.register",
   max: Config.authRateLimitRegisterMax,
   windowMs: Config.authRateLimitWindowMs,
   keyMode: "ip+body",

@@ -72,6 +72,10 @@ env:
   frontendUrl: "http://localhost:5173"
   corsOrigins: "http://localhost:4200,http://localhost:5173,http://localhost:4173,http://localhost:9876"
   corsAllowNoOrigin: false
+  corsCredentials: false
+  refreshCookieEnabled: false
+  refreshCookieSameSite: lax
+  refreshCookieSecure: true
   trustProxy: true
   jsonBodyLimit: 1mb
   urlEncodedBodyLimit: 1mb

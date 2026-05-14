@@ -43,6 +43,11 @@ function makeKey(req, mode) {
   return `ip:${ip}`;
 }
 
+function makeScopedKey(scope, req, mode) {
+  const normalizedScope = scope || req.baseUrl || req.originalUrl || "global";
+  return `scope:${normalizedScope}|${makeKey(req, mode)}`;
+}
+
 function hashKey(value) {
   return Crypto.createHash("sha256").update(value).digest("hex");
 }
@@ -136,10 +141,11 @@ module.exports = function createRateLimiter(options = {}) {
   const keyMode = options.keyMode || "ip";
   const message = options.message || "Too many requests";
   const store = options.store || Config.rateLimitStore || "memory";
+  const scope = options.scope || options.name || message;
 
   return async function rateLimit(req, res, next) {
     const now = Date.now();
-    const key = makeKey(req, keyMode);
+    const key = makeScopedKey(scope, req, keyMode);
 
     try {
       const result =
@@ -168,4 +174,5 @@ module.exports = function createRateLimiter(options = {}) {
 module.exports._checkMemoryLimit = checkMemoryLimit;
 module.exports._hashKey = hashKey;
 module.exports._makeKey = makeKey;
+module.exports._makeScopedKey = makeScopedKey;
 module.exports._memoryCounters = memoryCounters;

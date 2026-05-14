@@ -9,12 +9,14 @@ const router = express.Router();
 const electionController = require("../controllers/election");
 const publicElectionController = require("../controllers/publicelection");
 const publicInviteRateLimit = createRateLimiter({
+  scope: "poll.public-invite-manage",
   max: Config.authRateLimitInviteManageMax,
   windowMs: Config.authRateLimitWindowMs,
   keyMode: "ip+body",
   message: "Too many public invite management attempts",
 });
 const participationReminderRateLimit = createRateLimiter({
+  scope: "poll.participation-reminder",
   max: Config.authRateLimitInviteManageMax,
   windowMs: Config.authRateLimitWindowMs,
   keyMode: "ip+body",

@@ -1427,20 +1427,43 @@ paths:
       - bearerAuth: []
   /v1/register/:
     post:
-      summary: POST /v1/register/
+      summary: Register a consumer account with a personal organization and first space
       parameters: []
       responses:
         '200':
-          description: Successful response
-      security:
-      - bearerAuth: []
+          description: Registration accepted and confirmation email queued
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              additionalProperties: true
+              required:
+              - email
+              - firstName
+              - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                password:
+                  type: string
+                  minLength: 8
+                spaceName:
+                  type: string
+                  description: Optional display name for the first personal space.
+                organizationName:
+                  type: string
+                  description: Optional display name for the personal organization.
+      description: |
+        Self-service consumer registration creates a private organization, creates
+        the first personal space, makes the new user the admin for that space, and
+        starts the poll tutorial. The account remains inactive until the email
+        confirmation token is used.
   /v1/item/share/:itemId/recipient/:recipient:
     post:
       summary: POST /v1/item/share/:itemId/recipient/:recipient
@@ -1918,6 +1941,47 @@ paths:
             schema:
               type: object
               additionalProperties: true
+  /v1/login/session:
+    get:
+      summary: GET /v1/login/session
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /v1/login/session/:sessionId:
+    delete:
+      summary: DELETE /v1/login/session/:sessionId
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /v1/login/logout:
+    post:
+      summary: POST /v1/login/logout
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+  /v1/login/logout/all:
+    post:
+      summary: POST /v1/login/logout/all
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
   /v1/login/resetreq:
     post:
       summary: POST /v1/login/resetreq
