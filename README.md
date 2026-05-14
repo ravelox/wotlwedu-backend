@@ -43,6 +43,8 @@ The backend changes in this repo are documented as **0.0.50** in `CHANGELOG.md`.
 - Add public invite lookup via `GET /login/invite/:token` so clients can show invite context before Google sign-in.
 - Add public election access via `GET /public/poll/:token`, guest session issuance via `POST /public/poll/:token/session`, guest voting via `POST /public/poll/:token/vote`, and public abuse reporting via `POST /public/poll/:token/report`.
 - Add trust-gated public election invite management for authenticated election owners via `GET /poll/public/trust`, `POST /poll/:electionId/public/enable`, `POST /poll/:electionId/public/disable`, `GET /poll/:electionId/public/stats`, and `GET/POST/DELETE` invite lifecycle routes under `/poll/:electionId/invite`.
+- Public poll responses include guest-voting availability, expiry/reporting context, and share URLs; guest sessions expire after `WOTLWEDU_PUBLIC_GUEST_SESSION_TTL_HOURS` and guest votes enforce poll/IP quotas.
+- Support users can moderate reported public polls with `POST /support/publicpoll/:electionId/moderation` using `lock`, `restore`, or `remove_public_access`.
 - Add public-poll trust, suppression, invite, participant, vote, and abuse-audit persistence so public links can expand participation without allowing guest-triggered outbound messaging.
 - First-time social sign-in now consumes a pending organization invite only when the supplied invite token matches the Google account email; otherwise it auto-provisions a new organization named `<FirstInitial> <LastInitial>'s Organization`.
 - Matching password-based accounts are not auto-linked before provider authentication. Social login now returns a neutral `linkRequired` confirmation state after verified provider authentication, and linking preserves password login.
@@ -266,6 +268,7 @@ Additional tenancy endpoints:
 - `POST /login/logout/all`
 - `GET /support/publicpoll/overview`
 - `GET /support/publicpoll/audit`
+- `POST /support/publicpoll/:electionId/moderation`
 - `GET /person/:userId/ownership/preview`
 - `POST /person/:userId/ownership/transfer`
 - `GET /public/poll/:token`

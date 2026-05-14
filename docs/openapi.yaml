@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   title: WOTLWEDU API
-  version: 0.0.49
+  version: 0.0.51
 
 paths:
   /v1/ping:
@@ -44,6 +44,17 @@ paths:
       responses:
         '200':
           description: Successful response
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                displayName:
+                  type: string
+                inviteToken:
+                  type: string
   /v1/public/poll/:token/vote:
     post:
       summary: POST /v1/public/poll/:token/vote
@@ -56,6 +67,23 @@ paths:
       responses:
         '200':
           description: Successful response
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - sessionToken
+              - itemId
+              properties:
+                sessionToken:
+                  type: string
+                itemId:
+                  type: string
+                decision:
+                  type: string
+                  enum: [yes, no, maybe, vote]
   /v1/public/poll/:token/report:
     post:
       summary: POST /v1/public/poll/:token/report
@@ -68,6 +96,15 @@ paths:
       responses:
         '200':
           description: Successful response
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
   /v1/organization/:
     get:
       summary: GET /v1/organization/
@@ -653,6 +690,34 @@ paths:
           description: Successful response
       security:
       - bearerAuth: []
+  /v1/support/publicpoll/:electionId/moderation:
+    post:
+      summary: POST /v1/support/publicpoll/:electionId/moderation
+      parameters:
+      - name: electionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - action
+              properties:
+                action:
+                  type: string
+                  enum: [lock, restore, remove_public_access]
+                reason:
+                  type: string
   /v1/support/session/testtoken:
     post:
       summary: POST /v1/support/session/testtoken

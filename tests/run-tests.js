@@ -1,5 +1,12 @@
 const tests = [];
 
+process.env.NODE_ENV = process.env.NODE_ENV || "test";
+process.env.WOTLWEDU_DB_DIALECT = process.env.WOTLWEDU_DB_DIALECT || "sqlite";
+process.env.WOTLWEDU_DB_STORAGE = process.env.WOTLWEDU_DB_STORAGE || ":memory:";
+process.env.WOTLWEDU_DB_LOGGING = process.env.WOTLWEDU_DB_LOGGING || "false";
+process.env.WOTLWEDU_JWT_SECRET = process.env.WOTLWEDU_JWT_SECRET || "testsecret";
+process.env.WOTLWEDU_DB_SYNC = process.env.WOTLWEDU_DB_SYNC || "true";
+
 function addTest(name, fn) {
   tests.push({ name, fn });
 }

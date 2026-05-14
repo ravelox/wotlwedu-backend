@@ -160,6 +160,8 @@ module.exports.publicPollBasicRecipientsPerPoll =
   +(process.env.WOTLWEDU_PUBLIC_BASIC_RECIPIENTS_PER_POLL || 20);
 module.exports.publicPollInviteResendCooldownHours =
   +(process.env.WOTLWEDU_PUBLIC_INVITE_RESEND_COOLDOWN_HOURS || 72);
+module.exports.publicPollGuestSessionTtlHours =
+  +(process.env.WOTLWEDU_PUBLIC_GUEST_SESSION_TTL_HOURS || 168);
 module.exports.authAuditStdout = toBool(
   process.env.WOTLWEDU_AUTH_AUDIT_STDOUT || true
 );

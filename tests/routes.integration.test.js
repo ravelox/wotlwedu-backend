@@ -31,6 +31,7 @@ const Election = require("../model/election");
 const Vote = require("../model/vote");
 const Image = require("../model/image");
 const PublicPollInvite = require("../model/publicpollinvite");
+const PublicPollParticipant = require("../model/publicpollparticipant");
 const AbuseAudit = require("../model/abuseaudit");
 const Preference = require("../model/preference");
 const Security = require("../util/security");
@@ -345,7 +346,7 @@ module.exports = (addTest) => {
     await Status.bulkCreate([
       { id: 100, object: "notification", name: "Unread" },
       { id: 101, object: "notification", name: "Read" },
-      { id: 110, object: "notification", name: "Election Participation Reminder" },
+      { id: 110, object: "notification", name: "Poll Participation Reminder" },
       { id: 200, object: "election", name: "Not Started" },
       { id: 201, object: "election", name: "In Progress" },
       { id: 202, object: "election", name: "Ended" },
@@ -381,7 +382,7 @@ module.exports = (addTest) => {
       description: "Election for public testing",
       listId: publicList.id,
       workgroupId: "workgroup_test",
-      expiration: new Date("2026-04-01T00:00:00Z"),
+      expiration: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       statusId: 200,
       creator: "user_test",
     });
@@ -1420,6 +1421,7 @@ module.exports = (addTest) => {
     const viewRes = await request(server, "GET", `/public/poll/${publicElectionToken}`);
     assert.strictEqual(viewRes.status, 200);
     assert.strictEqual(viewRes.body.data.election.id, publicElectionId);
+    assert.strictEqual(viewRes.body.data.election.canGuestVote, true);
     assert.ok(Array.isArray(viewRes.body.data.election.list.items));
     assert.strictEqual(viewRes.body.data.election.list.items[0].id, publicListItemId);
 
@@ -1428,6 +1430,7 @@ module.exports = (addTest) => {
     });
     assert.strictEqual(sessionRes.status, 200);
     assert.ok(sessionRes.body.data.sessionToken);
+    assert.ok(sessionRes.body.data.expiresAt);
 
     const voteRes = await request(server, "POST", `/public/poll/${publicElectionToken}/vote`, {
       sessionToken: sessionRes.body.data.sessionToken,
@@ -1437,6 +1440,25 @@ module.exports = (addTest) => {
     assert.strictEqual(voteRes.status, 200);
     assert.strictEqual(voteRes.body.data.vote.itemId, publicListItemId);
     assert.strictEqual(voteRes.body.data.vote.decision, "yes");
+  });
+
+  addTest("public poll rejects expired guest sessions", async () => {
+    const sessionRes = await request(server, "POST", `/public/poll/${publicElectionToken}/session`, {
+      displayName: "Expired Guest",
+    });
+    assert.strictEqual(sessionRes.status, 200);
+
+    await PublicPollParticipant.update(
+      { lastSeenAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000) },
+      { where: { id: sessionRes.body.data.participantId } }
+    );
+
+    const voteRes = await request(server, "POST", `/public/poll/${publicElectionToken}/vote`, {
+      sessionToken: sessionRes.body.data.sessionToken,
+      itemId: publicListItemId,
+      decision: "yes",
+    });
+    assert.strictEqual(voteRes.status, 403);
   });
 
   addTest("trusted election owner can send public poll invite", async () => {
@@ -1450,8 +1472,30 @@ module.exports = (addTest) => {
     const statsRes = await request(server, "GET", `/poll/${publicElectionId}/public/stats`);
     assert.strictEqual(statsRes.status, 200);
     assert.strictEqual(statsRes.body.data.statistics.inviteCount, 1);
-    assert.strictEqual(statsRes.body.data.statistics.participantCount, 1);
+    assert.strictEqual(statsRes.body.data.statistics.participantCount, 2);
     assert.strictEqual(statsRes.body.data.statistics.voteCount, 1);
+  });
+
+  addTest("support can lock and restore reported public polls", async () => {
+    const lockRes = await request(server, "POST", `/support/publicpoll/${publicElectionId}/moderation`, {
+      action: "lock",
+      reason: "reported in test",
+    });
+    assert.strictEqual(lockRes.status, 200);
+    assert.strictEqual(lockRes.body.data.publicElection.abuseStatus, "locked");
+
+    const blockedViewRes = await request(server, "GET", `/public/poll/${publicElectionToken}`);
+    assert.strictEqual(blockedViewRes.status, 404);
+
+    const restoreRes = await request(server, "POST", `/support/publicpoll/${publicElectionId}/moderation`, {
+      action: "restore",
+      reason: "false positive",
+    });
+    assert.strictEqual(restoreRes.status, 200);
+    assert.strictEqual(restoreRes.body.data.publicElection.abuseStatus, "normal");
+
+    const viewRes = await request(server, "GET", `/public/poll/${publicElectionToken}`);
+    assert.strictEqual(viewRes.status, 200);
   });
 
   addTest("ownership transfer preview reports direct and linked objects", async () => {

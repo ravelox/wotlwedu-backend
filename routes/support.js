@@ -157,6 +157,11 @@ router.delete(
   Security.checkCapability("election", ["edit"]),
   publicElectionController.deletePublicElectionInvite
 );
+router.post(
+  "/publicpoll/:electionId/moderation",
+  Security.checkCapability("election", ["edit"]),
+  publicElectionController.postModeratePublicElection
+);
 
 router.get("/publicpoll/overview", supportController.getPublicPollAbuseOverview);
 router.get("/publicpoll/audit", supportController.getPublicPollAbuseFeed);

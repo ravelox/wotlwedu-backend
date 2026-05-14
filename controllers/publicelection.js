@@ -144,9 +144,37 @@ function getPublicShareUrl(token) {
   return `${Config.baseFrontendUrl}/public/poll/${encodeURIComponent(token)}`;
 }
 
+function getGuestSessionTtlMs() {
+  return Math.max(1, Number(Config.publicPollGuestSessionTtlHours) || 168) * 60 * 60 * 1000;
+}
+
+function getGuestSessionExpiresAt(participant) {
+  const baseMs = participant?.lastSeenAt ? new Date(participant.lastSeenAt).getTime() : Date.now();
+  return new Date(baseMs + getGuestSessionTtlMs());
+}
+
+function isGuestSessionExpired(participant) {
+  if (!participant?.lastSeenAt) return true;
+  return new Date(participant.lastSeenAt).getTime() + getGuestSessionTtlMs() < Date.now();
+}
+
+function isElectionExpired(election) {
+  return election?.expiration ? new Date(election.expiration).getTime() <= Date.now() : false;
+}
+
+function canGuestVote(election) {
+  return (
+    election?.publicAccessMode === "link_vote" &&
+    election?.guestVotingEnabled === true &&
+    election?.abuseStatus !== "locked" &&
+    !isElectionExpired(election)
+  );
+}
+
 function serializePublicElection(election) {
   const list = typeof election?.get === "function" ? election.get("list") : election?.list;
   const status = typeof election?.get === "function" ? election.get("status") : election?.status;
+  const expired = isElectionExpired(election);
   return {
     id: election.id,
     name: election.name,
@@ -156,7 +184,18 @@ function serializePublicElection(election) {
     publicAccessMode: election.publicAccessMode,
     guestVotingEnabled: election.guestVotingEnabled,
     abuseStatus: election.abuseStatus,
+    publicEnabledAt: election.publicEnabledAt,
+    publicDisabledAt: election.publicDisabledAt,
     publicShareUrl: election.publicToken ? getPublicShareUrl(election.publicToken) : null,
+    canGuestVote: canGuestVote(election),
+    isExpired: expired,
+    reportable: election.publicAccessMode !== "private" && election.abuseStatus !== "locked",
+    publicContext: {
+      statusLabel: expired ? "Expired" : status?.name || "Open",
+      guestSessionTtlHours: Math.max(1, Number(Config.publicPollGuestSessionTtlHours) || 168),
+      privacyLabel: "Public link",
+      reportingEnabled: true,
+    },
     status: status || null,
     list: list
       ? {
@@ -306,6 +345,42 @@ async function assertElectionItem(electionId, itemId) {
   return Item.findByPk(itemId, { attributes: ["id"] });
 }
 
+async function assertGuestVoteQuota(req, election, participant, itemId) {
+  if (!election || !participant) return { ok: false, status: 403, message: "Invalid public session" };
+
+  const existingVote = await PublicPollVote.findOne({
+    where: {
+      participantId: participant.id,
+      itemId,
+    },
+  });
+  if (existingVote) return { ok: true, existingVote };
+
+  const pollVoteCount = await PublicPollVote.count({ where: { electionId: election.id } });
+  const pollLimit = Math.max(1, Number(election.guestVoteLimitPerPoll || 1000));
+  if (pollVoteCount >= pollLimit) {
+    return { ok: false, status: 429, message: "This public poll has reached its guest vote limit" };
+  }
+
+  const ipHash = hashValue(getIpAddress(req));
+  const ipLimit = Math.max(1, Number(election.guestVoteLimitPerIpPerDay || 100));
+  if (ipHash) {
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const ipVoteCount = await PublicPollVote.count({
+      where: {
+        electionId: election.id,
+        sourceIpHash: ipHash,
+        createdAt: { [Op.gte]: oneDayAgo },
+      },
+    });
+    if (ipVoteCount >= ipLimit) {
+      return { ok: false, status: 429, message: "Too many guest votes from this network today" };
+    }
+  }
+
+  return { ok: true, existingVote: null };
+}
+
 module.exports.getPublicElection = async (req, res, next) => {
   try {
     const token = normalizeString(req.params.token);
@@ -339,7 +414,7 @@ module.exports.postPublicElectionSession = async (req, res, next) => {
 
     const election = await getPublicElectionByToken(token);
     if (!election) return StatusResponse(res, 404, "Public election not found");
-    if (election.publicAccessMode === "private" || election.guestVotingEnabled !== true) {
+    if (!canGuestVote(election)) {
       return StatusResponse(res, 403, "Guest voting is not enabled for this poll");
     }
 
@@ -378,6 +453,7 @@ module.exports.postPublicElectionSession = async (req, res, next) => {
       sessionToken,
       participantId: participant.id,
       consentState: participant.consentState,
+      expiresAt: getGuestSessionExpiresAt(participant),
     });
   } catch (err) {
     next(err);
@@ -397,7 +473,7 @@ module.exports.postPublicElectionVote = async (req, res, next) => {
 
     const election = await getPublicElectionByToken(token);
     if (!election) return StatusResponse(res, 404, "Public election not found");
-    if (election.publicAccessMode !== "link_vote" || election.guestVotingEnabled !== true) {
+    if (!canGuestVote(election)) {
       return StatusResponse(res, 403, "Public voting is not enabled for this poll");
     }
 
@@ -408,16 +484,17 @@ module.exports.postPublicElectionVote = async (req, res, next) => {
       },
     });
     if (!participant) return StatusResponse(res, 403, "Invalid public session");
+    if (isGuestSessionExpired(participant)) {
+      return StatusResponse(res, 403, "Public session expired");
+    }
 
     const allowedItem = await assertElectionItem(election.id, itemId);
     if (!allowedItem) return StatusResponse(res, 421, "Item is not part of this poll");
 
-    let existingVote = await PublicPollVote.findOne({
-      where: {
-        participantId: participant.id,
-        itemId,
-      },
-    });
+    const quota = await assertGuestVoteQuota(req, election, participant, itemId);
+    if (!quota.ok) return StatusResponse(res, quota.status, quota.message);
+
+    let existingVote = quota.existingVote;
 
     if (!existingVote) {
       existingVote = new PublicPollVote({
@@ -455,6 +532,7 @@ module.exports.postPublicElectionVote = async (req, res, next) => {
         itemId: existingVote.itemId,
         participantId: existingVote.participantId,
         decision: existingVote.decision,
+        expiresAt: getGuestSessionExpiresAt(participant),
       },
     });
   } catch (err) {
@@ -483,6 +561,67 @@ module.exports.postPublicElectionReport = async (req, res, next) => {
     );
 
     return StatusResponse(res, 200, "OK");
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports.postModeratePublicElection = async (req, res, next) => {
+  try {
+    const action = normalizeString(req.body?.action);
+    const reason = normalizeString(req.body?.reason) || "support action";
+    if (!["lock", "restore", "remove_public_access"].includes(action)) {
+      return StatusResponse(res, 421, "Invalid moderation action");
+    }
+
+    const managed = await getElectionForManage(req, req.params.electionId, "edit");
+    if (!managed.election) return StatusResponse(res, managed.status, managed.message);
+
+    const election = managed.election;
+    if (action === "lock") {
+      election.abuseStatus = "locked";
+      election.guestVotingEnabled = false;
+      election.publicDisabledAt = new Date();
+    } else if (action === "restore") {
+      election.abuseStatus = "normal";
+      if (election.publicToken && election.publicAccessMode !== "private") {
+        election.publicDisabledAt = null;
+        election.guestVotingEnabled = election.publicAccessMode === "link_vote";
+      }
+    } else if (action === "remove_public_access") {
+      election.publicAccessMode = "private";
+      election.guestVotingEnabled = false;
+      election.allowPlatformInvites = false;
+      election.invitePolicy = "none";
+      election.publicDisabledAt = new Date();
+      election.abuseStatus = "removed";
+    }
+    await election.save();
+
+    await AbuseAudit.log(
+      {
+        actorUserId: req.authUserId,
+        electionId: election.id,
+        eventType: `public_poll_moderation_${action}`,
+        outcome: "success",
+        message: "Public poll moderation action applied",
+        metadata: { action, reason },
+      },
+      { req }
+    );
+
+    return StatusResponse(res, 200, "OK", {
+      publicElection: {
+        electionId: election.id,
+        publicAccessMode: election.publicAccessMode,
+        publicShareUrl: election.publicToken ? getPublicShareUrl(election.publicToken) : null,
+        guestVotingEnabled: election.guestVotingEnabled,
+        allowPlatformInvites: election.allowPlatformInvites,
+        invitePolicy: election.invitePolicy,
+        abuseStatus: election.abuseStatus,
+        publicDisabledAt: election.publicDisabledAt,
+      },
+    });
   } catch (err) {
     next(err);
   }
