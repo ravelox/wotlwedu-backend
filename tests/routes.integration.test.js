@@ -24,6 +24,7 @@ const User = require("../model/user");
 const Workgroup = require("../model/workgroup");
 const Group = require("../model/group");
 const GroupMember = require("../model/groupmember");
+const Friend = require("../model/friend");
 const List = require("../model/list");
 const ListItem = require("../model/listitem");
 const Item = require("../model/item");
@@ -346,6 +347,7 @@ module.exports = (addTest) => {
     await Status.bulkCreate([
       { id: 100, object: "notification", name: "Unread" },
       { id: 101, object: "notification", name: "Read" },
+      { id: 103, object: "notification", name: "Friend Request" },
       { id: 110, object: "notification", name: "Poll Participation Reminder" },
       { id: 200, object: "election", name: "Not Started" },
       { id: 201, object: "election", name: "In Progress" },
@@ -658,6 +660,33 @@ module.exports = (addTest) => {
     const res = await request(server, "GET", "/notification/unreadcount");
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.body.data.unread, 2);
+  });
+
+  addTest("friend request to existing organization user creates notification", async () => {
+    const res = await request(server, "POST", "/person/request/user_sender");
+    assert.strictEqual(res.status, 200);
+    assert.ok(res.body.data.friendshipToken);
+
+    const relationship = await Friend.findOne({
+      where: {
+        userId: "user_test",
+        friendId: "user_sender",
+        token: res.body.data.friendshipToken,
+      },
+    });
+    assert.ok(relationship);
+
+    const notification = await Notification.findOne({
+      where: {
+        senderId: "user_test",
+        userId: "user_sender",
+        type: 103,
+        objectId: res.body.data.friendshipToken,
+      },
+    });
+    assert.ok(notification);
+    assert.strictEqual(notification.statusId, 100);
+    assert.strictEqual(notification.text, "Test User wants to be friends");
   });
 
   addTest("organization invite creates pending invite by email", async () => {

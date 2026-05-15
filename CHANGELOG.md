@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 0.0.57 - 2026-05-15
+- Ensure friend requests to existing users in the same organization save the relationship before creating an unread `Friend Request` notification for the invited user.
+
 ## 0.0.56 - 2026-05-15
 - Add database update `update-0024` to seed a non-admin `user_default` account in the default organization during initialization with the three-word default password `default user password`.
 

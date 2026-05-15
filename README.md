@@ -25,7 +25,7 @@ Core stack:
 - `Workgroup admin user`: can administer data for one workgroup (`adminWorkgroupId`, legacy `adminGroupId`).
 
 ## Current version
-The backend changes in this repo are documented as **0.0.56** in `CHANGELOG.md`.
+The backend changes in this repo are documented as **0.0.57** in `CHANGELOG.md`.
 
 ## Seeded Accounts
 Database initialization runs `model/util-createdb.js` followed by

@@ -915,17 +915,14 @@ exports.putAddFriend = (req, res, next) => {
                 friendship.tokenExpire = Date.now() + 3600000 * 24 * 30;
                 friendship.creator = req.authUserId;
 
-                friendship
-                  .save()
-                  .then((friendresult) => {
-                    if (!friendresult)
-                      return StatusResponse(
-                        res,
-                        500,
-                        "Unable to add relationship"
-                      );
-                  })
-                  .catch((err) => next(err));
+                const friendresult = await friendship.save();
+                if (!friendresult) {
+                  return StatusResponse(
+                    res,
+                    500,
+                    "Unable to add relationship"
+                  );
+                }
 
                 const friendNotification = await getStatusIdByName(
                   "Friend Request"
