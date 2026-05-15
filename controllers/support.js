@@ -1,10 +1,19 @@
 const { Op, Sequelize } = require("sequelize");
 
 const StatusResponse = require("../util/statusresponse");
+const Config = require("../config/wotlwedu");
+const UUID = require("../util/mini-uuid");
+const AbuseAuditLog = require("../util/abuse-audit");
+const { hashValue, normalizeEmail } = require("../util/public-poll");
 const AuthAudit = require("../model/authaudit");
 const AbuseAudit = require("../model/abuseaudit");
 const Election = require("../model/election");
 const Workgroup = require("../model/workgroup");
+const Organization = require("../model/organization");
+const User = require("../model/user");
+const Session = require("../model/session");
+const Metadata = require("../model/metadata");
+const ContactSuppression = require("../model/contactsuppression");
 
 function parseAuditMetadata(value) {
   if (!value) return null;
@@ -321,6 +330,110 @@ module.exports.getAuthAuditFeed = async (req, res, next) => {
   }
 };
 
+module.exports.getOpsOverview = async (req, res, next) => {
+  try {
+    if (req.isAdmin !== true && req.isOrganizationAdmin !== true) {
+      return StatusResponse(res, 403, "Admin access required");
+    }
+
+    const scopedOrganizationId = getSupportScope(
+      req,
+      (req.query.organizationId || "").trim() || null
+    );
+    if (scopedOrganizationId === false) {
+      return StatusResponse(res, 403, "Admin access required");
+    }
+
+    const now = new Date();
+    const userWhere = {};
+    const workgroupWhere = {};
+    if (scopedOrganizationId) {
+      userWhere.organizationId = scopedOrganizationId;
+      workgroupWhere.organizationId = scopedOrganizationId;
+    }
+
+    const [
+      organizationCount,
+      userCount,
+      workgroupCount,
+      activeSessionCount,
+      revokedSessionCount,
+      metadataRows,
+      recentAuthFailures,
+      recentMailFailures,
+    ] = await Promise.all([
+      scopedOrganizationId ? 1 : Organization.count(),
+      User.count({ where: userWhere }),
+      Workgroup.count({ where: workgroupWhere }),
+      Session.count({
+        where: {
+          revokedAt: null,
+          expiresAt: { [Op.gt]: now },
+        },
+      }),
+      Session.count({
+        where: {
+          revokedAt: { [Op.ne]: null },
+        },
+      }),
+      Metadata.findAll({ order: [["name", "ASC"]], raw: true }),
+      AuthAudit.count({
+        where: {
+          ...(scopedOrganizationId ? { organizationId: scopedOrganizationId } : {}),
+          outcome: { [Op.ne]: "success" },
+          createdAt: { [Op.gte]: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+        },
+      }),
+      AuthAudit.count({
+        where: {
+          ...(scopedOrganizationId ? { organizationId: scopedOrganizationId } : {}),
+          eventType: { [Op.like]: "%mail%" },
+          outcome: { [Op.ne]: "success" },
+          createdAt: { [Op.gte]: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+        },
+      }),
+    ]);
+
+    return StatusResponse(res, 200, "OK", {
+      organizationId: scopedOrganizationId,
+      tenancy: {
+        organizations: organizationCount,
+        users: userCount,
+        workgroups: workgroupCount,
+      },
+      sessions: {
+        active: activeSessionCount,
+        revoked: revokedSessionCount,
+      },
+      auth: {
+        recentFailures24h: recentAuthFailures,
+      },
+      mail: {
+        provider: Config.mailerProvider?.name || Config.mailerProvider?.constructor?.name || "configured",
+        fromAddress: Config.mailerFromAddress,
+        recentFailures24h: recentMailFailures,
+      },
+      storage: {
+        provider: Config.mediaStorageProvider,
+        publicBaseUrlConfigured: Boolean(Config.mediaStoragePublicBaseUrl),
+        keyPrefix: Config.mediaStorageKeyPrefix || "",
+        s3EndpointConfigured: Boolean(Config.s3Endpoint),
+        s3BucketConfigured: Boolean(Config.s3Bucket),
+      },
+      updates: {
+        count: metadataRows.length,
+        rows: metadataRows.map((row) => ({
+          name: row.name,
+          value: row.value,
+          comment: row.comment,
+        })),
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports.getPublicPollAbuseOverview = async (req, res, next) => {
   try {
     const built = await buildPublicPollAuditWhere(req);
@@ -428,6 +541,62 @@ module.exports.getPublicPollAbuseFeed = async (req, res, next) => {
       itemsPerPage,
       organizationId: built.scopedOrganizationId,
       audits: (rows || []).map((audit) => serializePublicPollAudit(audit, context)),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports.postSuppressPublicPollRecipient = async (req, res, next) => {
+  try {
+    if (req.isAdmin !== true && req.isOrganizationAdmin !== true) {
+      return StatusResponse(res, 403, "Admin access required");
+    }
+    const email = normalizeEmail(req.body?.email);
+    const reason = (req.body?.reason || "").trim() || "support moderation";
+    if (!email) return StatusResponse(res, 421, "No recipient email provided");
+
+    const recipientHash = hashValue(email);
+    const existing = await ContactSuppression.findOne({
+      where: { channel: "email", recipientHash },
+    });
+    const suppression =
+      existing ||
+      (await ContactSuppression.create({
+        id: UUID("suppression"),
+        channel: "email",
+        recipient: email,
+        recipientHash,
+        reason,
+        creator: req.authUserId || null,
+      }));
+
+    if (existing) {
+      existing.reason = reason;
+      existing.creator = req.authUserId || existing.creator;
+      await existing.save();
+    }
+
+    await AbuseAuditLog.log(
+      {
+        actorType: "user",
+        actorUserId: req.authUserId,
+        electionId: req.body?.electionId || null,
+        eventType: "public_poll_recipient_suppressed",
+        outcome: "success",
+        message: "Recipient suppressed by support",
+        metadata: { email, reason },
+      },
+      { req }
+    );
+
+    return StatusResponse(res, 200, "OK", {
+      suppression: {
+        id: suppression.id,
+        channel: suppression.channel,
+        recipient: suppression.recipient,
+        reason: suppression.reason,
+      },
     });
   } catch (err) {
     next(err);

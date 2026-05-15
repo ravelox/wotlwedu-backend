@@ -25,7 +25,7 @@ Core stack:
 - `Workgroup admin user`: can administer data for one workgroup (`adminWorkgroupId`, legacy `adminGroupId`).
 
 ## Current version
-The backend changes in this repo are documented as **0.0.54** in `CHANGELOG.md`.
+The backend changes in this repo are documented as **0.0.55** in `CHANGELOG.md`.
 
 ## Recent API behavior updates
 - Category IDs are now consistently included on category-enabled resources (`group`, `workgroup`, `image`, `item`, `list`, `election`).
@@ -44,13 +44,13 @@ The backend changes in this repo are documented as **0.0.54** in `CHANGELOG.md`.
 - Add public election access via `GET /public/poll/:token`, guest session issuance via `POST /public/poll/:token/session`, guest voting via `POST /public/poll/:token/vote`, and public abuse reporting via `POST /public/poll/:token/report`.
 - Add trust-gated public election invite management for authenticated election owners via `GET /poll/public/trust`, `POST /poll/:electionId/public/enable`, `POST /poll/:electionId/public/disable`, `GET /poll/:electionId/public/stats`, and `GET/POST/DELETE` invite lifecycle routes under `/poll/:electionId/invite`.
 - Public poll responses include guest-voting availability, expiry/reporting context, and share URLs; guest sessions expire after `WOTLWEDU_PUBLIC_GUEST_SESSION_TTL_HOURS` and guest votes enforce poll/IP quotas.
-- Support users can moderate reported public polls with `POST /support/publicpoll/:electionId/moderation` using `lock`, `restore`, or `remove_public_access`.
+- Support users can moderate reported public polls with `POST /support/publicpoll/:electionId/moderation` using `lock`, `restore`, or `remove_public_access`, and can suppress invite recipients with `POST /support/publicpoll/suppression`.
 - Add public-poll trust, suppression, invite, participant, vote, and abuse-audit persistence so public links can expand participation without allowing guest-triggered outbound messaging.
 - First-time social sign-in now consumes a pending organization invite only when the supplied invite token matches the Google account email; otherwise it auto-provisions a new organization named `<FirstInitial> <LastInitial>'s Organization`.
 - Matching password-based accounts are not auto-linked before provider authentication. Social login now returns a neutral `linkRequired` confirmation state after verified provider authentication, and linking preserves password login.
 - Social sign-in now refuses to auto-link against an existing non-password account match and returns a manual-support error instead of risking account takeover or duplicate identity state.
 - Auth and invite operations now emit persistent audit records (`authaudits`) covering password sign-in, social sign-in, deferred link confirmation, invite lookup, invite acceptance, invite creation, resend, and revoke flows.
-- Support/admin observability now includes aggregated support endpoints via `GET /support/auth/overview`, `GET /support/auth/audit`, `GET /support/publicpoll/overview`, and `GET /support/publicpoll/audit`.
+- Support/admin observability now includes aggregated support endpoints via `GET /support/auth/overview`, `GET /support/auth/audit`, `GET /support/publicpoll/overview`, `GET /support/publicpoll/audit`, and `GET /support/ops/overview`.
 - Poll participation follow-up now includes `POST /poll/:electionId/remind`, and `GET /poll/:electionId/participation` now returns reminder counts and last-reminder metadata.
 - Add a real poll tutorial via `POST /tutorial/poll/start` and `GET /tutorial/poll`, which stores tutorial progress per user, suggests exact names for the real list/audience/poll to create in the existing UI, and tracks completion from real items, memberships, votes, and stats.
 - Invite lookup, invite management, and deferred social-link confirmation now use dedicated rate limits in addition to the existing password/social login throttles.
@@ -272,6 +272,8 @@ Additional tenancy endpoints:
 - `GET /support/publicpoll/overview`
 - `GET /support/publicpoll/audit`
 - `POST /support/publicpoll/:electionId/moderation`
+- `POST /support/publicpoll/suppression`
+- `GET /support/ops/overview`
 - `GET /person/:userId/ownership/preview`
 - `POST /person/:userId/ownership/transfer`
 - `GET /public/poll/:token`

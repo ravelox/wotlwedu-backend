@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.0.55 - 2026-05-15
+- Add `/support/ops/overview` for tenant scale, session, mail, storage, and update-state dashboard data.
+- Add `/support/publicpoll/suppression` so support can suppress public-poll invite recipients with abuse-audit logging.
+
 ## 0.0.54 - 2026-05-14
 - Emit Socket.IO poll-update events when polls start, close, or receive votes so consumer clients can refresh live poll state.
 

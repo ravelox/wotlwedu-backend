@@ -28,6 +28,7 @@ const publicInviteRateLimit = createRateLimiter({
 
 router.get("/auth/overview", supportController.getAuthAuditOverview);
 router.get("/auth/audit", supportController.getAuthAuditFeed);
+router.get("/ops/overview", supportController.getOpsOverview);
 router.post(
   "/session/testtoken",
   Security.checkCapability("user", ["view"]),
@@ -165,5 +166,10 @@ router.post(
 
 router.get("/publicpoll/overview", supportController.getPublicPollAbuseOverview);
 router.get("/publicpoll/audit", supportController.getPublicPollAbuseFeed);
+router.post(
+  "/publicpoll/suppression",
+  Security.checkCapability("election", ["edit"]),
+  supportController.postSuppressPublicPollRecipient
+);
 
 module.exports = router;
