@@ -5,7 +5,7 @@ Local instructions for Codex-style agents working in this repository.
 ## Repo Summary
 
 - App: REST API backend for the wotlwedu ecosystem.
-- Package: `wotlwedu-backend` version `0.0.57`.
+- Package: `wotlwedu-backend` version `0.0.58`.
 - Stack: Node.js, Express, Sequelize, MariaDB by default.
 - Auth: JWT bearer tokens, optional Google/social login, OTP-based 2FA.
 - Real-time: Socket.IO notifications.

@@ -25,6 +25,7 @@ const Workgroup = require("../model/workgroup");
 const Group = require("../model/group");
 const GroupMember = require("../model/groupmember");
 const Friend = require("../model/friend");
+const Category = require("../model/category");
 const List = require("../model/list");
 const ListItem = require("../model/listitem");
 const Item = require("../model/item");
@@ -1262,6 +1263,48 @@ module.exports = (addTest) => {
     assert.strictEqual(feedRes.status, 200);
     assert.ok(Array.isArray(feedRes.body.data.audits));
     assert.ok(feedRes.body.data.audits.some((audit) => audit.outcome === "failure"));
+  });
+
+  addTest("support backup exports organization data and restores rows", async () => {
+    const exportRes = await request(
+      server,
+      "GET",
+      "/support/backup?scope=organization&organizationId=org_test"
+    );
+    assert.strictEqual(exportRes.status, 200);
+    const exported = exportRes.body.data.backup;
+    assert.strictEqual(exported.format, "wotlwedu.backup.v1");
+    assert.strictEqual(exported.scope, "organization");
+    assert.strictEqual(exported.organizationId, "org_test");
+    assert.ok(exported.counts.organizations >= 1);
+    assert.ok(exported.counts.users >= 1);
+
+    const restoreBackup = {
+      format: "wotlwedu.backup.v1",
+      scope: "organization",
+      organizationId: "org_test",
+      exportedAt: new Date().toISOString(),
+      data: {
+        categories: [
+          {
+            id: "category_restore_test",
+            name: "Restored Category",
+            description: "Created through restore",
+            creator: "user_test",
+          },
+        ],
+      },
+    };
+    const restoreRes = await request(server, "POST", "/support/backup/restore", {
+      backup: restoreBackup,
+      mode: "upsert",
+    });
+    assert.strictEqual(restoreRes.status, 200);
+    assert.strictEqual(restoreRes.body.data.restore.summary.categories.created, 1);
+
+    const restoredCategory = await Category.findByPk("category_restore_test");
+    assert.ok(restoredCategory);
+    assert.strictEqual(restoredCategory.name, "Restored Category");
   });
 
   addTest("support public poll overview and feed return scoped abuse data", async () => {

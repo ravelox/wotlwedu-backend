@@ -25,7 +25,7 @@ Core stack:
 - `Workgroup admin user`: can administer data for one workgroup (`adminWorkgroupId`, legacy `adminGroupId`).
 
 ## Current version
-The backend changes in this repo are documented as **0.0.57** in `CHANGELOG.md`.
+The backend changes in this repo are documented as **0.0.58** in `CHANGELOG.md`.
 
 ## Seeded Accounts
 Database initialization runs `model/util-createdb.js` followed by
@@ -41,6 +41,8 @@ The non-admin default user is active, verified, belongs to the default
 organization, and has all admin flags disabled.
 
 ## Recent API behavior updates
+- Support admins can export and restore JSON backups through `/support/backup`
+  and `/support/backup/restore` for whole-system, organization, or space scopes.
 - Category IDs are now consistently included on category-enabled resources (`group`, `workgroup`, `image`, `item`, `list`, `election`).
 - Category assignment is user-scoped: a resource can only be assigned a category created by the authenticated user.
 - Category-enabled list endpoints support optional grouped payloads via `?collapsible=true`.

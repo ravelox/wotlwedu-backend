@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 0.0.58 - 2026-05-15
+- Add support backup/restore endpoints for whole-system, organization, and space-scoped JSON backups.
+
 ## 0.0.57 - 2026-05-15
 - Ensure friend requests to existing users in the same organization save the relationship before creating an unread `Friend Request` notification for the invited user.
 

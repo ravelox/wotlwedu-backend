@@ -14,6 +14,7 @@ const User = require("../model/user");
 const Session = require("../model/session");
 const Metadata = require("../model/metadata");
 const ContactSuppression = require("../model/contactsuppression");
+const BackupRestore = require("../util/backup-restore");
 
 function parseAuditMetadata(value) {
   if (!value) return null;
@@ -88,6 +89,34 @@ function getSupportScope(req, requestedOrganizationId) {
     return req.authOrganizationId;
   }
   return false;
+}
+
+async function authorizeBackupScope(req, scope, organizationId, workgroupId) {
+  if (scope === "system") {
+    if (req.isAdmin !== true) return { error: "System admin access required" };
+    return { organizationId: null, workgroupId: null };
+  }
+
+  if (scope === "organization") {
+    const targetOrganizationId = organizationId || req.authOrganizationId;
+    if (!targetOrganizationId) return { error: "No organization selected", status: 421 };
+    if (req.isAdmin !== true && req.authOrganizationId !== targetOrganizationId) {
+      return { error: "Not authorized for this organization" };
+    }
+    return { organizationId: targetOrganizationId, workgroupId: null };
+  }
+
+  if (scope === "space") {
+    if (!workgroupId) return { error: "No space selected", status: 421 };
+    const workgroup = await Workgroup.findByPk(workgroupId, { raw: true });
+    if (!workgroup) return { error: "Space not found", status: 404 };
+    if (req.isAdmin !== true && req.authOrganizationId !== workgroup.organizationId) {
+      return { error: "Not authorized for this space" };
+    }
+    return { organizationId: workgroup.organizationId, workgroupId };
+  }
+
+  return { error: "Invalid backup scope", status: 421 };
 }
 
 function buildAuditWhere(req) {
@@ -430,6 +459,65 @@ module.exports.getOpsOverview = async (req, res, next) => {
       },
     });
   } catch (err) {
+    next(err);
+  }
+};
+
+module.exports.getBackup = async (req, res, next) => {
+  try {
+    if (req.isAdmin !== true && req.isOrganizationAdmin !== true) {
+      return StatusResponse(res, 403, "Admin access required");
+    }
+
+    const scope = BackupRestore.normalizeScope(req.query.scope);
+    const authorized = await authorizeBackupScope(
+      req,
+      scope,
+      (req.query.organizationId || "").trim() || null,
+      (req.query.workgroupId || "").trim() || null
+    );
+    if (authorized.error) {
+      return StatusResponse(res, authorized.status || 403, authorized.error);
+    }
+
+    const backup = await BackupRestore.exportBackup({
+      scope,
+      organizationId: authorized.organizationId,
+      workgroupId: authorized.workgroupId,
+    });
+
+    return StatusResponse(res, 200, "OK", { backup });
+  } catch (err) {
+    if (err.status) return StatusResponse(res, err.status, err.message);
+    next(err);
+  }
+};
+
+module.exports.postRestore = async (req, res, next) => {
+  try {
+    if (req.isAdmin !== true && req.isOrganizationAdmin !== true) {
+      return StatusResponse(res, 403, "Admin access required");
+    }
+
+    const backup = req.body?.backup || req.body;
+    const scope = BackupRestore.normalizeScope(backup?.scope);
+    const authorized = await authorizeBackupScope(
+      req,
+      scope,
+      backup?.organizationId || null,
+      backup?.workgroupId || null
+    );
+    if (authorized.error) {
+      return StatusResponse(res, authorized.status || 403, authorized.error);
+    }
+
+    const result = await BackupRestore.restoreBackup(backup, {
+      mode: req.body?.mode || "upsert",
+    });
+
+    return StatusResponse(res, 200, "OK", { restore: result });
+  } catch (err) {
+    if (err.status) return StatusResponse(res, err.status, err.message);
     next(err);
   }
 };

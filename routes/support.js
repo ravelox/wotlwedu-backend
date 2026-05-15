@@ -29,6 +29,16 @@ const publicInviteRateLimit = createRateLimiter({
 router.get("/auth/overview", supportController.getAuthAuditOverview);
 router.get("/auth/audit", supportController.getAuthAuditFeed);
 router.get("/ops/overview", supportController.getOpsOverview);
+router.get(
+  "/backup",
+  Security.checkCapability("organization", ["view"]),
+  supportController.getBackup
+);
+router.post(
+  "/backup/restore",
+  Security.checkCapability("organization", ["edit"]),
+  supportController.postRestore
+);
 router.post(
   "/session/testtoken",
   Security.checkCapability("user", ["view"]),
