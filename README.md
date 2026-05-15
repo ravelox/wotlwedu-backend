@@ -127,6 +127,58 @@ Tests:
 npm test
 ```
 
+Scale seed data for support-console load testing:
+```bash
+export WOTLWEDU_SEED_PASSWORD="replace-this-shared-seed-password"
+npm run seed:scale-tenants
+```
+
+When using the local Docker Compose stack, either provide the host-side DB
+credentials:
+```bash
+WOTLWEDU_DB_HOST=localhost \
+WOTLWEDU_DB_PASSWORD=wotlwedu \
+WOTLWEDU_SEED_PASSWORD="replace-this-shared-seed-password" \
+npm run seed:scale-tenants
+```
+
+Or run the script inside the backend container, where the compose database
+environment is already configured:
+```bash
+WOTLWEDU_SEED_PASSWORD="replace-this-shared-seed-password" \
+npm run seed:scale-tenants:compose
+```
+
+To remove rows created by the scale seed, first inspect the matched row counts:
+```bash
+WOTLWEDU_DB_HOST=localhost \
+WOTLWEDU_DB_PASSWORD=wotlwedu \
+WOTLWEDU_RESET_DRY_RUN=true \
+npm run reset:scale-tenants
+```
+
+Then confirm deletion by matching the configured seed prefix:
+```bash
+WOTLWEDU_DB_HOST=localhost \
+WOTLWEDU_DB_PASSWORD=wotlwedu \
+WOTLWEDU_RESET_CONFIRM=scale \
+npm run reset:scale-tenants
+```
+
+The compose equivalent is:
+```bash
+WOTLWEDU_RESET_DRY_RUN=true npm run reset:scale-tenants:compose
+WOTLWEDU_RESET_CONFIRM=scale npm run reset:scale-tenants:compose
+```
+
+The scale seed script defaults to 15,000 organizations, 1-8 spaces per
+organization, at least 30 users per organization, one seeded system admin, two
+organization admins per organization, one admin per space, and non-admin users
+for the rest. It is deterministic and idempotent for the configured
+`WOTLWEDU_SEED_PREFIX` (`scale` by default). Use `WOTLWEDU_SEED_DRY_RUN=true`
+to estimate row counts without inserting data or opening a database connection.
+Real inserts require the normal `WOTLWEDU_DB_*` credentials.
+
 Deployed support/auth validation:
 ```bash
 export WOTLWEDU_VALIDATE_BASE_URL="https://api.example.com"

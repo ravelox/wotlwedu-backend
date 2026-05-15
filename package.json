@@ -1,6 +1,6 @@
 {
   "name": "wotlwedu-backend",
-  "version": "0.0.59",
+  "version": "0.0.60",
   "description": "Puts important decisions to a vote",
   "main": "app.js",
   "scripts": {
@@ -8,6 +8,10 @@
     "start": "node app.js",
     "test": "node tests/run-tests.js",
     "test:live-notification": "WOTLWEDU_LIVE_NOTIFICATION=1 node tests/run-tests.js",
+    "seed:scale-tenants": "node scripts/seed-scale-tenants.js",
+    "seed:scale-tenants:compose": "docker compose -f ../docker-compose.yaml exec -e WOTLWEDU_SEED_PASSWORD -e WOTLWEDU_SEED_PREFIX -e WOTLWEDU_SEED_ORG_COUNT -e WOTLWEDU_SEED_MIN_USERS_PER_ORG -e WOTLWEDU_SEED_MIN_SPACES_PER_ORG -e WOTLWEDU_SEED_MAX_SPACES_PER_ORG -e WOTLWEDU_SEED_BATCH_ORGS -e WOTLWEDU_SEED_INSERT_CHUNK_SIZE -e WOTLWEDU_SEED_RANDOM_SEED -e WOTLWEDU_SEED_DRY_RUN wotlwedu-backend node scripts/seed-scale-tenants.js",
+    "reset:scale-tenants": "node scripts/reset-scale-tenants.js",
+    "reset:scale-tenants:compose": "docker compose -f ../docker-compose.yaml exec -e WOTLWEDU_SEED_PREFIX -e WOTLWEDU_RESET_DRY_RUN -e WOTLWEDU_RESET_CONFIRM -e WOTLWEDU_RESET_INCLUDE_SYSADMIN wotlwedu-backend node scripts/reset-scale-tenants.js",
     "validate:deployed-support": "node scripts/validate-deployed-support.mjs"
   },
   "author": "Dave Kelly",

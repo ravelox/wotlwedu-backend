@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.0.60 - 2026-05-15
+- Add a deterministic scale seed script for 15,000 organizations with spaces,
+  organization admins, space admins, and non-admin users.
+- Add a reset script for removing scale seed users, spaces, organizations, and
+  related seed memberships/sessions by prefix.
+
 ## 0.0.59 - 2026-05-15
 - Add server-side support audit export endpoints for auth and public-poll abuse feeds.
 - Add support account-recovery actions for password reset generation, 2FA clearing, and account verification with auth-audit logging.
