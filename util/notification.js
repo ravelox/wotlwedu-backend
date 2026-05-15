@@ -64,6 +64,16 @@ async function emitNotificationEvent(userId, kind, options = {}) {
   });
 }
 
+async function emitPollUpdate(userId, payload = {}) {
+  if (!userId || !payload.electionId) return;
+  await IO.notifyUser(userId, "poll-update", {
+    electionId: payload.electionId,
+    kind: payload.kind || "updated",
+    status: payload.status || null,
+    message: payload.message || null,
+  });
+}
+
 module.exports.sendNotification = async (
   notifSender,
   notifRcpt,
@@ -93,3 +103,4 @@ module.exports.sendNotification = async (
 module.exports.getUnreadCount = getUnreadCount;
 module.exports.getNotificationPayload = getNotificationPayload;
 module.exports.emitNotificationEvent = emitNotificationEvent;
+module.exports.emitPollUpdate = emitPollUpdate;

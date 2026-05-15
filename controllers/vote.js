@@ -298,7 +298,19 @@ module.exports.getCastVote = (req, res, next) => {
           foundElection.statusId = electionEndedStatus;
           await foundElection.save();
         }
+        await Notify.emitPollUpdate(foundVote.election.creator, {
+          electionId: foundVote.election.id,
+          kind: "ended",
+          status: "Ended",
+          message: `${foundVote.election.name} ended`,
+        });
       }
+      await Notify.emitPollUpdate(req.authUserId, {
+        electionId: foundVote.election.id,
+        kind: "vote_cast",
+        status: statusToFind,
+        message: `Vote saved for ${foundVote.election.name}`,
+      });
 
       return StatusResponse(res, 200, "OK", { id: foundVote.id });
     });

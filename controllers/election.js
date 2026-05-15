@@ -744,8 +744,10 @@ module.exports.putStartElection = (req, res, next) => {
       const electionStartNotification = await getStatusIdByName(
         "Election Start"
       );
+      const pollUpdateRecipients = new Set([foundElection.creator]);
       const votesToAdd = [];
       for (const voter of foundElection.group.users) {
+        pollUpdateRecipients.add(voter.id);
         await Notify.sendNotification(
           req.authUserId,
           voter.id,
@@ -791,7 +793,17 @@ module.exports.putStartElection = (req, res, next) => {
           foundElection.statusId = statusId;
           foundElection
             .save()
-            .then((electionSaved) => {
+            .then(async (electionSaved) => {
+              await Promise.all(
+                [...pollUpdateRecipients].map((userId) =>
+                  Notify.emitPollUpdate(userId, {
+                    electionId: foundElection.id,
+                    kind: "started",
+                    status: "In Progress",
+                    message: `${foundElection.name} started`,
+                  })
+                )
+              );
               return StatusResponse(res, 200, "OK", {
                 votes: votesToAdd,
                 errors: voteErrors,
@@ -856,7 +868,22 @@ module.exports.putStopElection = (req, res, next) => {
               foundElection.statusId = statusId;
               foundElection
                 .save()
-                .then(() => {
+                .then(async () => {
+                  const participantSummary = await buildParticipationSummary(foundElection);
+                  const recipients = new Set([foundElection.creator]);
+                  for (const participant of participantSummary?.audience?.participants || []) {
+                    recipients.add(participant.id);
+                  }
+                  await Promise.all(
+                    [...recipients].map((userId) =>
+                      Notify.emitPollUpdate(userId, {
+                        electionId: foundElection.id,
+                        kind: "closed",
+                        status: "Stopped",
+                        message: `${foundElection.name} closed`,
+                      })
+                    )
+                  );
                   return StatusResponse(res, 200, "OK");
                 })
                 .catch((err) => next(err));

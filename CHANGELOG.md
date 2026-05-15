@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 0.0.54 - 2026-05-14
+- Emit Socket.IO poll-update events when polls start, close, or receive votes so consumer clients can refresh live poll state.
+
 ## 0.0.53 - 2026-05-14
 - Add provider-based media storage with local development storage and S3-compatible production storage for AWS S3, MinIO, or compatible providers.
 - Complete the public poll backend contract with public response context, guest-session expiry, guest vote quota enforcement, and support moderation actions for locking/restoring/removing public access.
