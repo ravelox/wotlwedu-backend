@@ -25,7 +25,20 @@ Core stack:
 - `Workgroup admin user`: can administer data for one workgroup (`adminWorkgroupId`, legacy `adminGroupId`).
 
 ## Current version
-The backend changes in this repo are documented as **0.0.55** in `CHANGELOG.md`.
+The backend changes in this repo are documented as **0.0.56** in `CHANGELOG.md`.
+
+## Seeded Accounts
+Database initialization runs `model/util-createdb.js` followed by
+`model/util-updatedb.js`. The update path keeps these baseline accounts present
+and idempotent:
+
+- `root@localhost.localdomain`: protected system-admin bootstrap account.
+- `user@localhost.localdomain`: non-admin default user seeded as
+  `user_default` in `org_default`. The default password is
+  `default user password`.
+
+The non-admin default user is active, verified, belongs to the default
+organization, and has all admin flags disabled.
 
 ## Recent API behavior updates
 - Category IDs are now consistently included on category-enabled resources (`group`, `workgroup`, `image`, `item`, `list`, `election`).
@@ -69,6 +82,7 @@ The backend changes in this repo are documented as **0.0.55** in `CHANGELOG.md`.
 - Production security defaults now include Helmet headers, configured JSON/form body limits, production-safe 500 error redaction, stricter production CORS behavior, authenticated picture uploads with file validation, and shared database-backed rate limiting when `NODE_ENV=production`.
 - Server-side auth sessions now rotate refresh tokens, detect refresh-token replay, expose current-user session list/revoke endpoints, and provide support session revocation endpoints.
 - Self-service registration now provisions a private organization, creates the first personal space, assigns the user to that space, and starts the poll tutorial. New consumer users no longer land in a shared default organization.
+- Database initialization now seeds `user@localhost.localdomain` (`user_default`) as a non-admin member of `org_default` with the three-word password `default user password`.
 
 ## Prerequisites
 - Node.js and npm

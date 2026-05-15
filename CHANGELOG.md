@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 0.0.56 - 2026-05-15
+- Add database update `update-0024` to seed a non-admin `user_default` account in the default organization during initialization with the three-word default password `default user password`.
+
 ## 0.0.55 - 2026-05-15
 - Add `/support/ops/overview` for tenant scale, session, mail, storage, and update-state dashboard data.
 - Add `/support/publicpoll/suppression` so support can suppress public-poll invite recipients with abuse-audit logging.

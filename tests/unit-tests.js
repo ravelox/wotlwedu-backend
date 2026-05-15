@@ -2,6 +2,7 @@ const assert = require("assert");
 const http = require("http");
 const express = require("express");
 const FormData = require("form-data");
+const bcrypt = require("bcryptjs");
 const FS = require("fs");
 const Os = require("os");
 const Path = require("path");
@@ -18,6 +19,12 @@ const DBUpdate = require("../util/dbupdate");
 const RateLimit = require("../util/rate-limit");
 const UploadSecurity = require("../util/upload-security");
 const MediaStorage = require("../util/media-storage");
+const database = require("../util/database");
+const Associations = require("../model/associations");
+const Organization = require("../model/organization");
+const Role = require("../model/role");
+const User = require("../model/user");
+const Update0024 = require("../updates/update-0024");
 
 function createMemoryMetadata(initialRows = {}) {
   const rows = new Map(
@@ -540,6 +547,50 @@ module.exports = (addTest) => {
       Config.supportEmail = previousSupportEmail;
       Config.baseFrontendUrl = previousBaseFrontendUrl;
     }
+  });
+
+  addTest("database initialization seeds default organization non-admin user", async () => {
+    Associations.setup();
+    await database.sync({ force: true });
+    await Role.create({
+      id: "role_default",
+      name: "Default Role",
+      description: "Default role",
+      protected: false,
+    });
+
+    const queryInterface = database.getQueryInterface();
+    const initResult = Update0024.init(queryInterface);
+    assert.strictEqual(initResult.status, 0);
+
+    const before = await Update0024.isApplied(queryInterface);
+    assert.strictEqual(before.applied, false);
+
+    const applyResult = await Update0024.apply(true);
+    assert.strictEqual(applyResult.status, 0);
+
+    const defaultOrganization = await Organization.findByPk("org_default");
+    assert.ok(defaultOrganization);
+
+    const defaultUser = await User.findByPk("user_default");
+    assert.ok(defaultUser);
+    assert.strictEqual(defaultUser.organizationId, "org_default");
+    assert.strictEqual(defaultUser.email, "user@localhost.localdomain");
+    assert.strictEqual(
+      await bcrypt.compare("default user password", defaultUser.auth),
+      true
+    );
+    assert.strictEqual(Boolean(defaultUser.admin), false);
+    assert.strictEqual(Boolean(defaultUser.systemAdmin), false);
+    assert.strictEqual(Boolean(defaultUser.organizationAdmin), false);
+    assert.strictEqual(Boolean(defaultUser.workgroupAdmin), false);
+
+    const after = await Update0024.isApplied(queryInterface);
+    assert.strictEqual(after.applied, true);
+
+    const secondApply = await Update0024.apply(true);
+    assert.strictEqual(secondApply.status, 0);
+    assert.strictEqual(await User.count({ where: { id: "user_default" } }), 1);
   });
 
   addTest("database update runner applies modules missing metadata and reapplies incomplete modules", async () => {
