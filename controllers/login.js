@@ -1680,6 +1680,24 @@ exports.postGenerateTestBearer = async (req, res, next) => {
       revokedAt: null,
     });
 
+    await AuthAudit.log(
+      {
+        eventType: "support_view_as_token_generated",
+        outcome: "success",
+        actorUserId: req.authUserId,
+        targetUserId: targetUser.id,
+        organizationId: targetUser.organizationId || null,
+        email: targetUser.email,
+        message: "Support generated temporary view-as token",
+        metadata: {
+          tokenId,
+          expiresAt: expiresAt.toISOString(),
+          reason: req.body.reason || null,
+        },
+      },
+      { req }
+    );
+
     return StatusResponse(res, 200, "OK", {
       tokenId: tokenId,
       kind: "test",
@@ -1729,6 +1747,18 @@ exports.postRevokeTestBearer = async (req, res, next) => {
 
     foundToken.revokedAt = new Date();
     await foundToken.save();
+
+    await AuthAudit.log(
+      {
+        eventType: "support_view_as_token_revoked",
+        outcome: "success",
+        actorUserId: req.authUserId,
+        targetUserId: foundToken.userId,
+        message: "Support revoked temporary view-as token",
+        metadata: { tokenId: foundToken.id },
+      },
+      { req }
+    );
 
     return StatusResponse(res, 200, "OK", {
       tokenId: foundToken.id,

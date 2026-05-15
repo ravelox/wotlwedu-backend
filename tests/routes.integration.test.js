@@ -1378,9 +1378,32 @@ module.exports = (addTest) => {
     assert.strictEqual(auditRes.status, 200);
     assert.ok(Array.isArray(auditRes.body.data.audits));
 
+    const exportRes = await request(server, "GET", "/support/auth/audit/export?organizationId=org_test");
+    assert.strictEqual(exportRes.status, 200);
+    assert.ok(exportRes.body.data.csv.includes("eventType"));
+
+    const resetRes = await request(
+      server,
+      "POST",
+      "/support/people/user_password/recovery/password-reset",
+      {
+        sendEmail: false,
+        reason: "integration support recovery",
+      }
+    );
+    assert.strictEqual(resetRes.status, 200);
+    assert.ok(resetRes.body.data.recovery.resetUrl.includes("/pwdreset/user_password/"));
+
+    const verifyRes = await request(server, "POST", "/support/people/user_password/recovery/verify", {
+      reason: "integration support verification",
+    });
+    assert.strictEqual(verifyRes.status, 200);
+    assert.strictEqual(verifyRes.body.data.recovery.verified, true);
+
     const tokenRes = await request(server, "POST", "/support/session/testtoken", {
       userId: "user_test",
       expiresInMinutes: 15,
+      reason: "integration view-as",
     });
     assert.strictEqual(tokenRes.status, 200);
     assert.ok(tokenRes.body.data.authToken);

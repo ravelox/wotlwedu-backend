@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.0.59 - 2026-05-15
+- Add server-side support audit export endpoints for auth and public-poll abuse feeds.
+- Add support account-recovery actions for password reset generation, 2FA clearing, and account verification with auth-audit logging.
+- Audit support view-as token generation/revocation and ownership transfer remediation.
+- Scope operations dashboard session and media counts to the selected organization.
+
 ## 0.0.58 - 2026-05-15
 - Add support backup/restore endpoints for whole-system, organization, and space-scoped JSON backups.
 

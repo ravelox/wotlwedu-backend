@@ -28,6 +28,7 @@ const publicInviteRateLimit = createRateLimiter({
 
 router.get("/auth/overview", supportController.getAuthAuditOverview);
 router.get("/auth/audit", supportController.getAuthAuditFeed);
+router.get("/auth/audit/export", supportController.getAuthAuditExport);
 router.get("/ops/overview", supportController.getOpsOverview);
 router.get(
   "/backup",
@@ -79,6 +80,21 @@ router.post(
   "/people/:userId/session/revoke-all",
   Security.checkCapability("user", ["edit"]),
   loginController.postRevokeUserSessions
+);
+router.post(
+  "/people/:userId/recovery/password-reset",
+  Security.checkCapability("user", ["edit"]),
+  supportController.postSupportPasswordReset
+);
+router.post(
+  "/people/:userId/recovery/clear-2fa",
+  Security.checkCapability("user", ["edit"]),
+  supportController.postSupportClear2fa
+);
+router.post(
+  "/people/:userId/recovery/verify",
+  Security.checkCapability("user", ["edit"]),
+  supportController.postSupportVerifyUser
 );
 router.get(
   "/people/:userId/ownership/preview",
@@ -176,6 +192,7 @@ router.post(
 
 router.get("/publicpoll/overview", supportController.getPublicPollAbuseOverview);
 router.get("/publicpoll/audit", supportController.getPublicPollAbuseFeed);
+router.get("/publicpoll/audit/export", supportController.getPublicPollAbuseExport);
 router.post(
   "/publicpoll/suppression",
   Security.checkCapability("election", ["edit"]),

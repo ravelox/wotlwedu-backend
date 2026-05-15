@@ -597,6 +597,50 @@ paths:
           description: Successful response
       security:
       - bearerAuth: []
+  /v1/support/auth/audit/export:
+    get:
+      summary: GET /v1/support/auth/audit/export
+      parameters:
+      - name: organizationId
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: eventType
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: outcome
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: provider
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: email
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: userId
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Returns matching audit rows plus a CSV payload.
+      security:
+      - bearerAuth: []
   /v1/support/publicpoll/overview:
     get:
       summary: GET /v1/support/publicpoll/overview
@@ -688,6 +732,50 @@ paths:
       responses:
         '200':
           description: Successful response
+      security:
+      - bearerAuth: []
+  /v1/support/publicpoll/audit/export:
+    get:
+      summary: GET /v1/support/publicpoll/audit/export
+      parameters:
+      - name: organizationId
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: eventType
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: outcome
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: actorType
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: userId
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: electionId
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Returns matching public-poll audit rows plus a CSV payload.
       security:
       - bearerAuth: []
   /v1/support/publicpoll/:electionId/moderation:
@@ -801,6 +889,83 @@ paths:
           description: Successful response
       security:
       - bearerAuth: []
+  /v1/support/people/:userId/recovery/password-reset:
+    post:
+      summary: POST /v1/support/people/:userId/recovery/password-reset
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Generates a password reset token and optionally emails it.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - reason
+              properties:
+                reason:
+                  type: string
+                sendEmail:
+                  type: boolean
+  /v1/support/people/:userId/recovery/clear-2fa:
+    post:
+      summary: POST /v1/support/people/:userId/recovery/clear-2fa
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Clears two-factor authentication for account recovery.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - reason
+              properties:
+                reason:
+                  type: string
+  /v1/support/people/:userId/recovery/verify:
+    post:
+      summary: POST /v1/support/people/:userId/recovery/verify
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Marks an account verified and active after support review.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - reason
+              properties:
+                reason:
+                  type: string
   /v1/support/people/:userId/ownership/preview:
     get:
       summary: GET /v1/support/people/:userId/ownership/preview
@@ -866,6 +1031,8 @@ paths:
                   type: array
                   items:
                     type: string
+                reason:
+                  type: string
   /v1/support/organizations/:organizationId/invite:
     get:
       summary: GET /v1/support/organizations/:organizationId/invite

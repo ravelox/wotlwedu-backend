@@ -6,15 +6,18 @@ const UUID = require("../util/mini-uuid");
 const AbuseAuditLog = require("../util/abuse-audit");
 const { hashValue, normalizeEmail } = require("../util/public-poll");
 const AuthAudit = require("../model/authaudit");
+const AuthAuditLog = require("../util/auth-audit");
 const AbuseAudit = require("../model/abuseaudit");
 const Election = require("../model/election");
 const Workgroup = require("../model/workgroup");
 const Organization = require("../model/organization");
 const User = require("../model/user");
 const Session = require("../model/session");
+const Image = require("../model/image");
 const Metadata = require("../model/metadata");
 const ContactSuppression = require("../model/contactsuppression");
 const BackupRestore = require("../util/backup-restore");
+const Mailer = require("../util/mailer");
 
 function parseAuditMetadata(value) {
   if (!value) return null;
@@ -256,6 +259,64 @@ async function buildPublicPollAuditContext(audits) {
   };
 }
 
+function getPagination(query, defaultItems = 25, maxItems = 100) {
+  let page = Number(query.page || 1);
+  let itemsPerPage = Number(query.items || defaultItems);
+  if (!Number.isFinite(page) || page <= 0) page = 1;
+  if (!Number.isFinite(itemsPerPage) || itemsPerPage <= 0) itemsPerPage = defaultItems;
+  if (itemsPerPage > maxItems) itemsPerPage = maxItems;
+  return { page, itemsPerPage };
+}
+
+function toCsvValue(value) {
+  if (value === undefined || value === null) return "";
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
+function buildCsv(rows, headers) {
+  return [
+    headers.join(","),
+    ...rows.map((row) =>
+      headers.map((header) => JSON.stringify(toCsvValue(row[header]))).join(",")
+    ),
+  ].join("\n");
+}
+
+async function getScopedUserIds(organizationId) {
+  if (!organizationId) return null;
+  const users = await User.findAll({
+    where: { organizationId },
+    attributes: ["id"],
+    raw: true,
+  });
+  return (users || []).map((row) => row.id).filter(Boolean);
+}
+
+async function getScopedWorkgroupIds(organizationId) {
+  if (!organizationId) return null;
+  const workgroups = await Workgroup.findAll({
+    where: { organizationId },
+    attributes: ["id"],
+    raw: true,
+  });
+  return (workgroups || []).map((row) => row.id).filter(Boolean);
+}
+
+async function getSupportUser(req, userId) {
+  if (!userId) return { status: 421, message: "No user ID provided" };
+  const user = await User.findByPk(userId);
+  if (!user) return { status: 404, message: "User not found" };
+  if (req.isAdmin !== true && req.authOrganizationId !== user.organizationId) {
+    return { status: 403, message: "Not authorized for this user" };
+  }
+  if (req.isOrganizationAdmin !== true && req.isAdmin !== true) {
+    return { status: 403, message: "Admin access required" };
+  }
+  if (user.protected === true) return { status: 421, message: "User is protected" };
+  return { user };
+}
+
 module.exports.getAuthAuditOverview = async (req, res, next) => {
   try {
     const built = buildAuditWhere(req);
@@ -334,11 +395,7 @@ module.exports.getAuthAuditFeed = async (req, res, next) => {
     const built = buildAuditWhere(req);
     if (built.error) return StatusResponse(res, 403, built.error);
 
-    let page = Number(req.query.page || 1);
-    let itemsPerPage = Number(req.query.items || 25);
-    if (!Number.isFinite(page) || page <= 0) page = 1;
-    if (!Number.isFinite(itemsPerPage) || itemsPerPage <= 0) itemsPerPage = 25;
-    if (itemsPerPage > 100) itemsPerPage = 100;
+    const { page, itemsPerPage } = getPagination(req.query);
 
     const { count, rows } = await AuthAudit.findAndCountAll({
       where: built.where,
@@ -353,6 +410,42 @@ module.exports.getAuthAuditFeed = async (req, res, next) => {
       itemsPerPage,
       organizationId: built.scopedOrganizationId,
       audits: (rows || []).map(serializeAudit),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports.getAuthAuditExport = async (req, res, next) => {
+  try {
+    const built = buildAuditWhere(req);
+    if (built.error) return StatusResponse(res, 403, built.error);
+
+    const limit = Math.min(Number(req.query.limit || 5000) || 5000, 10000);
+    const rows = await AuthAudit.findAll({
+      where: built.where,
+      order: [["createdAt", "DESC"]],
+      limit,
+    });
+    const audits = (rows || []).map(serializeAudit);
+    const headers = [
+      "id",
+      "createdAt",
+      "eventType",
+      "outcome",
+      "actorUserId",
+      "targetUserId",
+      "organizationId",
+      "provider",
+      "email",
+      "message",
+    ];
+    return StatusResponse(res, 200, "OK", {
+      filename: "wotlwedu-auth-audit.csv",
+      organizationId: built.scopedOrganizationId,
+      total: audits.length,
+      csv: buildCsv(audits, headers),
+      audits,
     });
   } catch (err) {
     next(err);
@@ -381,12 +474,27 @@ module.exports.getOpsOverview = async (req, res, next) => {
       workgroupWhere.organizationId = scopedOrganizationId;
     }
 
+    const scopedUserIds = await getScopedUserIds(scopedOrganizationId);
+    const scopedWorkgroupIds = await getScopedWorkgroupIds(scopedOrganizationId);
+    const sessionWhere = scopedUserIds
+      ? { userId: scopedUserIds.length ? { [Op.in]: scopedUserIds } : "__none__" }
+      : {};
+    const imageWhere = scopedOrganizationId
+      ? {
+          [Op.or]: [
+            { creator: scopedUserIds?.length ? { [Op.in]: scopedUserIds } : "__none__" },
+            { workgroupId: scopedWorkgroupIds?.length ? { [Op.in]: scopedWorkgroupIds } : "__none__" },
+          ],
+        }
+      : {};
+
     const [
       organizationCount,
       userCount,
       workgroupCount,
       activeSessionCount,
       revokedSessionCount,
+      imageCount,
       metadataRows,
       recentAuthFailures,
       recentMailFailures,
@@ -396,15 +504,18 @@ module.exports.getOpsOverview = async (req, res, next) => {
       Workgroup.count({ where: workgroupWhere }),
       Session.count({
         where: {
+          ...sessionWhere,
           revokedAt: null,
           expiresAt: { [Op.gt]: now },
         },
       }),
       Session.count({
         where: {
+          ...sessionWhere,
           revokedAt: { [Op.ne]: null },
         },
       }),
+      Image.count({ where: imageWhere }),
       Metadata.findAll({ order: [["name", "ASC"]], raw: true }),
       AuthAudit.count({
         where: {
@@ -444,6 +555,7 @@ module.exports.getOpsOverview = async (req, res, next) => {
       },
       storage: {
         provider: Config.mediaStorageProvider,
+        imageCount,
         publicBaseUrlConfigured: Boolean(Config.mediaStoragePublicBaseUrl),
         keyPrefix: Config.mediaStorageKeyPrefix || "",
         s3EndpointConfigured: Boolean(Config.s3Endpoint),
@@ -609,11 +721,7 @@ module.exports.getPublicPollAbuseFeed = async (req, res, next) => {
     const built = await buildPublicPollAuditWhere(req);
     if (built.error) return StatusResponse(res, 403, built.error);
 
-    let page = Number(req.query.page || 1);
-    let itemsPerPage = Number(req.query.items || 25);
-    if (!Number.isFinite(page) || page <= 0) page = 1;
-    if (!Number.isFinite(itemsPerPage) || itemsPerPage <= 0) itemsPerPage = 25;
-    if (itemsPerPage > 100) itemsPerPage = 100;
+    const { page, itemsPerPage } = getPagination(req.query);
 
     const { count, rows } = await AbuseAudit.findAndCountAll({
       where: built.where,
@@ -629,6 +737,176 @@ module.exports.getPublicPollAbuseFeed = async (req, res, next) => {
       itemsPerPage,
       organizationId: built.scopedOrganizationId,
       audits: (rows || []).map((audit) => serializePublicPollAudit(audit, context)),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports.getPublicPollAbuseExport = async (req, res, next) => {
+  try {
+    const built = await buildPublicPollAuditWhere(req);
+    if (built.error) return StatusResponse(res, 403, built.error);
+
+    const limit = Math.min(Number(req.query.limit || 5000) || 5000, 10000);
+    const rows = await AbuseAudit.findAll({
+      where: built.where,
+      order: [["createdAt", "DESC"]],
+      limit,
+    });
+    const context = await buildPublicPollAuditContext(rows);
+    const audits = (rows || []).map((audit) => serializePublicPollAudit(audit, context));
+    const flatRows = audits.map((audit) => ({
+      id: audit.id,
+      createdAt: audit.createdAt,
+      eventType: audit.eventType,
+      outcome: audit.outcome,
+      actorType: audit.actorType,
+      actorUserId: audit.actorUserId,
+      electionId: audit.electionId,
+      electionName: audit.election?.name,
+      organizationId: audit.workgroup?.organizationId,
+      message: audit.message,
+    }));
+    const headers = [
+      "id",
+      "createdAt",
+      "eventType",
+      "outcome",
+      "actorType",
+      "actorUserId",
+      "electionId",
+      "electionName",
+      "organizationId",
+      "message",
+    ];
+    return StatusResponse(res, 200, "OK", {
+      filename: "wotlwedu-public-poll-audit.csv",
+      organizationId: built.scopedOrganizationId,
+      total: audits.length,
+      csv: buildCsv(flatRows, headers),
+      audits,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports.postSupportPasswordReset = async (req, res, next) => {
+  try {
+    const found = await getSupportUser(req, req.params.userId);
+    if (!found.user) return StatusResponse(res, found.status, found.message);
+
+    const reason = (req.body?.reason || "").trim();
+    if (!reason) return StatusResponse(res, 421, "Recovery reason is required");
+
+    found.user.resetToken = UUID("wotlwedu");
+    found.user.resetTokenExpire = Date.now() + 3600000;
+    await found.user.save();
+
+    const resetUrl = `${Config.baseFrontendUrl}/pwdreset/${found.user.id}/${found.user.resetToken}`;
+    let emailSent = false;
+    if (req.body?.sendEmail !== false) {
+      await Mailer.sendPasswordResetMessage(
+        found.user.email,
+        found.user.id,
+        found.user.resetToken,
+        Config.baseFrontendUrl
+      );
+      emailSent = true;
+    }
+
+    await AuthAuditLog.log(
+      {
+        eventType: "support_password_reset",
+        outcome: "success",
+        actorUserId: req.authUserId,
+        targetUserId: found.user.id,
+        organizationId: found.user.organizationId,
+        email: found.user.email,
+        message: "Support generated account recovery password reset",
+        metadata: { reason, emailSent },
+      },
+      { req }
+    );
+
+    return StatusResponse(res, 200, "OK", {
+      recovery: {
+        userId: found.user.id,
+        email: found.user.email,
+        emailSent,
+        resetUrl,
+        expiresAt: found.user.resetTokenExpire,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports.postSupportClear2fa = async (req, res, next) => {
+  try {
+    const found = await getSupportUser(req, req.params.userId);
+    if (!found.user) return StatusResponse(res, found.status, found.message);
+    const reason = (req.body?.reason || "").trim();
+    if (!reason) return StatusResponse(res, 421, "Recovery reason is required");
+
+    found.user.enable2fa = false;
+    found.user.secret2fa = null;
+    found.user.token2fa = null;
+    await found.user.save();
+
+    await AuthAuditLog.log(
+      {
+        eventType: "support_clear_2fa",
+        outcome: "success",
+        actorUserId: req.authUserId,
+        targetUserId: found.user.id,
+        organizationId: found.user.organizationId,
+        email: found.user.email,
+        message: "Support cleared two-factor authentication",
+        metadata: { reason },
+      },
+      { req }
+    );
+
+    return StatusResponse(res, 200, "OK", {
+      recovery: { userId: found.user.id, twoFactorEnabled: false },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports.postSupportVerifyUser = async (req, res, next) => {
+  try {
+    const found = await getSupportUser(req, req.params.userId);
+    if (!found.user) return StatusResponse(res, found.status, found.message);
+    const reason = (req.body?.reason || "").trim();
+    if (!reason) return StatusResponse(res, 421, "Recovery reason is required");
+
+    found.user.verified = true;
+    found.user.active = true;
+    found.user.registerToken = null;
+    found.user.registerTokenExpire = null;
+    await found.user.save();
+
+    await AuthAuditLog.log(
+      {
+        eventType: "support_verify_account",
+        outcome: "success",
+        actorUserId: req.authUserId,
+        targetUserId: found.user.id,
+        organizationId: found.user.organizationId,
+        email: found.user.email,
+        message: "Support verified and activated account",
+        metadata: { reason },
+      },
+      { req }
+    );
+
+    return StatusResponse(res, 200, "OK", {
+      recovery: { userId: found.user.id, verified: true, active: true },
     });
   } catch (err) {
     next(err);

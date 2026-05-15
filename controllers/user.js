@@ -29,6 +29,7 @@ const Notification = require("../model/notification");
 const Role = require("../model/role");
 const SocialIdentity = require("../model/socialidentity");
 const AuthAudit = require("../model/authaudit");
+const AuthAuditLog = require("../util/auth-audit");
 
 const Attributes = require("../model/attributes");
 
@@ -342,6 +343,25 @@ exports.postOwnershipTransfer = async (req, res, next) => {
       validated.targetUser.id,
       resources,
       includeLinked
+    );
+
+    await AuthAuditLog.log(
+      {
+        eventType: "support_ownership_transfer",
+        outcome: "success",
+        actorUserId: req.authUserId,
+        targetUserId: validated.sourceUser.id,
+        organizationId: validated.sourceUser.organizationId,
+        message: "Support transferred resource ownership",
+        metadata: {
+          newOwnerId: validated.targetUser.id,
+          includeLinked,
+          resources: result.resources,
+          changed: result.changed,
+          reason: req.body?.reason || null,
+        },
+      },
+      { req }
     );
 
     return StatusResponse(res, 200, "OK", {
