@@ -25,7 +25,7 @@ Core stack:
 - `Workgroup admin user`: can administer data for one workgroup (`adminWorkgroupId`, legacy `adminGroupId`).
 
 ## Current version
-The backend changes in this repo are documented as **0.0.58** in `CHANGELOG.md`.
+The backend changes in this repo are documented as **0.0.61** in `CHANGELOG.md`.
 
 ## Seeded Accounts
 Database initialization runs `model/util-createdb.js` followed by
@@ -223,7 +223,7 @@ Commonly used settings:
 - CORS: `WOTLWEDU_CORS_ORIGINS` (comma-separated allowed origins), `WOTLWEDU_CORS_ALLOW_NO_ORIGIN`, `WOTLWEDU_CORS_CREDENTIALS`
 - Auth rate limits: `WOTLWEDU_RATE_LIMIT_STORE`, `WOTLWEDU_RATE_LIMIT_FAIL_OPEN`, `WOTLWEDU_RATE_LOGIN_MAX`, `WOTLWEDU_RATE_REGISTER_MAX`, `WOTLWEDU_RATE_RESET_MAX`, `WOTLWEDU_RATE_VERIFY2FA_MAX`, `WOTLWEDU_RATE_SOCIAL_LINK_MAX`, `WOTLWEDU_RATE_INVITE_LOOKUP_MAX`, `WOTLWEDU_RATE_INVITE_MANAGE_MAX`, `WOTLWEDU_RATE_WINDOW_MS`
 - Public poll trust/rate limits: `WOTLWEDU_RATE_PUBLIC_POLL_MAX`, `WOTLWEDU_RATE_PUBLIC_VOTE_MAX`, `WOTLWEDU_PUBLIC_TRUST_MIN_ACCOUNT_AGE_HOURS`, `WOTLWEDU_PUBLIC_BASIC_INVITE_QUOTA_DAILY`, `WOTLWEDU_PUBLIC_BASIC_INVITE_QUOTA_HOURLY`, `WOTLWEDU_PUBLIC_BASIC_RECIPIENTS_PER_POLL`, `WOTLWEDU_PUBLIC_INVITE_RESEND_COOLDOWN_HOURS`
-- Observability: `WOTLWEDU_AUTH_AUDIT_STDOUT`
+- Observability: `WOTLWEDU_AUTH_AUDIT_STDOUT`, `WOTLWEDU_METRICS_ENABLED`, `WOTLWEDU_ERROR_REPORTING_WEBHOOK_URL`, `WOTLWEDU_ERROR_REPORTING_TIMEOUT_MS`, `WOTLWEDU_ERROR_REPORTING_INCLUDE_STACK`
 - URLs: `WOTLWEDU_API_URL`, `WOTLWEDU_FRONTEND_URL`, `WOTLWEDU_IMAGE_URL`
 - Images/media: `WOTLWEDU_IMAGE_DIR`, `WOTLWEDU_UPLOAD_MAX_BYTES`, `WOTLWEDU_MEDIA_STORAGE_PROVIDER`, `WOTLWEDU_MEDIA_PUBLIC_BASE_URL`, `WOTLWEDU_MEDIA_KEY_PREFIX`
 - S3-compatible media: `WOTLWEDU_S3_ENDPOINT`, `WOTLWEDU_S3_REGION`, `WOTLWEDU_S3_BUCKET`, `WOTLWEDU_S3_ACCESS_KEY_ID`, `WOTLWEDU_S3_SECRET_ACCESS_KEY`, `WOTLWEDU_S3_FORCE_PATH_STYLE`, `WOTLWEDU_S3_TLS`
@@ -235,6 +235,25 @@ Notes:
 - Back up media by snapshotting or replicating the configured object-storage bucket/prefix together with MariaDB backups. Restore both the database and media prefix from the same point in time so image metadata and object keys stay aligned.
 - `WOTLWEDU_JWT_REFRESH_COOKIE_ENABLED=true` stores refresh tokens in an HTTP-only cookie while preserving the JSON refresh-token response for existing bearer-token clients. Enable CORS credentials and matching frontend `withCredentials` when using this across origins.
 - If SSL is enabled, provide certificate/key file paths.
+
+## Platform readiness
+
+The backend exposes unauthenticated platform endpoints:
+
+- `GET /healthz`: liveness/startup probe.
+- `GET /readyz`: readiness probe that verifies database connectivity.
+- `GET /metrics`: Prometheus text-format process and request counters when
+  `WOTLWEDU_METRICS_ENABLED=true`.
+
+Requests receive an `X-Request-Id` response header and structured JSON logs
+include the same `requestId` for correlation across ingress, API logs, and error
+reporting. Configure `WOTLWEDU_ERROR_REPORTING_WEBHOOK_URL` to send sanitized
+server-error events to an external reporting sink.
+
+See `docs/platform-readiness.md` for the shared-stateless deployment model,
+tenant isolation tiers, object-storage guidance, probes, logs, metrics, and
+error-reporting expectations. See `docs/backup-restore-runbook.md` for MariaDB
+and media backup/restore drills.
 
 ## Docker
 A `Dockerfile` and `docker-compose.yaml` are provided.
@@ -262,6 +281,7 @@ A Helm chart is available under `k8s/`.
 Notes:
 - The backend chart now includes optional ingress support.
 - Helm values default to HTTP-friendly local settings (`env.sslEnabled=false`, `env.apiUrl=http://localhost:9876/`).
+- Startup and liveness probes use `/healthz`; readiness probes use `/readyz`.
 - Set `environment` and `environments.<name>.service` / `environments.<name>.ingress` in Helm values to apply optional per-environment service and ingress overrides.
 
 ## API docs
@@ -272,6 +292,9 @@ Swagger UI assets are in `docs/` and served by the app at `/docs`.
 - Current route modules are mounted in `app.js`; there is currently no `/ai` route mounted.
 
 Additional tenancy endpoints:
+- `GET /healthz`
+- `GET /readyz`
+- `GET /metrics`
 - `GET /admin/config`
 - `GET /ping`
 - `GET /organization`

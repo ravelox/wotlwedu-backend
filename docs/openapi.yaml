@@ -4,6 +4,41 @@ info:
   version: 0.0.51
 
 paths:
+  /healthz:
+    get:
+      summary: Liveness check
+      operationId: getHealthz
+      description: Unauthenticated liveness check for load balancers and Kubernetes liveness/startup probes.
+      security: []
+      responses:
+        '200':
+          description: Process is alive.
+  /readyz:
+    get:
+      summary: Readiness check
+      operationId: getReadyz
+      description: Unauthenticated readiness check that verifies database connectivity before accepting traffic.
+      security: []
+      responses:
+        '200':
+          description: Process is ready to serve traffic.
+        '503':
+          description: A required dependency is unavailable.
+  /metrics:
+    get:
+      summary: Prometheus metrics
+      operationId: getMetrics
+      description: Unauthenticated Prometheus text-format metrics endpoint for platform scraping.
+      security: []
+      responses:
+        '200':
+          description: Metrics payload.
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: Metrics are disabled by configuration.
   /v1/ping:
     get:
       summary: GET /v1/ping

@@ -6,6 +6,7 @@ const FS = require("fs");
 const Status = require("../model/status");
 
 const packageJSON = require("../package.json");
+const Observability = require("./observability");
 
 module.exports.package = packageJSON;
 
@@ -18,32 +19,7 @@ module.exports.getStatusIdByName = function (statusName) {
 };
 
 module.exports.logComment = function (comment) {
-  return function (req, res, next) {
-    let remoteAddress = null;
-    if (req && req.socket && req.socket.remoteAddress) {
-      remoteAddress = req.socket.remoteAddress;
-    }
-    const startTime = Date.now();
-    res.once("finish", () => {
-      const duration = Date.now() - startTime;
-      console.log(
-        new Date().toISOString() +
-          " :: " +
-          (remoteAddress ? remoteAddress + " :: " : "") +
-          comment +
-          " :: " +
-          req.method +
-          " :: " +
-          req.originalUrl +
-          " :: " +
-          res.statusCode +
-          " :: " +
-          duration +
-          "ms"
-      );
-    });
-    next();
-  };
+  return Observability.requestLogger(comment);
 };
 
 // Copy all the specified attributes to a new object

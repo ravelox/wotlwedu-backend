@@ -86,6 +86,14 @@ spec:
               value: "{{ .Values.env.rateLimitStore }}"
             - name: WOTLWEDU_RATE_LIMIT_FAIL_OPEN
               value: "{{ ternary "true" "false" .Values.env.rateLimitFailOpen }}"
+            - name: WOTLWEDU_METRICS_ENABLED
+              value: "{{ ternary "true" "false" .Values.env.metricsEnabled }}"
+            - name: WOTLWEDU_ERROR_REPORTING_WEBHOOK_URL
+              value: "{{ .Values.env.errorReportingWebhookUrl }}"
+            - name: WOTLWEDU_ERROR_REPORTING_TIMEOUT_MS
+              value: "{{ .Values.env.errorReportingTimeoutMs }}"
+            - name: WOTLWEDU_ERROR_REPORTING_INCLUDE_STACK
+              value: "{{ ternary "true" "false" .Values.env.errorReportingIncludeStack }}"
             - name: WOTLWEDU_DB_HOST
               value: "{{ .Values.database.host }}"
             - name: WOTLWEDU_DB_NAME
@@ -162,6 +170,8 @@ spec:
             {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
       {{- if .Values.persistence.enabled }}
       volumes:
         - name: image-store

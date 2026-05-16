@@ -1,0 +1,737 @@
+# This file instructs Redocly's linter to ignore the rules contained for specific parts of your API.
+# See https://redocly.com/docs/cli/ for more information.
+docs/openapi.yaml:
+  no-empty-servers:
+    - '#/openapi'
+  info-license:
+    - '#/info'
+  operation-4xx-response:
+    - '#/paths/~1healthz/get/responses'
+    - '#/paths/~1readyz/get/responses'
+    - '#/paths/~1v1~1ping/get/responses'
+    - '#/paths/~1v1~1admin~1config/get/responses'
+    - '#/paths/~1v1~1public~1poll~1:token/get/responses'
+    - '#/paths/~1v1~1public~1poll~1:token~1session/post/responses'
+    - '#/paths/~1v1~1public~1poll~1:token~1vote/post/responses'
+    - '#/paths/~1v1~1public~1poll~1:token~1report/post/responses'
+    - '#/paths/~1v1~1organization~1/get/responses'
+    - '#/paths/~1v1~1organization~1/post/responses'
+    - '#/paths/~1v1~1organization~1:organizationId/get/responses'
+    - '#/paths/~1v1~1organization~1:organizationId/put/responses'
+    - '#/paths/~1v1~1organization~1:organizationId/delete/responses'
+    - '#/paths/~1v1~1login~1invite~1:token/get/responses'
+    - '#/paths/~1v1~1login~1invite~1:token~1accept/post/responses'
+    - '#/paths/~1v1~1login~1invite~1:token~1decline/post/responses'
+    - '#/paths/~1v1~1login~1google/post/responses'
+    - '#/paths/~1v1~1login~1google~1link/post/responses'
+    - '#/paths/~1v1~1login~1social/post/responses'
+    - '#/paths/~1v1~1login~1social~1link/post/responses'
+    - '#/paths/~1v1~1organization~1:organizationId~1invite/get/responses'
+    - '#/paths/~1v1~1organization~1:organizationId~1invite/post/responses'
+    - '#/paths/~1v1~1organization~1:organizationId~1membership/get/responses'
+    - >-
+      #/paths/~1v1~1organization~1:organizationId~1invite~1:inviteId~1resend/post/responses
+    - >-
+      #/paths/~1v1~1organization~1:organizationId~1invite~1:inviteId/delete/responses
+    - '#/paths/~1v1~1organization~1:organizationId~1authaudit/get/responses'
+    - '#/paths/~1v1~1tutorial~1poll/get/responses'
+    - '#/paths/~1v1~1tutorial~1poll~1start/post/responses'
+    - '#/paths/~1v1~1tutorial~1poll~1skip/post/responses'
+    - '#/paths/~1v1~1tutorial~1poll~1dismiss/post/responses'
+    - '#/paths/~1v1~1tutorial~1poll~1enable/post/responses'
+    - >-
+      #/paths/~1v1~1support~1people~1{userId}~1tutorial~1poll~1enable/post/responses
+    - '#/paths/~1v1~1support~1auth~1overview/get/responses'
+    - '#/paths/~1v1~1support~1auth~1audit/get/responses'
+    - '#/paths/~1v1~1support~1auth~1audit~1export/get/responses'
+    - '#/paths/~1v1~1support~1publicpoll~1overview/get/responses'
+    - '#/paths/~1v1~1support~1publicpoll~1audit/get/responses'
+    - '#/paths/~1v1~1support~1publicpoll~1audit~1export/get/responses'
+    - '#/paths/~1v1~1support~1publicpoll~1:electionId~1moderation/post/responses'
+    - '#/paths/~1v1~1support~1session~1testtoken/post/responses'
+    - '#/paths/~1v1~1support~1session~1testtoken~1revoke/post/responses'
+    - '#/paths/~1v1~1support~1people~1:userId~1signin-method/get/responses'
+    - >-
+      #/paths/~1v1~1support~1people~1:userId~1signin-method~1:identityId/delete/responses
+    - '#/paths/~1v1~1support~1people~1:userId~1authaudit/get/responses'
+    - >-
+      #/paths/~1v1~1support~1people~1:userId~1recovery~1password-reset/post/responses
+    - '#/paths/~1v1~1support~1people~1:userId~1recovery~1clear-2fa/post/responses'
+    - '#/paths/~1v1~1support~1people~1:userId~1recovery~1verify/post/responses'
+    - '#/paths/~1v1~1support~1people~1:userId~1ownership~1preview/get/responses'
+    - '#/paths/~1v1~1support~1people~1:userId~1ownership~1transfer/post/responses'
+    - >-
+      #/paths/~1v1~1support~1organizations~1:organizationId~1invite/get/responses
+    - >-
+      #/paths/~1v1~1support~1organizations~1:organizationId~1invite~1:inviteId~1resend/post/responses
+    - >-
+      #/paths/~1v1~1support~1organizations~1:organizationId~1invite~1:inviteId/delete/responses
+    - >-
+      #/paths/~1v1~1support~1organizations~1:organizationId~1authaudit/get/responses
+    - '#/paths/~1v1~1support~1polls~1public~1trust/get/responses'
+    - '#/paths/~1v1~1support~1polls~1:electionId~1public~1stats/get/responses'
+    - '#/paths/~1v1~1support~1polls~1:electionId~1invite/get/responses'
+    - '#/paths/~1v1~1support~1polls~1:electionId~1invite/post/responses'
+    - >-
+      #/paths/~1v1~1support~1polls~1:electionId~1invite~1:inviteId~1resend/post/responses
+    - >-
+      #/paths/~1v1~1support~1polls~1:electionId~1invite~1:inviteId/delete/responses
+    - '#/paths/~1v1~1support~1polls~1:electionId~1public~1enable/post/responses'
+    - '#/paths/~1v1~1support~1polls~1:electionId~1public~1disable/post/responses'
+    - '#/paths/~1v1~1picture~1:imageId~1notif~1:notificationId/get/responses'
+    - >-
+      #/paths/~1v1~1picture~1share~1:imageId~1recipient~1:recipient/post/responses
+    - '#/paths/~1v1~1picture~1accept~1:notificationId/post/responses'
+    - '#/paths/~1v1~1picture~1:imageId/get/responses'
+    - '#/paths/~1v1~1picture~1:imageId/put/responses'
+    - '#/paths/~1v1~1picture~1:imageId/delete/responses'
+    - '#/paths/~1v1~1picture~1/get/responses'
+    - '#/paths/~1v1~1picture~1/post/responses'
+    - '#/paths/~1v1~1picture~1file~1:imageId/post/responses'
+    - '#/paths/~1v1~1picture~1file~1:imageId/delete/responses'
+    - '#/paths/~1v1~1preference~1:preferenceName/get/responses'
+    - '#/paths/~1v1~1preference~1:preferenceName/put/responses'
+    - '#/paths/~1v1~1preference~1:preferenceName/delete/responses'
+    - '#/paths/~1v1~1preference~1/get/responses'
+    - '#/paths/~1v1~1preference~1/post/responses'
+    - >-
+      #/paths/~1v1~1notification~1status~1:notificationId~1:statusId/put/responses
+    - '#/paths/~1v1~1notification~1/get/responses'
+    - '#/paths/~1v1~1notification~1/post/responses'
+    - '#/paths/~1v1~1notification~1unreadcount/get/responses'
+    - '#/paths/~1v1~1notification~1:notificationId/get/responses'
+    - '#/paths/~1v1~1notification~1:notificationId/put/responses'
+    - '#/paths/~1v1~1notification~1:notificationId/delete/responses'
+    - '#/paths/~1v1~1register~1confirm~1:tokenId/post/responses'
+    - '#/paths/~1v1~1register~1/post/responses'
+    - '#/paths/~1v1~1item~1share~1:itemId~1recipient~1:recipient/post/responses'
+    - '#/paths/~1v1~1item~1accept~1:notificationId/post/responses'
+    - '#/paths/~1v1~1item~1:itemId~1notif~1:notificationId/get/responses'
+    - '#/paths/~1v1~1item~1:itemId/get/responses'
+    - '#/paths/~1v1~1item~1:itemId/put/responses'
+    - '#/paths/~1v1~1item~1:itemId/delete/responses'
+    - '#/paths/~1v1~1item~1/get/responses'
+    - '#/paths/~1v1~1item~1/post/responses'
+    - '#/paths/~1v1~1vote~1:voteId/get/responses'
+    - '#/paths/~1v1~1vote~1:voteId/put/responses'
+    - '#/paths/~1v1~1vote~1/get/responses'
+    - '#/paths/~1v1~1vote~1/post/responses'
+    - '#/paths/~1v1~1vote~1poll~1:electionId/get/responses'
+    - '#/paths/~1v1~1vote~1:electionId~1next/get/responses'
+    - '#/paths/~1v1~1vote~1next~1all/get/responses'
+    - '#/paths/~1v1~1list~1share~1:listId~1recipient~1:recipient/post/responses'
+    - '#/paths/~1v1~1list~1accept~1:notificationId/post/responses'
+    - '#/paths/~1v1~1list~1:listId~1notif~1:notificationId/get/responses'
+    - '#/paths/~1v1~1list~1:listId/get/responses'
+    - '#/paths/~1v1~1list~1:listId/put/responses'
+    - '#/paths/~1v1~1list~1:listId/delete/responses'
+    - '#/paths/~1v1~1list~1/get/responses'
+    - '#/paths/~1v1~1list~1/post/responses'
+    - '#/paths/~1v1~1list~1:listId~1bulkitemadd/post/responses'
+    - '#/paths/~1v1~1list~1:listId~1bulkitemdel/post/responses'
+    - '#/paths/~1v1~1list~1:listId~1item~1:itemId/put/responses'
+    - '#/paths/~1v1~1list~1:listId~1item~1:itemId/delete/responses'
+    - '#/paths/~1v1~1login~1verify2fa/post/responses'
+    - '#/paths/~1v1~1login~12fa/post/responses'
+    - '#/paths/~1v1~1login~1gentoken/post/responses'
+    - '#/paths/~1v1~1login~1refresh/post/responses'
+    - '#/paths/~1v1~1login~1session/get/responses'
+    - '#/paths/~1v1~1login~1session~1:sessionId/delete/responses'
+    - '#/paths/~1v1~1login~1logout/post/responses'
+    - '#/paths/~1v1~1login~1logout~1all/post/responses'
+    - '#/paths/~1v1~1login~1resetreq/post/responses'
+    - '#/paths/~1v1~1login~1password~1:userid/put/responses'
+    - '#/paths/~1v1~1login~1/post/responses'
+    - '#/paths/~1v1~1person~1accept~1:tokenId/post/responses'
+    - '#/paths/~1v1~1person~1friend/get/responses'
+    - '#/paths/~1v1~1person~1:userId~1friend/get/responses'
+    - '#/paths/~1v1~1person~1:userId/get/responses'
+    - '#/paths/~1v1~1person~1:userId/put/responses'
+    - '#/paths/~1v1~1person~1:userId/delete/responses'
+    - '#/paths/~1v1~1person~1:userId~1signin-method/get/responses'
+    - '#/paths/~1v1~1person~1:userId~1signin-method~1:identityId/delete/responses'
+    - '#/paths/~1v1~1person~1:userId~1authaudit/get/responses'
+    - '#/paths/~1v1~1person~1:userId~1ownership~1preview/get/responses'
+    - '#/paths/~1v1~1person~1:userId~1ownership~1transfer/post/responses'
+    - '#/paths/~1v1~1person~1/get/responses'
+    - '#/paths/~1v1~1person~1/post/responses'
+    - '#/paths/~1v1~1person~1block~1:blockUser/put/responses'
+    - '#/paths/~1v1~1person~1:userId~1block~1:blockUser/put/responses'
+    - '#/paths/~1v1~1person~1:userId~1friend~1:friendId/put/responses'
+    - '#/paths/~1v1~1person~1:userId~1friend~1:friendId/delete/responses'
+    - '#/paths/~1v1~1person~1request~1:friendId/post/responses'
+    - '#/paths/~1v1~1person~1request/post/responses'
+    - '#/paths/~1v1~1person~1relationship~1:relationshipId/delete/responses'
+    - >-
+      #/paths/~1v1~1person~1:userId~1relationship~1:relationshipId/delete/responses
+    - '#/paths/~1v1~1person~1friend~1:friendId/delete/responses'
+    - '#/paths/~1v1~1person~1:userId~1reassign~1:ownerId/delete/responses'
+    - '#/paths/~1v1~1circle~1/get/responses'
+    - '#/paths/~1v1~1circle~1/post/responses'
+    - '#/paths/~1v1~1circle~1:groupId/get/responses'
+    - '#/paths/~1v1~1circle~1:groupId/put/responses'
+    - '#/paths/~1v1~1circle~1:groupId/delete/responses'
+    - '#/paths/~1v1~1circle~1:groupId~1person~1:userId/put/responses'
+    - '#/paths/~1v1~1circle~1:groupId~1person~1:userId/delete/responses'
+    - '#/paths/~1v1~1circle~1:groupId~1bulkpersonadd/post/responses'
+    - '#/paths/~1v1~1circle~1:groupId~1bulkpersondel/post/responses'
+    - '#/paths/~1v1~1capability~1:capId/get/responses'
+    - '#/paths/~1v1~1capability~1:capId/put/responses'
+    - '#/paths/~1v1~1capability~1:capId/delete/responses'
+    - '#/paths/~1v1~1capability~1/get/responses'
+    - '#/paths/~1v1~1capability~1/post/responses'
+    - '#/paths/~1v1~1cast~1:voteId~1decision/post/responses'
+    - '#/paths/~1v1~1space~1/get/responses'
+    - '#/paths/~1v1~1space~1/post/responses'
+    - '#/paths/~1v1~1space~1:workgroupId/get/responses'
+    - '#/paths/~1v1~1space~1:workgroupId/put/responses'
+    - '#/paths/~1v1~1space~1:workgroupId/delete/responses'
+    - '#/paths/~1v1~1space~1:workgroupId~1person~1:userId/put/responses'
+    - '#/paths/~1v1~1space~1:workgroupId~1person~1:userId/delete/responses'
+    - '#/paths/~1v1~1space~1:workgroupId~1bulkpersonadd/put/responses'
+    - '#/paths/~1v1~1space~1:workgroupId~1bulkpersondel/put/responses'
+    - '#/paths/~1v1~1poll~1/get/responses'
+    - '#/paths/~1v1~1poll~1/post/responses'
+    - '#/paths/~1v1~1poll~1:electionId~1stats/get/responses'
+    - '#/paths/~1v1~1poll~1:electionId~1participation/get/responses'
+    - '#/paths/~1v1~1poll~1:electionId~1remind/post/responses'
+    - '#/paths/~1v1~1poll~1public~1trust/get/responses'
+    - '#/paths/~1v1~1poll~1:electionId~1public~1stats/get/responses'
+    - '#/paths/~1v1~1poll~1:electionId~1invite/get/responses'
+    - '#/paths/~1v1~1poll~1:electionId~1invite/post/responses'
+    - '#/paths/~1v1~1poll~1:electionId~1invite~1:inviteId~1resend/post/responses'
+    - '#/paths/~1v1~1poll~1:electionId~1invite~1:inviteId/delete/responses'
+    - '#/paths/~1v1~1poll~1:electionId~1public~1enable/post/responses'
+    - '#/paths/~1v1~1poll~1:electionId~1public~1disable/post/responses'
+    - '#/paths/~1v1~1poll~1:electionId/get/responses'
+    - '#/paths/~1v1~1poll~1:electionId/put/responses'
+    - '#/paths/~1v1~1poll~1:electionId/delete/responses'
+    - '#/paths/~1v1~1poll~1:electionId~1start/post/responses'
+    - '#/paths/~1v1~1poll~1:electionId~1stop/post/responses'
+    - '#/paths/~1v1~1helper~1status~1object~1:objectName/get/responses'
+    - '#/paths/~1v1~1helper~1status~1object/get/responses'
+    - '#/paths/~1v1~1helper~1status~1id~1:statusName/get/responses'
+    - '#/paths/~1v1~1helper~1status/get/responses'
+    - '#/paths/~1v1~1role~1/get/responses'
+    - '#/paths/~1v1~1role~1/post/responses'
+    - '#/paths/~1v1~1role~1:roleId/get/responses'
+    - '#/paths/~1v1~1role~1:roleId/put/responses'
+    - '#/paths/~1v1~1role~1:roleId/delete/responses'
+    - '#/paths/~1v1~1role~1:roleId~1bulkcapadd/post/responses'
+    - '#/paths/~1v1~1role~1:roleId~1bulkcapdel/post/responses'
+    - '#/paths/~1v1~1role~1:roleId~1cap~1:capabilityId/put/responses'
+    - '#/paths/~1v1~1role~1:roleId~1cap~1:capabilityId/delete/responses'
+    - '#/paths/~1v1~1role~1:roleId~1bulkpersonadd/post/responses'
+    - '#/paths/~1v1~1role~1:roleId~1bulkpersondel/post/responses'
+    - '#/paths/~1v1~1role~1:roleId~1person~1:userId/put/responses'
+    - '#/paths/~1v1~1role~1:roleId~1person~1:userId/delete/responses'
+    - '#/paths/~1v1~1category~1/get/responses'
+    - '#/paths/~1v1~1category~1/post/responses'
+    - '#/paths/~1v1~1category~1:categoryId/get/responses'
+    - '#/paths/~1v1~1category~1:categoryId/put/responses'
+    - '#/paths/~1v1~1category~1:categoryId/delete/responses'
+  operation-operationId:
+    - '#/paths/~1v1~1ping/get/operationId'
+    - '#/paths/~1v1~1admin~1config/get/operationId'
+    - '#/paths/~1v1~1public~1poll~1:token/get/operationId'
+    - '#/paths/~1v1~1public~1poll~1:token~1session/post/operationId'
+    - '#/paths/~1v1~1public~1poll~1:token~1vote/post/operationId'
+    - '#/paths/~1v1~1public~1poll~1:token~1report/post/operationId'
+    - '#/paths/~1v1~1organization~1/get/operationId'
+    - '#/paths/~1v1~1organization~1/post/operationId'
+    - '#/paths/~1v1~1organization~1:organizationId/get/operationId'
+    - '#/paths/~1v1~1organization~1:organizationId/put/operationId'
+    - '#/paths/~1v1~1organization~1:organizationId/delete/operationId'
+    - '#/paths/~1v1~1login~1invite~1:token/get/operationId'
+    - '#/paths/~1v1~1login~1invite~1:token~1accept/post/operationId'
+    - '#/paths/~1v1~1login~1invite~1:token~1decline/post/operationId'
+    - '#/paths/~1v1~1login~1google/post/operationId'
+    - '#/paths/~1v1~1login~1google~1link/post/operationId'
+    - '#/paths/~1v1~1login~1social/post/operationId'
+    - '#/paths/~1v1~1login~1social~1link/post/operationId'
+    - '#/paths/~1v1~1organization~1:organizationId~1invite/get/operationId'
+    - '#/paths/~1v1~1organization~1:organizationId~1invite/post/operationId'
+    - '#/paths/~1v1~1organization~1:organizationId~1membership/get/operationId'
+    - >-
+      #/paths/~1v1~1organization~1:organizationId~1invite~1:inviteId~1resend/post/operationId
+    - >-
+      #/paths/~1v1~1organization~1:organizationId~1invite~1:inviteId/delete/operationId
+    - '#/paths/~1v1~1organization~1:organizationId~1authaudit/get/operationId'
+    - '#/paths/~1v1~1tutorial~1poll/get/operationId'
+    - '#/paths/~1v1~1tutorial~1poll~1start/post/operationId'
+    - '#/paths/~1v1~1tutorial~1poll~1skip/post/operationId'
+    - '#/paths/~1v1~1tutorial~1poll~1dismiss/post/operationId'
+    - '#/paths/~1v1~1tutorial~1poll~1enable/post/operationId'
+    - >-
+      #/paths/~1v1~1support~1people~1{userId}~1tutorial~1poll~1enable/post/operationId
+    - '#/paths/~1v1~1support~1auth~1overview/get/operationId'
+    - '#/paths/~1v1~1support~1auth~1audit/get/operationId'
+    - '#/paths/~1v1~1support~1auth~1audit~1export/get/operationId'
+    - '#/paths/~1v1~1support~1publicpoll~1overview/get/operationId'
+    - '#/paths/~1v1~1support~1publicpoll~1audit/get/operationId'
+    - '#/paths/~1v1~1support~1publicpoll~1audit~1export/get/operationId'
+    - >-
+      #/paths/~1v1~1support~1publicpoll~1:electionId~1moderation/post/operationId
+    - '#/paths/~1v1~1support~1session~1testtoken/post/operationId'
+    - '#/paths/~1v1~1support~1session~1testtoken~1revoke/post/operationId'
+    - '#/paths/~1v1~1support~1people~1:userId~1signin-method/get/operationId'
+    - >-
+      #/paths/~1v1~1support~1people~1:userId~1signin-method~1:identityId/delete/operationId
+    - '#/paths/~1v1~1support~1people~1:userId~1authaudit/get/operationId'
+    - >-
+      #/paths/~1v1~1support~1people~1:userId~1recovery~1password-reset/post/operationId
+    - >-
+      #/paths/~1v1~1support~1people~1:userId~1recovery~1clear-2fa/post/operationId
+    - '#/paths/~1v1~1support~1people~1:userId~1recovery~1verify/post/operationId'
+    - '#/paths/~1v1~1support~1people~1:userId~1ownership~1preview/get/operationId'
+    - >-
+      #/paths/~1v1~1support~1people~1:userId~1ownership~1transfer/post/operationId
+    - >-
+      #/paths/~1v1~1support~1organizations~1:organizationId~1invite/get/operationId
+    - >-
+      #/paths/~1v1~1support~1organizations~1:organizationId~1invite/post/operationId
+    - >-
+      #/paths/~1v1~1support~1organizations~1:organizationId~1invite~1:inviteId~1resend/post/operationId
+    - >-
+      #/paths/~1v1~1support~1organizations~1:organizationId~1invite~1:inviteId/delete/operationId
+    - >-
+      #/paths/~1v1~1support~1organizations~1:organizationId~1authaudit/get/operationId
+    - '#/paths/~1v1~1support~1polls~1public~1trust/get/operationId'
+    - '#/paths/~1v1~1support~1polls~1:electionId~1public~1stats/get/operationId'
+    - '#/paths/~1v1~1support~1polls~1:electionId~1invite/get/operationId'
+    - '#/paths/~1v1~1support~1polls~1:electionId~1invite/post/operationId'
+    - >-
+      #/paths/~1v1~1support~1polls~1:electionId~1invite~1:inviteId~1resend/post/operationId
+    - >-
+      #/paths/~1v1~1support~1polls~1:electionId~1invite~1:inviteId/delete/operationId
+    - '#/paths/~1v1~1support~1polls~1:electionId~1public~1enable/post/operationId'
+    - >-
+      #/paths/~1v1~1support~1polls~1:electionId~1public~1disable/post/operationId
+    - '#/paths/~1v1~1picture~1:imageId~1notif~1:notificationId/get/operationId'
+    - >-
+      #/paths/~1v1~1picture~1share~1:imageId~1recipient~1:recipient/post/operationId
+    - '#/paths/~1v1~1picture~1accept~1:notificationId/post/operationId'
+    - '#/paths/~1v1~1picture~1:imageId/get/operationId'
+    - '#/paths/~1v1~1picture~1:imageId/put/operationId'
+    - '#/paths/~1v1~1picture~1:imageId/delete/operationId'
+    - '#/paths/~1v1~1picture~1/get/operationId'
+    - '#/paths/~1v1~1picture~1/post/operationId'
+    - '#/paths/~1v1~1picture~1file~1:imageId/post/operationId'
+    - '#/paths/~1v1~1picture~1file~1:imageId/delete/operationId'
+    - '#/paths/~1v1~1preference~1:preferenceName/get/operationId'
+    - '#/paths/~1v1~1preference~1:preferenceName/put/operationId'
+    - '#/paths/~1v1~1preference~1:preferenceName/delete/operationId'
+    - '#/paths/~1v1~1preference~1/get/operationId'
+    - '#/paths/~1v1~1preference~1/post/operationId'
+    - >-
+      #/paths/~1v1~1notification~1status~1:notificationId~1:statusId/put/operationId
+    - '#/paths/~1v1~1notification~1/get/operationId'
+    - '#/paths/~1v1~1notification~1/post/operationId'
+    - '#/paths/~1v1~1notification~1unreadcount/get/operationId'
+    - '#/paths/~1v1~1notification~1:notificationId/get/operationId'
+    - '#/paths/~1v1~1notification~1:notificationId/put/operationId'
+    - '#/paths/~1v1~1notification~1:notificationId/delete/operationId'
+    - '#/paths/~1v1~1register~1confirm~1:tokenId/post/operationId'
+    - '#/paths/~1v1~1register~1/post/operationId'
+    - '#/paths/~1v1~1item~1share~1:itemId~1recipient~1:recipient/post/operationId'
+    - '#/paths/~1v1~1item~1accept~1:notificationId/post/operationId'
+    - '#/paths/~1v1~1item~1:itemId~1notif~1:notificationId/get/operationId'
+    - '#/paths/~1v1~1item~1:itemId/get/operationId'
+    - '#/paths/~1v1~1item~1:itemId/put/operationId'
+    - '#/paths/~1v1~1item~1:itemId/delete/operationId'
+    - '#/paths/~1v1~1item~1/get/operationId'
+    - '#/paths/~1v1~1item~1/post/operationId'
+    - '#/paths/~1v1~1vote~1:voteId/get/operationId'
+    - '#/paths/~1v1~1vote~1:voteId/put/operationId'
+    - '#/paths/~1v1~1vote~1/get/operationId'
+    - '#/paths/~1v1~1vote~1/post/operationId'
+    - '#/paths/~1v1~1vote~1poll~1:electionId/get/operationId'
+    - '#/paths/~1v1~1vote~1:electionId~1next/get/operationId'
+    - '#/paths/~1v1~1vote~1next~1all/get/operationId'
+    - '#/paths/~1v1~1list~1share~1:listId~1recipient~1:recipient/post/operationId'
+    - '#/paths/~1v1~1list~1accept~1:notificationId/post/operationId'
+    - '#/paths/~1v1~1list~1:listId~1notif~1:notificationId/get/operationId'
+    - '#/paths/~1v1~1list~1:listId/get/operationId'
+    - '#/paths/~1v1~1list~1:listId/put/operationId'
+    - '#/paths/~1v1~1list~1:listId/delete/operationId'
+    - '#/paths/~1v1~1list~1/get/operationId'
+    - '#/paths/~1v1~1list~1/post/operationId'
+    - '#/paths/~1v1~1list~1:listId~1bulkitemadd/post/operationId'
+    - '#/paths/~1v1~1list~1:listId~1bulkitemdel/post/operationId'
+    - '#/paths/~1v1~1list~1:listId~1item~1:itemId/put/operationId'
+    - '#/paths/~1v1~1list~1:listId~1item~1:itemId/delete/operationId'
+    - '#/paths/~1v1~1login~1verify2fa/post/operationId'
+    - '#/paths/~1v1~1login~12fa/post/operationId'
+    - '#/paths/~1v1~1login~1gentoken/post/operationId'
+    - '#/paths/~1v1~1login~1refresh/post/operationId'
+    - '#/paths/~1v1~1login~1session/get/operationId'
+    - '#/paths/~1v1~1login~1session~1:sessionId/delete/operationId'
+    - '#/paths/~1v1~1login~1logout/post/operationId'
+    - '#/paths/~1v1~1login~1logout~1all/post/operationId'
+    - '#/paths/~1v1~1login~1resetreq/post/operationId'
+    - '#/paths/~1v1~1login~1password~1:userid/put/operationId'
+    - '#/paths/~1v1~1login~1/post/operationId'
+    - '#/paths/~1v1~1person~1accept~1:tokenId/post/operationId'
+    - '#/paths/~1v1~1person~1friend/get/operationId'
+    - '#/paths/~1v1~1person~1:userId~1friend/get/operationId'
+    - '#/paths/~1v1~1person~1:userId/get/operationId'
+    - '#/paths/~1v1~1person~1:userId/put/operationId'
+    - '#/paths/~1v1~1person~1:userId/delete/operationId'
+    - '#/paths/~1v1~1person~1:userId~1signin-method/get/operationId'
+    - >-
+      #/paths/~1v1~1person~1:userId~1signin-method~1:identityId/delete/operationId
+    - '#/paths/~1v1~1person~1:userId~1authaudit/get/operationId'
+    - '#/paths/~1v1~1person~1:userId~1ownership~1preview/get/operationId'
+    - '#/paths/~1v1~1person~1:userId~1ownership~1transfer/post/operationId'
+    - '#/paths/~1v1~1person~1/get/operationId'
+    - '#/paths/~1v1~1person~1/post/operationId'
+    - '#/paths/~1v1~1person~1block~1:blockUser/put/operationId'
+    - '#/paths/~1v1~1person~1:userId~1block~1:blockUser/put/operationId'
+    - '#/paths/~1v1~1person~1:userId~1friend~1:friendId/put/operationId'
+    - '#/paths/~1v1~1person~1:userId~1friend~1:friendId/delete/operationId'
+    - '#/paths/~1v1~1person~1request~1:friendId/post/operationId'
+    - '#/paths/~1v1~1person~1request/post/operationId'
+    - '#/paths/~1v1~1person~1relationship~1:relationshipId/delete/operationId'
+    - >-
+      #/paths/~1v1~1person~1:userId~1relationship~1:relationshipId/delete/operationId
+    - '#/paths/~1v1~1person~1friend~1:friendId/delete/operationId'
+    - '#/paths/~1v1~1person~1:userId~1reassign~1:ownerId/delete/operationId'
+    - '#/paths/~1v1~1circle~1/get/operationId'
+    - '#/paths/~1v1~1circle~1/post/operationId'
+    - '#/paths/~1v1~1circle~1:groupId/get/operationId'
+    - '#/paths/~1v1~1circle~1:groupId/put/operationId'
+    - '#/paths/~1v1~1circle~1:groupId/delete/operationId'
+    - '#/paths/~1v1~1circle~1:groupId~1person~1:userId/put/operationId'
+    - '#/paths/~1v1~1circle~1:groupId~1person~1:userId/delete/operationId'
+    - '#/paths/~1v1~1circle~1:groupId~1bulkpersonadd/post/operationId'
+    - '#/paths/~1v1~1circle~1:groupId~1bulkpersondel/post/operationId'
+    - '#/paths/~1v1~1capability~1:capId/get/operationId'
+    - '#/paths/~1v1~1capability~1:capId/put/operationId'
+    - '#/paths/~1v1~1capability~1:capId/delete/operationId'
+    - '#/paths/~1v1~1capability~1/get/operationId'
+    - '#/paths/~1v1~1capability~1/post/operationId'
+    - '#/paths/~1v1~1cast~1:voteId~1decision/post/operationId'
+    - '#/paths/~1v1~1space~1/get/operationId'
+    - '#/paths/~1v1~1space~1/post/operationId'
+    - '#/paths/~1v1~1space~1:workgroupId/get/operationId'
+    - '#/paths/~1v1~1space~1:workgroupId/put/operationId'
+    - '#/paths/~1v1~1space~1:workgroupId/delete/operationId'
+    - '#/paths/~1v1~1space~1:workgroupId~1person~1:userId/put/operationId'
+    - '#/paths/~1v1~1space~1:workgroupId~1person~1:userId/delete/operationId'
+    - '#/paths/~1v1~1space~1:workgroupId~1bulkpersonadd/put/operationId'
+    - '#/paths/~1v1~1space~1:workgroupId~1bulkpersondel/put/operationId'
+    - '#/paths/~1v1~1poll~1/get/operationId'
+    - '#/paths/~1v1~1poll~1/post/operationId'
+    - '#/paths/~1v1~1poll~1:electionId~1stats/get/operationId'
+    - '#/paths/~1v1~1poll~1:electionId~1participation/get/operationId'
+    - '#/paths/~1v1~1poll~1:electionId~1remind/post/operationId'
+    - '#/paths/~1v1~1poll~1public~1trust/get/operationId'
+    - '#/paths/~1v1~1poll~1:electionId~1public~1stats/get/operationId'
+    - '#/paths/~1v1~1poll~1:electionId~1invite/get/operationId'
+    - '#/paths/~1v1~1poll~1:electionId~1invite/post/operationId'
+    - >-
+      #/paths/~1v1~1poll~1:electionId~1invite~1:inviteId~1resend/post/operationId
+    - '#/paths/~1v1~1poll~1:electionId~1invite~1:inviteId/delete/operationId'
+    - '#/paths/~1v1~1poll~1:electionId~1public~1enable/post/operationId'
+    - '#/paths/~1v1~1poll~1:electionId~1public~1disable/post/operationId'
+    - '#/paths/~1v1~1poll~1:electionId/get/operationId'
+    - '#/paths/~1v1~1poll~1:electionId/put/operationId'
+    - '#/paths/~1v1~1poll~1:electionId/delete/operationId'
+    - '#/paths/~1v1~1poll~1:electionId~1start/post/operationId'
+    - '#/paths/~1v1~1poll~1:electionId~1stop/post/operationId'
+    - '#/paths/~1v1~1helper~1status~1object~1:objectName/get/operationId'
+    - '#/paths/~1v1~1helper~1status~1object/get/operationId'
+    - '#/paths/~1v1~1helper~1status~1id~1:statusName/get/operationId'
+    - '#/paths/~1v1~1helper~1status/get/operationId'
+    - '#/paths/~1v1~1role~1/get/operationId'
+    - '#/paths/~1v1~1role~1/post/operationId'
+    - '#/paths/~1v1~1role~1:roleId/get/operationId'
+    - '#/paths/~1v1~1role~1:roleId/put/operationId'
+    - '#/paths/~1v1~1role~1:roleId/delete/operationId'
+    - '#/paths/~1v1~1role~1:roleId~1bulkcapadd/post/operationId'
+    - '#/paths/~1v1~1role~1:roleId~1bulkcapdel/post/operationId'
+    - '#/paths/~1v1~1role~1:roleId~1cap~1:capabilityId/put/operationId'
+    - '#/paths/~1v1~1role~1:roleId~1cap~1:capabilityId/delete/operationId'
+    - '#/paths/~1v1~1role~1:roleId~1bulkpersonadd/post/operationId'
+    - '#/paths/~1v1~1role~1:roleId~1bulkpersondel/post/operationId'
+    - '#/paths/~1v1~1role~1:roleId~1person~1:userId/put/operationId'
+    - '#/paths/~1v1~1role~1:roleId~1person~1:userId/delete/operationId'
+    - '#/paths/~1v1~1category~1/get/operationId'
+    - '#/paths/~1v1~1category~1/post/operationId'
+    - '#/paths/~1v1~1category~1:categoryId/get/operationId'
+    - '#/paths/~1v1~1category~1:categoryId/put/operationId'
+    - '#/paths/~1v1~1category~1:categoryId/delete/operationId'
+  path-parameters-defined:
+    - '#/paths/~1v1~1public~1poll~1:token/get/parameters/0/name'
+    - '#/paths/~1v1~1public~1poll~1:token~1session/post/parameters/0/name'
+    - '#/paths/~1v1~1public~1poll~1:token~1vote/post/parameters/0/name'
+    - '#/paths/~1v1~1public~1poll~1:token~1report/post/parameters/0/name'
+    - '#/paths/~1v1~1organization~1:organizationId/get/parameters/0/name'
+    - '#/paths/~1v1~1organization~1:organizationId/put/parameters/0/name'
+    - '#/paths/~1v1~1organization~1:organizationId/delete/parameters/0/name'
+    - '#/paths/~1v1~1login~1invite~1:token/get/parameters/0/name'
+    - '#/paths/~1v1~1login~1invite~1:token~1accept/post/parameters/0/name'
+    - '#/paths/~1v1~1login~1invite~1:token~1decline/post/parameters/0/name'
+    - '#/paths/~1v1~1organization~1:organizationId~1invite/get/parameters/0/name'
+    - '#/paths/~1v1~1organization~1:organizationId~1invite/post/parameters/0/name'
+    - >-
+      #/paths/~1v1~1organization~1:organizationId~1membership/get/parameters/0/name
+    - >-
+      #/paths/~1v1~1organization~1:organizationId~1invite~1:inviteId~1resend/post/parameters/0/name
+    - >-
+      #/paths/~1v1~1organization~1:organizationId~1invite~1:inviteId~1resend/post/parameters/1/name
+    - >-
+      #/paths/~1v1~1organization~1:organizationId~1invite~1:inviteId/delete/parameters/0/name
+    - >-
+      #/paths/~1v1~1organization~1:organizationId~1invite~1:inviteId/delete/parameters/1/name
+    - >-
+      #/paths/~1v1~1organization~1:organizationId~1authaudit/get/parameters/0/name
+    - >-
+      #/paths/~1v1~1support~1publicpoll~1:electionId~1moderation/post/parameters/0/name
+    - >-
+      #/paths/~1v1~1support~1people~1:userId~1signin-method/get/parameters/0/name
+    - >-
+      #/paths/~1v1~1support~1people~1:userId~1signin-method~1:identityId/delete/parameters/0/name
+    - >-
+      #/paths/~1v1~1support~1people~1:userId~1signin-method~1:identityId/delete/parameters/1/name
+    - '#/paths/~1v1~1support~1people~1:userId~1authaudit/get/parameters/0/name'
+    - >-
+      #/paths/~1v1~1support~1people~1:userId~1recovery~1password-reset/post/parameters/0/name
+    - >-
+      #/paths/~1v1~1support~1people~1:userId~1recovery~1clear-2fa/post/parameters/0/name
+    - >-
+      #/paths/~1v1~1support~1people~1:userId~1recovery~1verify/post/parameters/0/name
+    - >-
+      #/paths/~1v1~1support~1people~1:userId~1ownership~1preview/get/parameters/0/name
+    - >-
+      #/paths/~1v1~1support~1people~1:userId~1ownership~1transfer/post/parameters/0/name
+    - >-
+      #/paths/~1v1~1support~1organizations~1:organizationId~1invite/get/parameters/0/name
+    - >-
+      #/paths/~1v1~1support~1organizations~1:organizationId~1invite/post/parameters/0/name
+    - >-
+      #/paths/~1v1~1support~1organizations~1:organizationId~1invite~1:inviteId~1resend/post/parameters/0/name
+    - >-
+      #/paths/~1v1~1support~1organizations~1:organizationId~1invite~1:inviteId~1resend/post/parameters/1/name
+    - >-
+      #/paths/~1v1~1support~1organizations~1:organizationId~1invite~1:inviteId/delete/parameters/0/name
+    - >-
+      #/paths/~1v1~1support~1organizations~1:organizationId~1invite~1:inviteId/delete/parameters/1/name
+    - >-
+      #/paths/~1v1~1support~1organizations~1:organizationId~1authaudit/get/parameters/0/name
+    - >-
+      #/paths/~1v1~1support~1polls~1:electionId~1public~1stats/get/parameters/0/name
+    - '#/paths/~1v1~1support~1polls~1:electionId~1invite/get/parameters/0/name'
+    - '#/paths/~1v1~1support~1polls~1:electionId~1invite/post/parameters/0/name'
+    - >-
+      #/paths/~1v1~1support~1polls~1:electionId~1invite~1:inviteId~1resend/post/parameters/0/name
+    - >-
+      #/paths/~1v1~1support~1polls~1:electionId~1invite~1:inviteId~1resend/post/parameters/1/name
+    - >-
+      #/paths/~1v1~1support~1polls~1:electionId~1invite~1:inviteId/delete/parameters/0/name
+    - >-
+      #/paths/~1v1~1support~1polls~1:electionId~1invite~1:inviteId/delete/parameters/1/name
+    - >-
+      #/paths/~1v1~1support~1polls~1:electionId~1public~1enable/post/parameters/0/name
+    - >-
+      #/paths/~1v1~1support~1polls~1:electionId~1public~1disable/post/parameters/0/name
+    - >-
+      #/paths/~1v1~1picture~1:imageId~1notif~1:notificationId/get/parameters/0/name
+    - >-
+      #/paths/~1v1~1picture~1:imageId~1notif~1:notificationId/get/parameters/1/name
+    - >-
+      #/paths/~1v1~1picture~1share~1:imageId~1recipient~1:recipient/post/parameters/0/name
+    - >-
+      #/paths/~1v1~1picture~1share~1:imageId~1recipient~1:recipient/post/parameters/1/name
+    - '#/paths/~1v1~1picture~1accept~1:notificationId/post/parameters/0/name'
+    - '#/paths/~1v1~1picture~1:imageId/get/parameters/0/name'
+    - '#/paths/~1v1~1picture~1:imageId/put/parameters/0/name'
+    - '#/paths/~1v1~1picture~1:imageId/delete/parameters/0/name'
+    - '#/paths/~1v1~1picture~1file~1:imageId/post/parameters/0/name'
+    - '#/paths/~1v1~1picture~1file~1:imageId/delete/parameters/0/name'
+    - '#/paths/~1v1~1preference~1:preferenceName/get/parameters/0/name'
+    - '#/paths/~1v1~1preference~1:preferenceName/put/parameters/0/name'
+    - '#/paths/~1v1~1preference~1:preferenceName/delete/parameters/0/name'
+    - >-
+      #/paths/~1v1~1notification~1status~1:notificationId~1:statusId/put/parameters/0/name
+    - >-
+      #/paths/~1v1~1notification~1status~1:notificationId~1:statusId/put/parameters/1/name
+    - '#/paths/~1v1~1notification~1:notificationId/get/parameters/0/name'
+    - '#/paths/~1v1~1notification~1:notificationId/put/parameters/0/name'
+    - '#/paths/~1v1~1notification~1:notificationId/delete/parameters/0/name'
+    - '#/paths/~1v1~1register~1confirm~1:tokenId/post/parameters/0/name'
+    - >-
+      #/paths/~1v1~1item~1share~1:itemId~1recipient~1:recipient/post/parameters/0/name
+    - >-
+      #/paths/~1v1~1item~1share~1:itemId~1recipient~1:recipient/post/parameters/1/name
+    - '#/paths/~1v1~1item~1accept~1:notificationId/post/parameters/0/name'
+    - '#/paths/~1v1~1item~1:itemId~1notif~1:notificationId/get/parameters/0/name'
+    - '#/paths/~1v1~1item~1:itemId~1notif~1:notificationId/get/parameters/1/name'
+    - '#/paths/~1v1~1item~1:itemId/get/parameters/0/name'
+    - '#/paths/~1v1~1item~1:itemId/put/parameters/0/name'
+    - '#/paths/~1v1~1item~1:itemId/delete/parameters/0/name'
+    - '#/paths/~1v1~1vote~1:voteId/get/parameters/0/name'
+    - '#/paths/~1v1~1vote~1:voteId/put/parameters/0/name'
+    - '#/paths/~1v1~1vote~1poll~1:electionId/get/parameters/0/name'
+    - '#/paths/~1v1~1vote~1:electionId~1next/get/parameters/0/name'
+    - >-
+      #/paths/~1v1~1list~1share~1:listId~1recipient~1:recipient/post/parameters/0/name
+    - >-
+      #/paths/~1v1~1list~1share~1:listId~1recipient~1:recipient/post/parameters/1/name
+    - '#/paths/~1v1~1list~1accept~1:notificationId/post/parameters/0/name'
+    - '#/paths/~1v1~1list~1:listId~1notif~1:notificationId/get/parameters/0/name'
+    - '#/paths/~1v1~1list~1:listId~1notif~1:notificationId/get/parameters/1/name'
+    - '#/paths/~1v1~1list~1:listId/get/parameters/0/name'
+    - '#/paths/~1v1~1list~1:listId/put/parameters/0/name'
+    - '#/paths/~1v1~1list~1:listId/delete/parameters/0/name'
+    - '#/paths/~1v1~1list~1:listId~1bulkitemadd/post/parameters/0/name'
+    - '#/paths/~1v1~1list~1:listId~1bulkitemdel/post/parameters/0/name'
+    - '#/paths/~1v1~1list~1:listId~1item~1:itemId/put/parameters/0/name'
+    - '#/paths/~1v1~1list~1:listId~1item~1:itemId/put/parameters/1/name'
+    - '#/paths/~1v1~1list~1:listId~1item~1:itemId/delete/parameters/0/name'
+    - '#/paths/~1v1~1list~1:listId~1item~1:itemId/delete/parameters/1/name'
+    - '#/paths/~1v1~1login~1session~1:sessionId/delete/parameters/0/name'
+    - '#/paths/~1v1~1login~1password~1:userid/put/parameters/0/name'
+    - '#/paths/~1v1~1person~1accept~1:tokenId/post/parameters/0/name'
+    - '#/paths/~1v1~1person~1:userId~1friend/get/parameters/0/name'
+    - '#/paths/~1v1~1person~1:userId/get/parameters/0/name'
+    - '#/paths/~1v1~1person~1:userId/put/parameters/0/name'
+    - '#/paths/~1v1~1person~1:userId/delete/parameters/0/name'
+    - '#/paths/~1v1~1person~1:userId~1signin-method/get/parameters/0/name'
+    - >-
+      #/paths/~1v1~1person~1:userId~1signin-method~1:identityId/delete/parameters/0/name
+    - >-
+      #/paths/~1v1~1person~1:userId~1signin-method~1:identityId/delete/parameters/1/name
+    - '#/paths/~1v1~1person~1:userId~1authaudit/get/parameters/0/name'
+    - '#/paths/~1v1~1person~1:userId~1ownership~1preview/get/parameters/0/name'
+    - '#/paths/~1v1~1person~1:userId~1ownership~1transfer/post/parameters/0/name'
+    - '#/paths/~1v1~1person~1block~1:blockUser/put/parameters/0/name'
+    - '#/paths/~1v1~1person~1:userId~1block~1:blockUser/put/parameters/0/name'
+    - '#/paths/~1v1~1person~1:userId~1block~1:blockUser/put/parameters/1/name'
+    - '#/paths/~1v1~1person~1:userId~1friend~1:friendId/put/parameters/0/name'
+    - '#/paths/~1v1~1person~1:userId~1friend~1:friendId/put/parameters/1/name'
+    - '#/paths/~1v1~1person~1:userId~1friend~1:friendId/delete/parameters/0/name'
+    - '#/paths/~1v1~1person~1:userId~1friend~1:friendId/delete/parameters/1/name'
+    - '#/paths/~1v1~1person~1request~1:friendId/post/parameters/0/name'
+    - >-
+      #/paths/~1v1~1person~1relationship~1:relationshipId/delete/parameters/0/name
+    - >-
+      #/paths/~1v1~1person~1:userId~1relationship~1:relationshipId/delete/parameters/0/name
+    - >-
+      #/paths/~1v1~1person~1:userId~1relationship~1:relationshipId/delete/parameters/1/name
+    - '#/paths/~1v1~1person~1friend~1:friendId/delete/parameters/0/name'
+    - '#/paths/~1v1~1person~1:userId~1reassign~1:ownerId/delete/parameters/0/name'
+    - '#/paths/~1v1~1person~1:userId~1reassign~1:ownerId/delete/parameters/1/name'
+    - '#/paths/~1v1~1circle~1:groupId/get/parameters/0/name'
+    - '#/paths/~1v1~1circle~1:groupId/put/parameters/0/name'
+    - '#/paths/~1v1~1circle~1:groupId/delete/parameters/0/name'
+    - '#/paths/~1v1~1circle~1:groupId~1person~1:userId/put/parameters/0/name'
+    - '#/paths/~1v1~1circle~1:groupId~1person~1:userId/put/parameters/1/name'
+    - '#/paths/~1v1~1circle~1:groupId~1person~1:userId/delete/parameters/0/name'
+    - '#/paths/~1v1~1circle~1:groupId~1person~1:userId/delete/parameters/1/name'
+    - '#/paths/~1v1~1circle~1:groupId~1bulkpersonadd/post/parameters/0/name'
+    - '#/paths/~1v1~1circle~1:groupId~1bulkpersondel/post/parameters/0/name'
+    - '#/paths/~1v1~1capability~1:capId/get/parameters/0/name'
+    - '#/paths/~1v1~1capability~1:capId/put/parameters/0/name'
+    - '#/paths/~1v1~1capability~1:capId/delete/parameters/0/name'
+    - '#/paths/~1v1~1cast~1:voteId~1decision/post/parameters/0/name'
+    - '#/paths/~1v1~1space~1:workgroupId/get/parameters/0/name'
+    - '#/paths/~1v1~1space~1:workgroupId/put/parameters/0/name'
+    - '#/paths/~1v1~1space~1:workgroupId/delete/parameters/0/name'
+    - '#/paths/~1v1~1space~1:workgroupId~1person~1:userId/put/parameters/0/name'
+    - '#/paths/~1v1~1space~1:workgroupId~1person~1:userId/put/parameters/1/name'
+    - >-
+      #/paths/~1v1~1space~1:workgroupId~1person~1:userId/delete/parameters/0/name
+    - >-
+      #/paths/~1v1~1space~1:workgroupId~1person~1:userId/delete/parameters/1/name
+    - '#/paths/~1v1~1space~1:workgroupId~1bulkpersonadd/put/parameters/0/name'
+    - '#/paths/~1v1~1space~1:workgroupId~1bulkpersondel/put/parameters/0/name'
+    - '#/paths/~1v1~1poll~1:electionId~1stats/get/parameters/0/name'
+    - '#/paths/~1v1~1poll~1:electionId~1participation/get/parameters/0/name'
+    - '#/paths/~1v1~1poll~1:electionId~1remind/post/parameters/0/name'
+    - '#/paths/~1v1~1poll~1:electionId~1public~1stats/get/parameters/0/name'
+    - '#/paths/~1v1~1poll~1:electionId~1invite/get/parameters/0/name'
+    - '#/paths/~1v1~1poll~1:electionId~1invite/post/parameters/0/name'
+    - >-
+      #/paths/~1v1~1poll~1:electionId~1invite~1:inviteId~1resend/post/parameters/0/name
+    - >-
+      #/paths/~1v1~1poll~1:electionId~1invite~1:inviteId~1resend/post/parameters/1/name
+    - >-
+      #/paths/~1v1~1poll~1:electionId~1invite~1:inviteId/delete/parameters/0/name
+    - >-
+      #/paths/~1v1~1poll~1:electionId~1invite~1:inviteId/delete/parameters/1/name
+    - '#/paths/~1v1~1poll~1:electionId~1public~1enable/post/parameters/0/name'
+    - '#/paths/~1v1~1poll~1:electionId~1public~1disable/post/parameters/0/name'
+    - '#/paths/~1v1~1poll~1:electionId/get/parameters/0/name'
+    - '#/paths/~1v1~1poll~1:electionId/put/parameters/0/name'
+    - '#/paths/~1v1~1poll~1:electionId/delete/parameters/0/name'
+    - '#/paths/~1v1~1poll~1:electionId~1start/post/parameters/0/name'
+    - '#/paths/~1v1~1poll~1:electionId~1stop/post/parameters/0/name'
+    - '#/paths/~1v1~1helper~1status~1object~1:objectName/get/parameters/0/name'
+    - '#/paths/~1v1~1helper~1status~1id~1:statusName/get/parameters/0/name'
+    - '#/paths/~1v1~1role~1:roleId/get/parameters/0/name'
+    - '#/paths/~1v1~1role~1:roleId/put/parameters/0/name'
+    - '#/paths/~1v1~1role~1:roleId/delete/parameters/0/name'
+    - '#/paths/~1v1~1role~1:roleId~1bulkcapadd/post/parameters/0/name'
+    - '#/paths/~1v1~1role~1:roleId~1bulkcapdel/post/parameters/0/name'
+    - '#/paths/~1v1~1role~1:roleId~1cap~1:capabilityId/put/parameters/0/name'
+    - '#/paths/~1v1~1role~1:roleId~1cap~1:capabilityId/put/parameters/1/name'
+    - '#/paths/~1v1~1role~1:roleId~1cap~1:capabilityId/delete/parameters/0/name'
+    - '#/paths/~1v1~1role~1:roleId~1cap~1:capabilityId/delete/parameters/1/name'
+    - '#/paths/~1v1~1role~1:roleId~1bulkpersonadd/post/parameters/0/name'
+    - '#/paths/~1v1~1role~1:roleId~1bulkpersondel/post/parameters/0/name'
+    - '#/paths/~1v1~1role~1:roleId~1person~1:userId/put/parameters/0/name'
+    - '#/paths/~1v1~1role~1:roleId~1person~1:userId/put/parameters/1/name'
+    - '#/paths/~1v1~1role~1:roleId~1person~1:userId/delete/parameters/0/name'
+    - '#/paths/~1v1~1role~1:roleId~1person~1:userId/delete/parameters/1/name'
+    - '#/paths/~1v1~1category~1:categoryId/get/parameters/0/name'
+    - '#/paths/~1v1~1category~1:categoryId/put/parameters/0/name'
+    - '#/paths/~1v1~1category~1:categoryId/delete/parameters/0/name'
+  no-path-trailing-slash:
+    - '#/paths/~1v1~1organization~1'
+    - '#/paths/~1v1~1picture~1'
+    - '#/paths/~1v1~1preference~1'
+    - '#/paths/~1v1~1notification~1'
+    - '#/paths/~1v1~1register~1'
+    - '#/paths/~1v1~1item~1'
+    - '#/paths/~1v1~1vote~1'
+    - '#/paths/~1v1~1list~1'
+    - '#/paths/~1v1~1login~1'
+    - '#/paths/~1v1~1person~1'
+    - '#/paths/~1v1~1circle~1'
+    - '#/paths/~1v1~1capability~1'
+    - '#/paths/~1v1~1space~1'
+    - '#/paths/~1v1~1poll~1'
+    - '#/paths/~1v1~1role~1'
+    - '#/paths/~1v1~1category~1'
+  no-unused-components:
+    - '#/components/schemas/Capability'
+    - '#/components/schemas/Category'
+    - '#/components/schemas/Election'
+    - '#/components/schemas/Friend'
+    - '#/components/schemas/Group'
+    - '#/components/schemas/Groupmember'
+    - '#/components/schemas/Image'
+    - '#/components/schemas/Item'
+    - '#/components/schemas/List'
+    - '#/components/schemas/Listitem'
+    - '#/components/schemas/Metadata'
+    - '#/components/schemas/Notification'
+    - '#/components/schemas/Preference'
+    - '#/components/schemas/Role'
+    - '#/components/schemas/Rolecapability'
+    - '#/components/schemas/Socketinfo'
+    - '#/components/schemas/Status'
+    - '#/components/schemas/Userrole'
+    - '#/components/schemas/Vote'
+  security-defined:
+    - '#/paths/~1v1~1public~1poll~1:token/get'
+    - '#/paths/~1v1~1public~1poll~1:token~1session/post'
+    - '#/paths/~1v1~1public~1poll~1:token~1vote/post'
+    - '#/paths/~1v1~1public~1poll~1:token~1report/post'
+    - '#/paths/~1v1~1login~1invite~1:token/get'
+    - '#/paths/~1v1~1login~1google/post'
+    - '#/paths/~1v1~1login~1google~1link/post'
+    - '#/paths/~1v1~1login~1social/post'
+    - '#/paths/~1v1~1login~1social~1link/post'
+    - '#/paths/~1v1~1register~1/post'

@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## 0.0.61 - 2026-05-16
+- Add platform readiness endpoints (`/healthz`, `/readyz`, `/metrics`),
+  structured request logs with request IDs, optional webhook error reporting,
+  and Prometheus-style counters.
+- Update Kubernetes probes to use health/readiness endpoints instead of static
+  OpenAPI docs, add non-root container security defaults, and harden the backend
+  Dockerfile with `npm ci --omit=dev` and a non-root runtime user.
+- Add platform readiness and backup/restore runbooks, OpenAPI entries for
+  platform endpoints, OpenAPI linting, production dependency audit, Helm
+  validation, and container-build checks to CI.
+
 ## 0.0.60 - 2026-05-15
 - Add a deterministic scale seed script for 15,000 organizations with spaces,
   organization admins, space admins, and non-admin users.

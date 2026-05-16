@@ -181,6 +181,17 @@ module.exports.authAuditStdout = toBool(
   process.env.WOTLWEDU_AUTH_AUDIT_STDOUT || true
 );
 
+module.exports.metricsEnabled = toBool(
+  process.env.WOTLWEDU_METRICS_ENABLED || true
+);
+module.exports.errorReportingWebhookUrl =
+  process.env.WOTLWEDU_ERROR_REPORTING_WEBHOOK_URL || "";
+module.exports.errorReportingTimeoutMs =
+  +(process.env.WOTLWEDU_ERROR_REPORTING_TIMEOUT_MS || 2000);
+module.exports.errorReportingIncludeStack = toBool(
+  process.env.WOTLWEDU_ERROR_REPORTING_INCLUDE_STACK || !module.exports.isProduction
+);
+
 module.exports.housekeepingInterval = 300;
 
 module.exports.dump = () => {

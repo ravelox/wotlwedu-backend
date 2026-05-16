@@ -34,25 +34,32 @@ podAnnotations: {}
 
 podSecurityContext: {}
 
-securityContext: {}
+securityContext:
+  allowPrivilegeEscalation: false
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  capabilities:
+    drop:
+      - ALL
 
 resources: {}
 
 probes:
   startup:
-    path: /docs/openapi.yaml
+    path: /healthz
     initialDelaySeconds: 2
     periodSeconds: 2
     timeoutSeconds: 3
     failureThreshold: 30
   readiness:
-    path: /docs/openapi.yaml
+    path: /readyz
     initialDelaySeconds: 2
     periodSeconds: 5
     timeoutSeconds: 3
     failureThreshold: 6
   liveness:
-    path: /docs/openapi.yaml
+    path: /healthz
     initialDelaySeconds: 15
     periodSeconds: 15
     timeoutSeconds: 3
@@ -82,6 +89,10 @@ env:
   uploadMaxBytes: 5242880
   rateLimitStore: database
   rateLimitFailOpen: false
+  metricsEnabled: true
+  errorReportingWebhookUrl: ""
+  errorReportingTimeoutMs: 2000
+  errorReportingIncludeStack: false
   housekeepingInterval: 300
   dbLogging: false
   dbSync: true

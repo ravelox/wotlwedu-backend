@@ -63,6 +63,7 @@ const adminRoutes = require("./routes/admin");
 const Security = require("./util/security");
 const Helpers = require("./util/helpers");
 const StatusResponse = require("./util/statusresponse");
+const Observability = require("./util/observability");
 
 const app = express();
 const API_VERSION = "v1";
@@ -84,6 +85,7 @@ if (Config.ssl === true) {
 }
 
 app.set("trust proxy", Config.trustProxy);
+app.use(Observability.requestContext);
 app.use(
   helmet({
     contentSecurityPolicy: false,
@@ -120,6 +122,27 @@ app.use('/docs', express.static(path.join(__dirname, 'docs')));
 
 // Stop the favicon request in its tracks
 app.get("/favicon.ico", (req, res) => res.status(204));
+
+app.get("/healthz", Helpers.logComment("Health"), (req, res) => {
+  res.status(200).json(Observability.healthPayload());
+});
+
+app.get("/readyz", Helpers.logComment("Readiness"), async (req, res, next) => {
+  try {
+    const readiness = await Observability.readinessStatus();
+    res.status(readiness.ready ? 200 : 503).json(readiness);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/metrics", Helpers.logComment("Metrics"), (req, res) => {
+  if (!Config.metricsEnabled) {
+    return res.status(404).type("text/plain").send("metrics disabled\n");
+  }
+  res.set("Content-Type", "text/plain; version=0.0.4; charset=utf-8");
+  res.send(Observability.prometheusMetrics());
+});
 
 // Routes that can be accessed without a login
 app.use(apiPath("/login"), Helpers.logComment("Login"), loginRoutes);
@@ -285,7 +308,7 @@ app.use((error, req, res, next) => {
       .json({ status: 413, message: "Request body is too large" });
   }
 
-  if (status >= 500) console.log(error);
+  if (status >= 500) Observability.reportError(error, req);
   if (Config.isProduction && status >= 500) {
     message = "Internal Server Error";
     data = undefined;

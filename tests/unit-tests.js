@@ -19,6 +19,7 @@ const DBUpdate = require("../util/dbupdate");
 const RateLimit = require("../util/rate-limit");
 const UploadSecurity = require("../util/upload-security");
 const MediaStorage = require("../util/media-storage");
+const Observability = require("../util/observability");
 const database = require("../util/database");
 const Associations = require("../model/associations");
 const Organization = require("../model/organization");
@@ -161,6 +162,92 @@ module.exports = (addTest) => {
     const token = Helpers.genBase32();
     assert.strictEqual(token.length, 24);
     assert.ok(/^[A-Z2-7]+$/.test(token), "token should be base32 uppercase");
+  });
+
+  addTest("observability request context attaches request id response header", async () => {
+    const app = express();
+    app.use(Observability.requestContext);
+    app.get("/test", (req, res) => {
+      res.status(200).json({ requestId: req.requestId });
+    });
+
+    const server = await new Promise((resolve) => {
+      const nextServer = app.listen(0, "127.0.0.1", () => resolve(nextServer));
+    });
+    try {
+      const response = await new Promise((resolve, reject) => {
+        const req = http.request(
+          {
+            method: "GET",
+            host: "127.0.0.1",
+            port: server.address().port,
+            path: "/test",
+            headers: {
+              "X-Request-Id": "req_test",
+            },
+          },
+          (res) => {
+            let body = "";
+            res.on("data", (chunk) => {
+              body += chunk;
+            });
+            res.on("end", () => {
+              resolve({
+                status: res.statusCode,
+                header: res.headers["x-request-id"],
+                body: JSON.parse(body),
+              });
+            });
+          }
+        );
+        req.on("error", reject);
+        req.end();
+      });
+
+      assert.strictEqual(response.status, 200);
+      assert.strictEqual(response.header, "req_test");
+      assert.strictEqual(response.body.requestId, "req_test");
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+
+  addTest("observability metrics include request and readiness counters", async () => {
+    Observability.resetMetricsForTests();
+    const app = express();
+    app.use(Observability.requestContext);
+    app.get("/test", Observability.requestLogger("Unit Test"), (req, res) => {
+      res.status(204).end();
+    });
+
+    const server = await new Promise((resolve) => {
+      const nextServer = app.listen(0, "127.0.0.1", () => resolve(nextServer));
+    });
+    try {
+      await new Promise((resolve, reject) => {
+        const req = http.request(
+          {
+            method: "GET",
+            host: "127.0.0.1",
+            port: server.address().port,
+            path: "/test",
+          },
+          (res) => {
+            res.resume();
+            res.on("end", resolve);
+          }
+        );
+        req.on("error", reject);
+        req.end();
+      });
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+
+    const metrics = Observability.prometheusMetrics();
+    assert.ok(metrics.includes("wotlwedu_backend_requests_total 1"));
+    assert.ok(metrics.includes('wotlwedu_backend_requests_by_route_total{route="Unit Test"} 1'));
+    assert.ok(metrics.includes('wotlwedu_backend_responses_by_status_total{status="2xx"} 1'));
   });
 
   addTest("security boolean coercion accepts true/false, 0/1, and string booleans", () => {

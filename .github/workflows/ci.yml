@@ -16,10 +16,29 @@ jobs:
       - name: Use Node.js 20.x
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "20.19.0"
+          cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Run tests
         run: npm test
+
+      - name: Validate OpenAPI
+        run: npm run lint:openapi
+
+      - name: Audit production dependencies
+        run: npm run audit:prod
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Validate Helm chart
+        run: |
+          helm lint k8s
+          helm template wotlwedu-backend k8s --debug | tee /tmp/wotlwedu-backend-rendered.yaml
+          grep -q "kind: Deployment" /tmp/wotlwedu-backend-rendered.yaml
+
+      - name: Build container image
+        run: docker build -t wotlwedu-backend:ci .
