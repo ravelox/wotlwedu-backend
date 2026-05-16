@@ -181,6 +181,17 @@ module.exports.authAuditStdout = toBool(
   process.env.WOTLWEDU_AUTH_AUDIT_STDOUT || true
 );
 
+module.exports.retentionAuthAuditDays =
+  +(process.env.WOTLWEDU_RETENTION_AUTH_AUDIT_DAYS || 365);
+module.exports.retentionPublicPollParticipantDays =
+  +(process.env.WOTLWEDU_RETENTION_PUBLIC_PARTICIPANT_DAYS || 180);
+module.exports.retentionAbuseAuditDays =
+  +(process.env.WOTLWEDU_RETENTION_ABUSE_AUDIT_DAYS || 730);
+module.exports.retentionNotificationDays =
+  +(process.env.WOTLWEDU_RETENTION_NOTIFICATION_DAYS || 180);
+module.exports.retentionDeletedUserDays =
+  +(process.env.WOTLWEDU_RETENTION_DELETED_USER_DAYS || 30);
+
 module.exports.metricsEnabled = toBool(
   process.env.WOTLWEDU_METRICS_ENABLED || true
 );

@@ -603,7 +603,7 @@ module.exports = (addTest) => {
     }
   });
 
-  addTest("mailer public poll invite payload includes invite token and support email", () => {
+  addTest("mailer public poll invite payload includes invite token, consent, and unsubscribe link", () => {
     const previousSupportEmail = Config.supportEmail;
     const previousBaseFrontendUrl = Config.baseFrontendUrl;
     try {
@@ -628,8 +628,14 @@ module.exports = (addTest) => {
           "https://ui.example/public/poll/public%20token?invite=invite%20token"
         )
       );
-      assert.ok(message.text.includes("support@test.example"));
-      assert.ok(message.html.includes("support@test.example"));
+      assert.ok(message.text.includes("stores your display name"));
+      assert.ok(message.html.includes("stores your display name"));
+      assert.ok(
+        message.text.includes("https://ui.example/public/unsubscribe/invite%20token")
+      );
+      assert.ok(
+        message.html.includes("https://ui.example/public/unsubscribe/invite%20token")
+      );
     } finally {
       Config.supportEmail = previousSupportEmail;
       Config.baseFrontendUrl = previousBaseFrontendUrl;

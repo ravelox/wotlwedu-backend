@@ -313,6 +313,32 @@ async function isSuppressed(email) {
   return !!found;
 }
 
+async function suppressEmail(email, reason = "unsubscribe", creator = "public") {
+  const recipientEmail = normalizeEmail(email);
+  if (!recipientEmail) return null;
+  const recipientHash = hashValue(recipientEmail);
+  const [suppression, created] = await ContactSuppression.findOrCreate({
+    where: {
+      channel: "email",
+      recipientHash,
+    },
+    defaults: {
+      id: UUID("suppression"),
+      channel: "email",
+      recipient: recipientEmail,
+      recipientHash,
+      reason,
+      creator,
+    },
+  });
+  if (!created && suppression.reason !== reason) {
+    suppression.reason = reason;
+    suppression.recipient = recipientEmail;
+    await suppression.save();
+  }
+  return suppression;
+}
+
 async function markInviteAccepted(inviteToken, participantId) {
   if (!inviteToken) return null;
   const invite = await PublicPollInvite.findOne({
@@ -561,6 +587,41 @@ module.exports.postPublicElectionReport = async (req, res, next) => {
     );
 
     return StatusResponse(res, 200, "OK");
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports.postPublicPollInviteUnsubscribe = async (req, res, next) => {
+  try {
+    const inviteToken = normalizeString(req.params.inviteToken);
+    if (!inviteToken) return StatusResponse(res, 421, "No invite token provided");
+
+    const invite = await PublicPollInvite.findOne({ where: { inviteToken } });
+    if (!invite) return StatusResponse(res, 404, "Invite not found");
+
+    await suppressEmail(invite.recipientEmail, "unsubscribe", "public");
+    invite.status = "unsubscribed";
+    invite.revokedAt = new Date();
+    await invite.save();
+
+    await AbuseAudit.log(
+      {
+        electionId: invite.electionId,
+        eventType: "public_poll_invite_unsubscribed",
+        outcome: "success",
+        message: "Public poll invite recipient unsubscribed",
+        metadata: { inviteId: invite.id },
+      },
+      { req }
+    );
+
+    return StatusResponse(res, 200, "OK", {
+      unsubscribe: {
+        channel: "email",
+        status: "suppressed",
+      },
+    });
   } catch (err) {
     next(err);
   }

@@ -22,6 +22,11 @@ const publicVoteRateLimit = createRateLimiter({
 });
 
 router.get("/:token", publicPollRateLimit, publicElectionController.getPublicElection);
+router.post(
+  "/invite/:inviteToken/unsubscribe",
+  publicPollRateLimit,
+  publicElectionController.postPublicPollInviteUnsubscribe
+);
 router.post("/:token/session", publicPollRateLimit, publicElectionController.postPublicElectionSession);
 router.post("/:token/vote", publicVoteRateLimit, publicElectionController.postPublicElectionVote);
 router.post("/:token/report", publicPollRateLimit, publicElectionController.postPublicElectionReport);

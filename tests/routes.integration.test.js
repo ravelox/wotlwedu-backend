@@ -34,6 +34,7 @@ const Vote = require("../model/vote");
 const Image = require("../model/image");
 const PublicPollInvite = require("../model/publicpollinvite");
 const PublicPollParticipant = require("../model/publicpollparticipant");
+const ContactSuppression = require("../model/contactsuppression");
 const AbuseAudit = require("../model/abuseaudit");
 const Preference = require("../model/preference");
 const Security = require("../util/security");
@@ -1221,6 +1222,32 @@ module.exports = (addTest) => {
     assert.ok(orgAuditRes.body.data.audits.some((audit) => audit.eventType));
   });
 
+  addTest("account privacy export and deletion request are available", async () => {
+    const exportRes = await request(server, "GET", "/person/user_password/privacy/export");
+    assert.strictEqual(exportRes.status, 200);
+    assert.strictEqual(exportRes.body.data.export.account.id, "user_password");
+    assert.ok(exportRes.body.data.export.account.email.includes("@example.com"));
+    assert.ok(Array.isArray(exportRes.body.data.export.authAudits));
+    assert.ok(Array.isArray(exportRes.body.data.export.sessions));
+    assert.ok(!Object.prototype.hasOwnProperty.call(exportRes.body.data.export.account, "auth"));
+
+    const deleteRes = await request(server, "POST", "/person/user_password/privacy/delete-request", {
+      reason: "test deletion request",
+    });
+    assert.strictEqual(deleteRes.status, 200);
+    assert.strictEqual(deleteRes.body.data.deletionRequest.status, "pending_support_review");
+
+    const audit = await AuthAudit.findOne({
+      where: {
+        targetUserId: "user_password",
+        eventType: "account_deletion_requested",
+      },
+      order: [["createdAt", "DESC"]],
+    });
+    assert.ok(audit);
+    assert.strictEqual(audit.outcome, "pending");
+  });
+
   addTest("support auth overview and feed return scoped observability data", async () => {
     await AuthAudit.create({
       id: "audit_support_success",
@@ -1563,12 +1590,46 @@ module.exports = (addTest) => {
     assert.strictEqual(res.status, 200);
     assert.ok(Array.isArray(res.body.data.results));
     assert.strictEqual(res.body.data.results[0].status, 200);
+    assert.ok(res.body.data.results[0].invite.inviteToken);
 
     const statsRes = await request(server, "GET", `/poll/${publicElectionId}/public/stats`);
     assert.strictEqual(statsRes.status, 200);
     assert.strictEqual(statsRes.body.data.statistics.inviteCount, 1);
     assert.strictEqual(statsRes.body.data.statistics.participantCount, 2);
     assert.strictEqual(statsRes.body.data.statistics.voteCount, 1);
+  });
+
+  addTest("public invite unsubscribe suppresses future invites", async () => {
+    const invite = await PublicPollInvite.findOne({
+      where: {
+        electionId: publicElectionId,
+        recipientEmail: "public.invited@example.com",
+      },
+    });
+    assert.ok(invite);
+
+    const unsubscribeRes = await request(
+      server,
+      "POST",
+      `/public/poll/invite/${invite.inviteToken}/unsubscribe`
+    );
+    assert.strictEqual(unsubscribeRes.status, 200);
+
+    const suppression = await ContactSuppression.findOne({
+      where: {
+        channel: "email",
+        recipient: "public.invited@example.com",
+      },
+    });
+    assert.ok(suppression);
+    assert.strictEqual(suppression.reason, "unsubscribe");
+
+    const resendRes = await request(server, "POST", `/poll/${publicElectionId}/invite`, {
+      email: "public.invited@example.com",
+    });
+    assert.strictEqual(resendRes.status, 200);
+    assert.strictEqual(resendRes.body.data.results[0].status, 409);
+    assert.strictEqual(resendRes.body.data.results[0].message, "Recipient has opted out");
   });
 
   addTest("support can lock and restore reported public polls", async () => {

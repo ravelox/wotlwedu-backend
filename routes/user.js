@@ -14,6 +14,7 @@ router.get( "/friend", Security.checkCapability("user",["view"]), userController
 router.get(  "/:userId/friend",  Security.checkCapability("user", ["view"]),  userController.getUserFriends);
 router.get(  "/:userId/signin-method",  Security.checkCapability("user", ["view"]),  userController.getUserSignInMethods);
 router.get(  "/:userId/authaudit",  Security.checkCapability("user", ["view"]),  userController.getUserAuthAudit);
+router.get(  "/:userId/privacy/export",  Security.checkCapability("user", ["view"]),  userController.getUserPrivacyExport);
 router.get(  "/:userId/ownership/preview",  Security.checkCapability("user", ["edit"]),  userController.getOwnershipTransferPreview);
 
 router.get(  "/:userId",  Security.checkCapability("user", ["view"]),  userController.getUser);
@@ -27,6 +28,7 @@ router.post(  "/",  Security.checkCapability("user", ["add"]),  userController.p
 
 router.post( "/request/:friendId", Security.checkCapability("user", ["edit"]), userController.putAddFriend)
 router.post( "/request", userController.putAddFriend);
+router.post( "/:userId/privacy/delete-request", Security.checkCapability("user", ["edit"]), userController.postUserDeletionRequest);
 router.post( "/:userId/ownership/transfer", Security.checkCapability("user", ["edit"]), userController.postOwnershipTransfer);
 router.put(  "/:userId",  Security.checkCapability("user", ["edit"]),  userController.postUpdateUser);
 

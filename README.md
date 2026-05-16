@@ -25,7 +25,7 @@ Core stack:
 - `Workgroup admin user`: can administer data for one workgroup (`adminWorkgroupId`, legacy `adminGroupId`).
 
 ## Current version
-The backend changes in this repo are documented as **0.0.61** in `CHANGELOG.md`.
+The backend changes in this repo are documented as **0.0.62** in `CHANGELOG.md`.
 
 ## Seeded Accounts
 Database initialization runs `model/util-createdb.js` followed by
@@ -60,6 +60,9 @@ organization, and has all admin flags disabled.
 - Add trust-gated public election invite management for authenticated election owners via `GET /poll/public/trust`, `POST /poll/:electionId/public/enable`, `POST /poll/:electionId/public/disable`, `GET /poll/:electionId/public/stats`, and `GET/POST/DELETE` invite lifecycle routes under `/poll/:electionId/invite`.
 - Public poll responses include guest-voting availability, expiry/reporting context, and share URLs; guest sessions expire after `WOTLWEDU_PUBLIC_GUEST_SESSION_TTL_HOURS` and guest votes enforce poll/IP quotas.
 - Support users can moderate reported public polls with `POST /support/publicpoll/:electionId/moderation` using `lock`, `restore`, or `remove_public_access`, and can suppress invite recipients with `POST /support/publicpoll/suppression`.
+- Public poll invite emails include direct unsubscribe links backed by contact suppression records (`POST /public/poll/invite/:inviteToken/unsubscribe`), and invite/guest copy discloses guest voting data use.
+- Account holders can export privacy data with `GET /person/:userId/privacy/export` and request deletion review with `POST /person/:userId/privacy/delete-request`.
+- Retention windows and operator abuse/deletion workflows are documented in `docs/privacy-retention-policy.md`.
 - Add public-poll trust, suppression, invite, participant, vote, and abuse-audit persistence so public links can expand participation without allowing guest-triggered outbound messaging.
 - First-time social sign-in now consumes a pending organization invite only when the supplied invite token matches the Google account email; otherwise it auto-provisions a new organization named `<FirstInitial> <LastInitial>'s Organization`.
 - Matching password-based accounts are not auto-linked before provider authentication. Social login now returns a neutral `linkRequired` confirmation state after verified provider authentication, and linking preserves password login.

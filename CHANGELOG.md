@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.0.62 - 2026-05-16
+- Add account privacy export and deletion-request endpoints, public poll invite
+  unsubscribe links backed by suppression records, guest consent copy in invite
+  email, and retention/abuse operations documentation.
+
 ## 0.0.61 - 2026-05-16
 - Add platform readiness endpoints (`/healthz`, `/readyz`, `/metrics`),
   structured request logs with request IDs, optional webhook error reporting,

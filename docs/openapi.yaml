@@ -140,6 +140,22 @@ paths:
               properties:
                 reason:
                   type: string
+  /v1/public/poll/invite/{inviteToken}/unsubscribe:
+    post:
+      summary: POST /v1/public/poll/invite/:inviteToken/unsubscribe
+      operationId: postPublicPollInviteUnsubscribe
+      parameters:
+      - name: inviteToken
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+        '404':
+          description: Invite not found
+      security: []
   /v1/organization/:
     get:
       summary: GET /v1/organization/
@@ -2461,6 +2477,49 @@ paths:
       responses:
         '200':
           description: Successful response
+      security:
+      - bearerAuth: []
+  /v1/person/{userId}/privacy/export:
+    get:
+      summary: GET /v1/person/:userId/privacy/export
+      operationId: getPersonPrivacyExport
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+        '403':
+          description: Not authorized for this user
+      security:
+      - bearerAuth: []
+  /v1/person/{userId}/privacy/delete-request:
+    post:
+      summary: POST /v1/person/:userId/privacy/delete-request
+      operationId: postPersonPrivacyDeleteRequest
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+        '403':
+          description: Not authorized for this user
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
       security:
       - bearerAuth: []
   /v1/person/:userId/ownership/preview:

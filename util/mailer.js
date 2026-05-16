@@ -246,6 +246,14 @@ function buildPublicPollInviteMessage(
   const inviteUrl =
     `${Config.baseFrontendUrl}/public/poll/${encodeURIComponent(publicToken)}` +
     (inviteToken ? `?invite=${encodeURIComponent(inviteToken)}` : "");
+  const unsubscribeUrl = inviteToken
+    ? `${Config.baseFrontendUrl}/public/unsubscribe/${encodeURIComponent(inviteToken)}`
+    : null;
+  const unsubscribeCopy = unsubscribeUrl
+    ? `You can opt out of future public poll invites here:\n\n${unsubscribeUrl}`
+    : `If you no longer want invites like this, contact ${Config.supportEmail}.`;
+  const consentCopy =
+    "When you open a guest voting session, Wotlwedu stores your display name, invite status, and votes for the poll so the organizer can count responses and handle abuse reports.";
   const textBody = `Hi there,
 
 You have been invited to participate in the Wotlwedu poll "${pollName}".
@@ -254,7 +262,9 @@ Open the poll here:
 
 ${inviteUrl}
 
-If you no longer want invites like this, contact ${Config.supportEmail}.
+${consentCopy}
+
+${unsubscribeCopy}
 
 Best regards,
 
@@ -268,7 +278,12 @@ Wotlwedu admin team`;
       `You're invited to "${pollName}"`,
       `<p>You have been invited to participate in the Wotlwedu poll <strong>${pollName}</strong>.</p>
          <p><a href="${inviteUrl}">${inviteUrl}</a></p>
-         <p>If you no longer want invites like this, contact ${Config.supportEmail}.</p>`
+         <p>${consentCopy}</p>
+         ${
+           unsubscribeUrl
+             ? `<p>You can opt out of future public poll invites here:</p><p><a href="${unsubscribeUrl}">${unsubscribeUrl}</a></p>`
+             : `<p>If you no longer want invites like this, contact ${Config.supportEmail}.</p>`
+         }`
     ),
   };
 }

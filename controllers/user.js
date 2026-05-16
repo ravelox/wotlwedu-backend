@@ -30,6 +30,7 @@ const Role = require("../model/role");
 const SocialIdentity = require("../model/socialidentity");
 const AuthAudit = require("../model/authaudit");
 const AuthAuditLog = require("../util/auth-audit");
+const Session = require("../model/session");
 
 const Attributes = require("../model/attributes");
 
@@ -164,6 +165,53 @@ function serializeAudit(audit) {
   };
 }
 
+function serializeUserPrivacyProfile(user) {
+  return {
+    id: user.id,
+    email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    alias: user.alias,
+    imageId: user.imageId,
+    organizationId: user.organizationId,
+    active: user.active,
+    verified: user.verified,
+    enable2fa: user.enable2fa,
+    organizationAdmin: user.organizationAdmin,
+    workgroupAdmin: user.workgroupAdmin,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+    lastLogin: user.lastLogin,
+  };
+}
+
+function serializeSessionForExport(row) {
+  return {
+    id: row.id,
+    userAgent: row.userAgent,
+    ipAddress: row.ipAddress,
+    lastUsedAt: row.lastUsedAt,
+    expiresAt: row.expiresAt,
+    revokedAt: row.revokedAt,
+    replayDetectedAt: row.replayDetectedAt,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function serializeNotificationForExport(row) {
+  return {
+    id: row.id,
+    type: row.type,
+    objectId: row.objectId,
+    text: row.text,
+    senderId: row.senderId,
+    statusId: row.statusId,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
 exports.getUser = async (req, res, next) => {
   const options = {};
   const userToFind = req.params.userId;
@@ -286,6 +334,159 @@ exports.getUserAuthAudit = async (req, res, next) => {
       page,
       itemsPerPage,
       audits: (rows || []).map(serializeAudit),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getUserPrivacyExport = async (req, res, next) => {
+  try {
+    const userId = req.params.userId;
+    if (!userId) return StatusResponse(res, 400, "No user ID provided");
+
+    const foundUser = await User.findByPk(userId);
+    if (!foundUser) return StatusResponse(res, 404, "User not found");
+    if (!canAccessUserSupportData(req, foundUser)) {
+      return StatusResponse(res, 403, "Not authorized for this user");
+    }
+
+    const memberships = await WorkgroupMember.findAll({
+      where: { userId },
+      order: [["createdAt", "ASC"]],
+      raw: true,
+    });
+    const workgroupIds = memberships.map((membership) => membership.workgroupId).filter(Boolean);
+
+    const [
+      organization,
+      workgroups,
+      identities,
+      audits,
+      sessions,
+      notifications,
+    ] = await Promise.all([
+      foundUser.organizationId ? Organization.findByPk(foundUser.organizationId, { raw: true }) : null,
+      workgroupIds.length
+        ? Workgroup.findAll({
+            where: { id: { [Op.in]: workgroupIds } },
+            attributes: ["id", "name", "description", "organizationId", "active", "createdAt", "updatedAt"],
+            raw: true,
+          })
+        : [],
+      SocialIdentity.findAll({ where: { userId }, order: [["provider", "ASC"]] }),
+      AuthAudit.findAll({
+        where: {
+          [Op.or]: [{ actorUserId: userId }, { targetUserId: userId }],
+        },
+        order: [["createdAt", "DESC"]],
+        limit: 500,
+      }),
+      Session.findAll({
+        where: { userId },
+        order: [["lastUsedAt", "DESC"]],
+        limit: 100,
+      }),
+      Notification.findAll({
+        where: { userId },
+        order: [["createdAt", "DESC"]],
+        limit: 500,
+      }),
+    ]);
+
+    const workgroupById = new Map((workgroups || []).map((workgroup) => [workgroup.id, workgroup]));
+
+    await AuthAuditLog.log(
+      {
+        eventType: "account_data_export",
+        outcome: "success",
+        actorUserId: req.authUserId,
+        targetUserId: userId,
+        organizationId: foundUser.organizationId,
+        email: foundUser.email,
+        message: "Account data export generated",
+      },
+      { req }
+    );
+
+    return StatusResponse(res, 200, "OK", {
+      export: {
+        exportedAt: new Date().toISOString(),
+        account: serializeUserPrivacyProfile(foundUser),
+        organization: organization
+          ? {
+              id: organization.id,
+              name: organization.name,
+              description: organization.description,
+              active: organization.active,
+              createdAt: organization.createdAt,
+              updatedAt: organization.updatedAt,
+            }
+          : null,
+        workgroups: memberships.map((membership) => ({
+          id: membership.workgroupId,
+          active: membership.active,
+          createdAt: membership.createdAt,
+          updatedAt: membership.updatedAt,
+          workgroup: workgroupById.get(membership.workgroupId) || null,
+        })),
+        signInMethods: {
+          passwordEnabled: !!(foundUser.auth && foundUser.auth !== ""),
+          linkedProviders: (identities || []).map(serializeSignInMethod),
+        },
+        sessions: (sessions || []).map(serializeSessionForExport),
+        notifications: (notifications || []).map(serializeNotificationForExport),
+        authAudits: (audits || []).map(serializeAudit),
+        notes: [
+          "Authentication secrets, password hashes, refresh token hashes, and two-factor secrets are excluded.",
+          "Poll, list, item, and media content owned by an organization may require support review before deletion or transfer.",
+        ],
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.postUserDeletionRequest = async (req, res, next) => {
+  try {
+    const userId = req.params.userId;
+    if (!userId) return StatusResponse(res, 400, "No user ID provided");
+
+    const foundUser = await User.findByPk(userId);
+    if (!foundUser) return StatusResponse(res, 404, "User not found");
+    if (!canAccessUserSupportData(req, foundUser)) {
+      return StatusResponse(res, 403, "Not authorized for this user");
+    }
+
+    const reason = typeof req.body?.reason === "string" ? req.body.reason.trim().slice(0, 500) : "";
+    const requestedAt = new Date();
+    await AuthAuditLog.log(
+      {
+        eventType: "account_deletion_requested",
+        outcome: "pending",
+        actorUserId: req.authUserId,
+        targetUserId: userId,
+        organizationId: foundUser.organizationId,
+        email: foundUser.email,
+        message: "Account deletion requested",
+        metadata: {
+          reason: reason || null,
+          requestedBySelf: req.authUserId === userId,
+          supportEmail: Config.supportEmail,
+          retentionDeletedUserDays: Config.retentionDeletedUserDays,
+        },
+      },
+      { req }
+    );
+
+    return StatusResponse(res, 200, "OK", {
+      deletionRequest: {
+        userId,
+        requestedAt,
+        status: "pending_support_review",
+        supportEmail: Config.supportEmail,
+      },
     });
   } catch (err) {
     next(err);
