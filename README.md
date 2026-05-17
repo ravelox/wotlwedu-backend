@@ -41,6 +41,9 @@ The non-admin default user is active, verified, belongs to the default
 organization, and has all admin flags disabled.
 
 ## Recent API behavior updates
+- Add `GET /home` for a consumer social activity summary that powers the
+  main app home feed with needs-vote, closing-soon, recent activity, recent
+  winners, quick starts, and unread notification count.
 - Support admins can export and restore JSON backups through `/support/backup`
   and `/support/backup/restore` for whole-system, organization, or space scopes.
 - Category IDs are now consistently included on category-enabled resources (`group`, `workgroup`, `image`, `item`, `list`, `election`).

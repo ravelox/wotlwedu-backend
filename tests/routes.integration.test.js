@@ -86,6 +86,7 @@ function buildApp() {
   const loginRoutes = require("../routes/login");
   const listRoutes = require("../routes/list");
   const groupRoutes = require("../routes/group");
+  const homeRoutes = require("../routes/home");
   const notificationRoutes = require("../routes/notification");
   const organizationRoutes = require("../routes/organization");
   const electionRoutes = require("../routes/election");
@@ -103,6 +104,7 @@ function buildApp() {
   baseApp.use(apiPath("/item"), Security.checkAuthentication, itemRoutes);
   baseApp.use(apiPath("/list"), Security.checkAuthentication, listRoutes);
   baseApp.use(apiPath("/circle"), Security.checkAuthentication, groupRoutes);
+  baseApp.use(apiPath("/home"), Security.checkAuthentication, homeRoutes);
   baseApp.use(apiPath("/notification"), Security.checkAuthentication, notificationRoutes);
   baseApp.use(apiPath("/organization"), Security.checkAuthentication, organizationRoutes);
   baseApp.use(apiPath("/poll"), Security.checkAuthentication, electionRoutes);
@@ -512,6 +514,62 @@ module.exports = (addTest) => {
     const res = await request(server, "GET", "/ping");
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.body.message, "OK");
+  });
+
+  addTest("home summary returns social activity sections", async () => {
+    await Election.create({
+      id: "election_home_pending",
+      name: "Home Pending Poll",
+      description: "Needs a response from the signed-in person",
+      listId: "list_public",
+      groupId: "group_participation",
+      workgroupId: "workgroup_test",
+      expiration: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+      statusId: 201,
+      creator: "user_sender",
+    });
+    await Vote.create({
+      id: "vote_home_pending_user_test",
+      electionId: "election_home_pending",
+      userId: "user_test",
+      itemId: publicListItemId,
+      statusId: 300,
+      creator: "user_sender",
+    });
+    await Election.create({
+      id: "election_home_winner",
+      name: "Home Winner Poll",
+      description: "Completed poll for recent winners",
+      listId: "list_public",
+      groupId: "group_participation",
+      workgroupId: "workgroup_test",
+      expiration: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      statusId: 202,
+      creator: "user_test",
+    });
+    await Vote.create({
+      id: "vote_home_winner_user_test",
+      electionId: "election_home_winner",
+      userId: "user_test",
+      itemId: publicListItemId,
+      statusId: 301,
+      creator: "user_test",
+    });
+
+    const res = await request(server, "GET", "/home?workgroupId=workgroup_test");
+    assert.strictEqual(res.status, 200);
+    assert.ok(Array.isArray(res.body.data.home.needsVote));
+    assert.ok(Array.isArray(res.body.data.home.closingSoon));
+    assert.ok(Array.isArray(res.body.data.home.friendActivity));
+    assert.ok(Array.isArray(res.body.data.home.recentWinners));
+    assert.ok(res.body.data.home.needsVote.some((poll) => poll.id === "election_home_pending"));
+    assert.ok(res.body.data.home.closingSoon.some((poll) => poll.id === "election_home_pending"));
+    assert.ok(res.body.data.home.recentWinners.some((poll) => poll.id === "election_home_winner"));
+    const pendingCard = res.body.data.home.needsVote.find((poll) => poll.id === "election_home_pending");
+    assert.strictEqual(pendingCard.action.label, "Vote");
+    assert.ok(pendingCard.creator.name);
+    assert.ok(Array.isArray(pendingCard.ideas));
+    assert.ok(Array.isArray(res.body.data.home.quickStarts.templates));
   });
 
   addTest("consumer registration creates a personal organization, first space, and tutorial", async () => {

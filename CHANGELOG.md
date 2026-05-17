@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Add `GET /home` for a consumer social activity summary with polls needing a
+  vote, closing-soon polls, recent activity, recent winners, quick-start
+  templates, and unread notification count.
 
 ## 0.0.62 - 2026-05-16
 - Add account privacy export and deletion-request endpoints, public poll invite

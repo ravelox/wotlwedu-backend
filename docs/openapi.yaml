@@ -55,6 +55,23 @@ paths:
           description: Successful response
       security:
       - bearerAuth: []
+  /v1/home:
+    get:
+      summary: GET /v1/home
+      operationId: getHomeSummary
+      parameters:
+      - name: workgroupId
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Social activity home summary.
+        '403':
+          description: Not authorized for requested workgroup.
+      security:
+      - bearerAuth: []
   /v1/public/poll/:token:
     get:
       summary: GET /v1/public/poll/:token
