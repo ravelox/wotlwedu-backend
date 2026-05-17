@@ -1602,6 +1602,10 @@ module.exports = (addTest) => {
     assert.strictEqual(viewRes.status, 200);
     assert.strictEqual(viewRes.body.data.election.id, publicElectionId);
     assert.strictEqual(viewRes.body.data.election.canGuestVote, true);
+    assert.ok(viewRes.body.data.election.creator);
+    assert.strictEqual(viewRes.body.data.election.publicContext.participantCount, 0);
+    assert.strictEqual(viewRes.body.data.election.publicContext.voteCount, 0);
+    assert.ok(viewRes.body.data.election.publicShareUrl);
     assert.ok(Array.isArray(viewRes.body.data.election.list.items));
     assert.strictEqual(viewRes.body.data.election.list.items[0].id, publicListItemId);
 

@@ -44,7 +44,7 @@ paths:
       summary: GET /v1/ping
       responses:
         '200':
-          description: Successful response
+          description: Successful response with public poll details, creator identity, public share URL, ideas, and public social-proof counts.
       security:
       - bearerAuth: []
   /v1/admin/config:

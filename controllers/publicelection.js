@@ -63,6 +63,21 @@ function serializeTrustProfile(profile) {
   };
 }
 
+function displayName(user) {
+  if (!user) return "Wotlwedu";
+  const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
+  return fullName || user.alias || user.email || "Wotlwedu";
+}
+
+function initials(value) {
+  const words = String(value || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (!words.length) return "W";
+  return words.slice(0, 2).map((word) => word[0]).join("").toUpperCase();
+}
+
 async function getWorkgroupOrganizationId(workgroupId) {
   if (!workgroupId) return null;
   const wg = await Workgroup.findByPk(workgroupId, { raw: true });
@@ -171,10 +186,11 @@ function canGuestVote(election) {
   );
 }
 
-function serializePublicElection(election) {
+function serializePublicElection(election, context = {}) {
   const list = typeof election?.get === "function" ? election.get("list") : election?.list;
   const status = typeof election?.get === "function" ? election.get("status") : election?.status;
   const expired = isElectionExpired(election);
+  const creatorName = displayName(context.creator);
   return {
     id: election.id,
     name: election.name,
@@ -190,11 +206,22 @@ function serializePublicElection(election) {
     canGuestVote: canGuestVote(election),
     isExpired: expired,
     reportable: election.publicAccessMode !== "private" && election.abuseStatus !== "locked",
+    creator: context.creator
+      ? {
+          id: context.creator.id,
+          name: creatorName,
+          initials: initials(creatorName),
+        }
+      : null,
     publicContext: {
       statusLabel: expired ? "Expired" : status?.name || "Open",
       guestSessionTtlHours: Math.max(1, Number(Config.publicPollGuestSessionTtlHours) || 168),
       privacyLabel: "Public link",
       reportingEnabled: true,
+      participantCount: context.participantCount || 0,
+      voteCount: context.voteCount || 0,
+      inviteCount: context.inviteCount || 0,
+      acceptedInviteCount: context.acceptedInviteCount || 0,
     },
     status: status || null,
     list: list
@@ -415,6 +442,20 @@ module.exports.getPublicElection = async (req, res, next) => {
     const election = await getPublicElectionByToken(token);
     if (!election) return StatusResponse(res, 404, "Public election not found");
 
+    const [creator, participantCount, voteCount, inviteCount, acceptedInviteCount] =
+      await Promise.all([
+        election.creator ? User.findByPk(election.creator, { attributes: Attributes.User, raw: true }) : null,
+        PublicPollParticipant.count({ where: { electionId: election.id } }),
+        PublicPollVote.count({ where: { electionId: election.id } }),
+        PublicPollInvite.count({ where: { electionId: election.id } }),
+        PublicPollInvite.count({
+          where: {
+            electionId: election.id,
+            status: "accepted",
+          },
+        }),
+      ]);
+
     await AbuseAudit.log(
       {
         electionId: election.id,
@@ -426,7 +467,13 @@ module.exports.getPublicElection = async (req, res, next) => {
     );
 
     return StatusResponse(res, 200, "OK", {
-      election: serializePublicElection(election),
+      election: serializePublicElection(election, {
+        creator,
+        participantCount,
+        voteCount,
+        inviteCount,
+        acceptedInviteCount,
+      }),
     });
   } catch (err) {
     next(err);
