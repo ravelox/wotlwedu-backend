@@ -418,6 +418,26 @@ module.exports.getAllElection = async (req, res, next) => {
     };
   }
 
+  const pollStatus = (req.query.pollStatus || "").trim();
+  const now = new Date();
+  if (pollStatus === "active") {
+    whereCondition.expiration = { [Op.gte]: now };
+  } else if (pollStatus === "expired") {
+    whereCondition.expiration = { [Op.lt]: now };
+  }
+
+  const publicStatus = (req.query.publicStatus || "").trim();
+  if (publicStatus === "public") whereCondition.publicAccessMode = { [Op.ne]: "private" };
+  if (publicStatus === "private") whereCondition.publicAccessMode = "private";
+
+  const abuseStatus = (req.query.abuseStatus || "").trim();
+  if (abuseStatus) whereCondition.abuseStatus = abuseStatus;
+
+  const electionType = Number(req.query.electionType);
+  if (Number.isFinite(electionType) && req.query.electionType !== undefined && req.query.electionType !== "") {
+    whereCondition.electionType = electionType;
+  }
+
   if (!requestedWorkgroupId && !Security.getVerdict(req.verdicts, "view").isAdmin) {
     whereCondition.creator = req.authUserId;
   }

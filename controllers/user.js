@@ -36,6 +36,14 @@ const Attributes = require("../model/attributes");
 
 const DEFAULT_ORGANIZATION_ID = "org_default";
 
+function queryBool(value) {
+  if (value === undefined || value === null || value === "") return null;
+  const normalized = String(value).trim().toLowerCase();
+  if (["true", "1", "yes", "on"].includes(normalized)) return true;
+  if (["false", "0", "no", "off"].includes(normalized)) return false;
+  return null;
+}
+
 async function getTargetOrganizationId(req) {
   if (req.isAdmin === true) {
     return req.body.organizationId || req.authOrganizationId || DEFAULT_ORGANIZATION_ID;
@@ -618,6 +626,17 @@ exports.getAllUser = async (req, res, next) => {
       whereCondition.organizationId = requestedOrganizationId;
     } else if (req.authOrganizationId) {
       whereCondition.organizationId = req.authOrganizationId;
+    }
+
+    const activeFilter = queryBool(req.query.active);
+    const verifiedFilter = queryBool(req.query.verified);
+    if (activeFilter !== null) whereCondition.active = activeFilter;
+    if (verifiedFilter !== null) whereCondition.verified = verifiedFilter;
+    if ((req.query.adminRole || "").trim()) {
+      const adminRole = String(req.query.adminRole).trim();
+      if (["systemAdmin", "organizationAdmin", "workgroupAdmin"].includes(adminRole)) {
+        whereCondition[adminRole] = true;
+      }
     }
 
     // Optional workgroup scoping: list users who are members of a given workgroup.

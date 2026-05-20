@@ -145,8 +145,23 @@ function buildAuditWhere(req) {
   if (userId) {
     where[Op.or] = [{ actorUserId: userId }, { targetUserId: userId }];
   }
+  const dateRange = buildDateRange(req.query);
+  if (dateRange) where.createdAt = dateRange;
 
   return { where, scopedOrganizationId };
+}
+
+function buildDateRange(query) {
+  const from = query.dateFrom ? new Date(query.dateFrom) : null;
+  const to = query.dateTo ? new Date(query.dateTo) : null;
+  const createdAt = {};
+  if (from && !Number.isNaN(from.getTime())) createdAt[Op.gte] = from;
+  if (to && !Number.isNaN(to.getTime())) {
+    const inclusiveTo = new Date(to);
+    inclusiveTo.setHours(23, 59, 59, 999);
+    createdAt[Op.lte] = inclusiveTo;
+  }
+  return Object.keys(createdAt).length ? createdAt : null;
 }
 
 function sortCountRows(rows) {
@@ -215,6 +230,8 @@ async function buildPublicPollAuditWhere(req) {
   if (outcome) where.outcome = outcome;
   if (actorType) where.actorType = actorType;
   if (userId) where.actorUserId = userId;
+  const dateRange = buildDateRange(req.query);
+  if (dateRange) where.createdAt = dateRange;
 
   if (scopedOrganizationId) {
     const scopedElectionIds = await resolveScopedElectionIds(scopedOrganizationId);
@@ -329,7 +346,7 @@ module.exports.getAuthAuditOverview = async (req, res, next) => {
     const createdAfter = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
     const baseWhere = {
       ...built.where,
-      createdAt: { [Op.gte]: createdAfter },
+      createdAt: built.where.createdAt || { [Op.gte]: createdAfter },
     };
 
     const [totalEvents, successCount, nonSuccessCount, uniqueActors, uniqueTargets] =
@@ -646,7 +663,7 @@ module.exports.getPublicPollAbuseOverview = async (req, res, next) => {
     const createdAfter = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
     const baseWhere = {
       ...built.where,
-      createdAt: { [Op.gte]: createdAfter },
+      createdAt: built.where.createdAt || { [Op.gte]: createdAfter },
     };
 
     const [
