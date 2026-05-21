@@ -1,15 +1,20 @@
 # Changelog
 
 ## Unreleased
-- Add `GET /home` for a consumer social activity summary with polls needing a
-  vote, closing-soon polls, recent activity, recent winners, quick-start
-  templates, and unread notification count.
 
 ## 0.0.65 - 2026-05-19
 - Add server-side People and Poll structured query filters for admin resource
   views.
 - Add date-range support for auth and public-poll support audit filters and
   exports.
+
+## 0.0.64 - 2026-05-16
+- Add public poll sharing metadata to public poll responses.
+
+## 0.0.63 - 2026-05-16
+- Add `GET /home` for a consumer social activity summary with polls needing a
+  vote, closing-soon polls, recent activity, recent winners, quick-start
+  templates, and unread notification count.
 
 ## 0.0.62 - 2026-05-16
 - Add account privacy export and deletion-request endpoints, public poll invite
